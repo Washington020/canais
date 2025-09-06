@@ -332,11 +332,17 @@ async def generate_token(
         raise HTTPException(status_code=400, detail="No tokens available")
     
     # Check subscription validity
-    if current_user.subscription_end and current_user.subscription_end < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=403,
-            detail="Assinatura expirada. Renove sua assinatura para continuar gerando tokens."
-        )
+    if current_user.subscription_end:
+        # Ensure both datetimes are timezone-aware for comparison
+        subscription_end = current_user.subscription_end
+        if subscription_end.tzinfo is None:
+            subscription_end = subscription_end.replace(tzinfo=timezone.utc)
+        
+        if subscription_end < datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=403,
+                detail="Assinatura expirada. Renove sua assinatura para continuar gerando tokens."
+            )
     
     # Generate unique token code
     token_code = secrets.token_urlsafe(16)
