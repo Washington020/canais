@@ -101,3 +101,175 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Test the FitPass Brasil backend API with comprehensive coverage of authentication, user management, token generation/validation, gym management, workout tracking, nutrition plans, and admin functionality."
+
+backend:
+  - task: "User Registration API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ User registration endpoint working correctly. Successfully creates users with unique emails, proper password hashing, and plan-based token allocation."
+
+  - task: "User Login API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ User login endpoint working correctly. Successfully authenticates users and returns JWT tokens. Demo user (cliente@fitpass.com) created and working."
+
+  - task: "Get Current User Profile API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Get current user endpoint working correctly. Properly validates JWT tokens and returns user profile information."
+
+  - task: "User Statistics API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ User stats endpoint working correctly. Returns comprehensive statistics including workouts, tokens, and gym visits."
+
+  - task: "Token Generation API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "❌ Initial test failed due to incorrect parameter format. Endpoint expects query parameters, not JSON body."
+        - working: true
+          agent: "testing"
+          comment: "✅ Fixed parameter format. Token generation working correctly. Generates unique tokens with QR codes and proper expiration times."
+
+  - task: "Token Validation API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "❌ Initial test failed due to datetime comparison error (offset-naive vs offset-aware) and parameter format issues."
+        - working: true
+          agent: "testing"
+          comment: "✅ Fixed datetime handling and parameter format. Token validation working correctly. Properly validates tokens and marks them as used."
+
+  - task: "Get Gyms API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Get gyms endpoint working correctly. Returns list of gyms with optional location filtering."
+
+  - task: "Create Gym API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Create gym endpoint working correctly. Successfully creates gyms with all required fields including location, capacity, and operating hours."
+
+  - task: "Get Workouts API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Get workouts endpoint working correctly. Returns list of available workouts."
+
+  - task: "Get User Workouts API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Get user workouts endpoint working correctly. Returns user's scheduled workouts with proper authentication."
+
+  - task: "Get Nutrition Plan API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Get nutrition plan endpoint working correctly. Handles cases with and without active nutrition plans."
+
+  - task: "Admin Dashboard API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Admin dashboard endpoint working correctly. Returns comprehensive statistics including user counts, subscriptions, gyms, and daily token usage."
+
+frontend:
+  # Frontend testing not performed as per instructions
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus: []
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "testing"
+      message: "✅ BACKEND TESTING COMPLETE: All 12 backend API endpoints tested successfully with 100% pass rate. Fixed 2 critical issues: (1) Token generation parameter format, (2) Token validation datetime handling. Demo user created and working. All authentication, CRUD operations, and business logic functioning correctly. Backend is production-ready."
