@@ -313,7 +313,135 @@ export default function Dashboard() {
             </TouchableOpacity>
           </View>
         </View>
+        </View>
       </ScrollView>
+
+      {/* Settings Modal */}
+      <Modal
+        visible={showSettingsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowSettingsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Configurações</Text>
+              <TouchableOpacity 
+                style={styles.modalCloseButton}
+                onPress={() => setShowSettingsModal(false)}
+              >
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* User Profile Section */}
+            <View style={styles.profileSection}>
+              <View style={styles.profileHeader}>
+                <View style={styles.profileAvatar}>
+                  <Text style={styles.profileAvatarText}>
+                    {user?.full_name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.profileInfo}>
+                  <Text style={styles.profileName}>{user?.full_name}</Text>
+                  <Text style={styles.profileEmail}>{user?.email}</Text>
+                  <View style={styles.profilePlan}>
+                    <Text style={[styles.profilePlanText, { color: getPlanColor(user?.plan_type || 'basic') }]}>
+                      Plano {getPlanName(user?.plan_type || 'basic')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Account Details */}
+            <View style={styles.accountSection}>
+              <Text style={styles.sectionTitle}>Detalhes da Conta</Text>
+              
+              <View style={styles.accountItem}>
+                <View style={styles.accountItemIcon}>
+                  <Ionicons name="person-outline" size={20} color="#8B5CF6" />
+                </View>
+                <View style={styles.accountItemContent}>
+                  <Text style={styles.accountItemLabel}>Nome Completo</Text>
+                  <Text style={styles.accountItemValue}>{user?.full_name}</Text>
+                </View>
+              </View>
+
+              <View style={styles.accountItem}>
+                <View style={styles.accountItemIcon}>
+                  <Ionicons name="mail-outline" size={20} color="#8B5CF6" />
+                </View>
+                <View style={styles.accountItemContent}>
+                  <Text style={styles.accountItemLabel}>Email</Text>
+                  <Text style={styles.accountItemValue}>{user?.email}</Text>
+                </View>
+              </View>
+
+              <View style={styles.accountItem}>
+                <View style={styles.accountItemIcon}>
+                  <Ionicons name="card-outline" size={20} color="#8B5CF6" />
+                </View>
+                <View style={styles.accountItemContent}>
+                  <Text style={styles.accountItemLabel}>Plano Atual</Text>
+                  <Text style={[styles.accountItemValue, { color: getPlanColor(user?.plan_type || 'basic') }]}>
+                    {getPlanName(user?.plan_type || 'basic')}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.accountItem}>
+                <View style={styles.accountItemIcon}>
+                  <Ionicons name="calendar-outline" size={20} color="#8B5CF6" />
+                </View>
+                <View style={styles.accountItemContent}>
+                  <Text style={styles.accountItemLabel}>Membro desde</Text>
+                  <Text style={styles.accountItemValue}>Janeiro 2024</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Statistics Section */}
+            <View style={styles.statsSection}>
+              <Text style={styles.sectionTitle}>Suas Estatísticas</Text>
+              
+              <View style={styles.modalStatsGrid}>
+                <View style={styles.modalStatItem}>
+                  <Text style={styles.modalStatNumber}>{stats?.tokens_available || 0}</Text>
+                  <Text style={styles.modalStatLabel}>Tokens Disponíveis</Text>
+                </View>
+                <View style={styles.modalStatItem}>
+                  <Text style={styles.modalStatNumber}>{stats?.tokens_used || 0}</Text>
+                  <Text style={styles.modalStatLabel}>Tokens Usados</Text>
+                </View>
+                <View style={styles.modalStatItem}>
+                  <Text style={styles.modalStatNumber}>{stats?.gyms_visited || 0}</Text>
+                  <Text style={styles.modalStatLabel}>Academias Visitadas</Text>
+                </View>
+                <View style={styles.modalStatItem}>
+                  <Text style={styles.modalStatNumber}>{stats?.completed_workouts || 0}</Text>
+                  <Text style={styles.modalStatLabel}>Treinos Concluídos</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.actionSection}>
+              <TouchableOpacity style={styles.supportButton}>
+                <Ionicons name="help-circle-outline" size={20} color="#22C55E" />
+                <Text style={styles.supportButtonText}>Central de Ajuda</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.logoutButtonModal} onPress={handleLogout}>
+                <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+                <Text style={styles.logoutButtonText}>Sair da Conta</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
