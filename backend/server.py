@@ -223,6 +223,24 @@ async def register(user: UserCreate):
 @api_router.post("/auth/login", response_model=Token)
 async def login(user_credentials: UserLogin):
     user_doc = await db.users.find_one({"email": user_credentials.email})
+    
+    # Create demo admin user if doesn't exist
+    if not user_doc and user_credentials.email == "admin@fitpass.com":
+        admin_user = {
+            "email": "admin@fitpass.com",
+            "full_name": "Administrador FitPass",
+            "phone": "+5511000000000",
+            "hashed_password": get_password_hash("admin123"),
+            "plan_type": "admin",
+            "is_active": True,
+            "created_at": datetime.now(timezone.utc),
+            "tokens_available": 999,
+            "tokens_used": 0,
+            "role": "admin"
+        }
+        result = await db.users.insert_one(admin_user)
+        user_doc = await db.users.find_one({"_id": result.inserted_id})
+    
     if not user_doc or not verify_password(user_credentials.password, user_doc["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
