@@ -64,9 +64,10 @@ class FitPassTester:
         """Test user registration endpoint"""
         print("\n=== Testing User Registration ===")
         
-        # Test data for new user
+        # Test data for new user with unique email
+        timestamp = int(time.time())
         user_data = {
-            "email": "testuser@fitpass.com",
+            "email": f"testuser{timestamp}@fitpass.com",
             "password": "testpass123",
             "full_name": "Test User",
             "phone": "+5511999999999",
@@ -83,15 +84,17 @@ class FitPassTester:
             else:
                 self.log_test("User Registration", False, "Response missing required fields")
         elif response and response.status_code == 400:
-            # User might already exist, try with different email
-            user_data["email"] = f"testuser{int(time.time())}@fitpass.com"
-            response = self.make_request("POST", "/auth/register", user_data, auth_required=False)
-            if response and response.status_code == 200:
-                data = response.json()
-                self.log_test("User Registration", True, f"User created with ID: {data['id']}")
-                return True
-            else:
-                self.log_test("User Registration", False, f"Status: {response.status_code if response else 'No response'}")
+            # Check if it's a duplicate email error
+            error_detail = response.json().get("detail", "")
+            if "already registered" in error_detail.lower():
+                # Try with a different timestamp
+                user_data["email"] = f"testuser{timestamp + 1}@fitpass.com"
+                response = self.make_request("POST", "/auth/register", user_data, auth_required=False)
+                if response and response.status_code == 200:
+                    data = response.json()
+                    self.log_test("User Registration", True, f"User created with ID: {data['id']}")
+                    return True
+            self.log_test("User Registration", False, f"Status: {response.status_code}, Detail: {error_detail}")
         else:
             self.log_test("User Registration", False, f"Status: {response.status_code if response else 'No response'}")
         
