@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
   },
-  logoutButton: {
+  settingsButton: {
     padding: 8,
   },
   statsContainer: {
