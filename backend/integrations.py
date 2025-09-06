@@ -3,7 +3,7 @@
       <content"># Advanced Integrations for FitPass Brasil
 from fastapi import APIRouter, HTTPException, Depends, Request, status, Header
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
-from emergentintegrations.llm import LLMService
+import openai
 import os
 import asyncio
 from typing import Optional, Dict, Any, List
