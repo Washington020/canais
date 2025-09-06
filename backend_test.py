@@ -198,14 +198,10 @@ class FitPassTester:
             self.log_test("Token Generation", False, "No auth token available")
             return False
             
-        # Test generating a gym token
-        token_data = {
-            "token_type": "gym",
-            "gym_id": "test-gym-123",
-            "validity_hours": 3
-        }
+        # Test generating a gym token - use query parameters
+        endpoint = "/tokens/generate?token_type=gym&gym_id=test-gym-123&validity_hours=3"
         
-        response = self.make_request("POST", "/tokens/generate", token_data)
+        response = self.make_request("POST", endpoint, data={})
         
         if response and response.status_code == 200:
             data = response.json()
