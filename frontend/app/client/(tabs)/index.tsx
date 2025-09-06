@@ -94,9 +94,20 @@ export default function Dashboard() {
           text: 'Sair',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.removeItem('token');
-            await AsyncStorage.removeItem('userType');
-            router.replace('/');
+            try {
+              // Clear all stored data
+              await AsyncStorage.removeItem('token');
+              await AsyncStorage.removeItem('userType');
+              await AsyncStorage.clear(); // Clear all AsyncStorage data
+              
+              // Navigate back to main screen
+              router.replace('/');
+              
+              Alert.alert('Sucesso', 'Logout realizado com sucesso!');
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Erro', 'Erro ao fazer logout. Tente novamente.');
+            }
           }
         }
       ]
