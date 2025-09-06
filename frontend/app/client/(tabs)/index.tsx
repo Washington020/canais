@@ -42,6 +42,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
