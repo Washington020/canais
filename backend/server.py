@@ -487,21 +487,278 @@ async def get_nutrition_plan(current_user: User = Depends(get_current_user)):
     del plan["_id"]
     return plan
 
+# Gym Authentication Routes
+@api_router.post("/auth/gym/login")
+async def gym_login(credentials: GymLogin):
+    """Login for gym staff"""
+    gym_user = await db.gym_users.find_one({"email": credentials.email})
+    if not gym_user or not verify_password(credentials.password, gym_user["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email ou senha incorretos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    if not gym_user.get("is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Conta da academia desativada"
+        )
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(gym_user["_id"]), "type": "gym"}, 
+        expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer", "gym_id": gym_user["gym_id"]}
+
 # Admin routes
 @api_router.get("/admin/dashboard")
 async def admin_dashboard():
     total_users = await db.users.count_documents({})
     active_subscriptions = await db.users.count_documents({"subscription_end": {"$gt": datetime.now(timezone.utc)}})
+    overdue_payments = await db.users.count_documents({"payment_status": "overdue"})
+    blocked_users = await db.users.count_documents({"is_blocked": True})
     total_gyms = await db.gyms.count_documents({})
     tokens_generated_today = await db.token_usage.count_documents({
         "created_at": {"$gte": datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)}
     })
     
+    # Calculate revenue
+    monthly_revenue = await db.payment_transactions.aggregate([
+        {
+            "$match": {
+                "payment_status": "completed",
+                "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(days=30)}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    
     return {
         "total_users": total_users,
         "active_subscriptions": active_subscriptions,
+        "overdue_payments": overdue_payments,
+        "blocked_users": blocked_users,
         "total_gyms": total_gyms,
-        "tokens_generated_today": tokens_generated_today
+        "tokens_generated_today": tokens_generated_today,
+        "monthly_revenue": monthly_revenue[0]["total"] if monthly_revenue else 0
+    }
+
+@api_router.get("/admin/users")
+async def get_all_users(
+    skip: int = 0,
+    limit: int = 50,
+    filter_status: Optional[str] = None
+):
+    """Get all users with filtering options"""
+    query = {}
+    
+    if filter_status == "blocked":
+        query["is_blocked"] = True
+    elif filter_status == "overdue":
+        query["payment_status"] = "overdue"
+    elif filter_status == "active":
+        query["payment_status"] = "active"
+        query["is_blocked"] = False
+    
+    users_cursor = db.users.find(query).skip(skip).limit(limit)
+    users = []
+    
+    async for user_doc in users_cursor:
+        user_doc["id"] = str(user_doc["_id"])
+        del user_doc["_id"]
+        del user_doc.get("hashed_password", "")  # Remove password hash
+        users.append(user_doc)
+    
+    total_count = await db.users.count_documents(query)
+    
+    return {
+        "users": users,
+        "total": total_count,
+        "skip": skip,
+        "limit": limit
+    }
+
+@api_router.post("/admin/users/{user_id}/block")
+async def block_user(user_id: str, reason: str = "Inadimplência"):
+    """Block user due to payment issues"""
+    result = await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$set": {
+                "is_blocked": True,
+                "block_reason": reason,
+                "blocked_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(404, "Usuário não encontrado")
+    
+    return {"message": "Usuário bloqueado com sucesso"}
+
+@api_router.post("/admin/users/{user_id}/unblock")
+async def unblock_user(user_id: str):
+    """Unblock user"""
+    result = await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$set": {
+                "is_blocked": False,
+                "payment_status": "active"
+            },
+            "$unset": {
+                "block_reason": "",
+                "blocked_at": ""
+            }
+        }
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(404, "Usuário não encontrado")
+    
+    return {"message": "Usuário desbloqueado com sucesso"}
+
+@api_router.post("/admin/gyms/create")
+async def create_gym_with_user(gym_data: GymCreate):
+    """Create gym and gym user account"""
+    
+    # Check if gym email already exists
+    existing_gym_user = await db.gym_users.find_one({"email": gym_data.email})
+    if existing_gym_user:
+        raise HTTPException(400, "Email já cadastrado")
+    
+    # Create gym record
+    gym_dict = {
+        "name": gym_data.name,
+        "address": gym_data.address,
+        "latitude": gym_data.latitude,
+        "longitude": gym_data.longitude,
+        "cnpj": gym_data.cnpj,
+        "phone": gym_data.phone,
+        "accepted_plans": gym_data.accepted_plans,
+        "equipments": gym_data.equipments,
+        "current_occupancy": 0,
+        "max_capacity": gym_data.max_capacity,
+        "rating": 0.0,
+        "photos": [],
+        "created_at": datetime.now(timezone.utc),
+        "is_active": True
+    }
+    
+    gym_result = await db.gyms.insert_one(gym_dict)
+    gym_id = str(gym_result.inserted_id)
+    
+    # Generate password for gym user
+    import secrets
+    import string
+    password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+    
+    # Create gym user account
+    gym_user = {
+        "name": f"Gestor - {gym_data.name}",
+        "email": gym_data.email,
+        "password_hash": get_password_hash(password),
+        "gym_id": gym_id,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    await db.gym_users.insert_one(gym_user)
+    
+    return {
+        "gym_id": gym_id,
+        "login_email": gym_data.email,
+        "login_password": password,
+        "message": "Academia cadastrada com sucesso!"
+    }
+
+@api_router.get("/admin/gyms")
+async def get_all_gyms():
+    """Get all gyms for admin"""
+    gyms_cursor = db.gyms.find()
+    gyms = []
+    
+    async for gym_doc in gyms_cursor:
+        gym_doc["id"] = str(gym_doc["_id"])
+        del gym_doc["_id"]
+        
+        # Get gym user info
+        gym_user = await db.gym_users.find_one({"gym_id": gym_doc["id"]})
+        if gym_user:
+            gym_doc["login_email"] = gym_user["email"]
+            gym_doc["user_active"] = gym_user.get("is_active", True)
+        
+        gyms.append(gym_doc)
+    
+    return {"gyms": gyms}
+
+@api_router.post("/admin/gyms/{gym_id}/toggle-status")
+async def toggle_gym_status(gym_id: str):
+    """Activate/deactivate gym"""
+    gym = await db.gyms.find_one({"_id": ObjectId(gym_id)})
+    if not gym:
+        raise HTTPException(404, "Academia não encontrada")
+    
+    new_status = not gym.get("is_active", True)
+    
+    # Update gym status
+    await db.gyms.update_one(
+        {"_id": ObjectId(gym_id)},
+        {"$set": {"is_active": new_status}}
+    )
+    
+    # Update gym user status
+    await db.gym_users.update_one(
+        {"gym_id": gym_id},
+        {"$set": {"is_active": new_status}}
+    )
+    
+    return {
+        "message": f"Academia {'ativada' if new_status else 'desativada'} com sucesso",
+        "is_active": new_status
+    }
+
+@api_router.get("/admin/financial/overview")
+async def financial_overview():
+    """Get financial overview for admin"""
+    
+    # Total revenue
+    total_revenue = await db.payment_transactions.aggregate([
+        {"$match": {"payment_status": "completed"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    
+    # Monthly revenue
+    monthly_revenue = await db.payment_transactions.aggregate([
+        {
+            "$match": {
+                "payment_status": "completed",
+                "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(days=30)}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    
+    # Overdue payments
+    overdue_users = await db.users.count_documents({
+        "payment_status": "overdue",
+        "subscription_end": {"$lt": datetime.now(timezone.utc)}
+    })
+    
+    # Revenue by plan
+    revenue_by_plan = await db.payment_transactions.aggregate([
+        {"$match": {"payment_status": "completed"}},
+        {"$group": {"_id": "$plan_type", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+    ]).to_list(10)
+    
+    return {
+        "total_revenue": total_revenue[0]["total"] if total_revenue else 0,
+        "monthly_revenue": monthly_revenue[0]["total"] if monthly_revenue else 0,
+        "overdue_users": overdue_users,
+        "revenue_by_plan": revenue_by_plan
     }
 
 # Include the router in the main app
