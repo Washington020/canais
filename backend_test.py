@@ -228,9 +228,9 @@ class FitPassTester:
             return False
             
         # Test validating the generated token
-        gym_data = {"gym_id": "test-gym-123"}
-        response = self.make_request("POST", f"/tokens/validate/{self.generated_token}", 
-                                   data=gym_data, auth_required=False)
+        gym_id = "test-gym-123"
+        response = self.make_request("POST", f"/tokens/validate/{self.generated_token}?gym_id={gym_id}", 
+                                   auth_required=False)
         
         if response and response.status_code == 200:
             data = response.json()
