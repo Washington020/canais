@@ -59,27 +59,36 @@ export default function Tokens() {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        Alert.alert('Erro', 'Você precisa estar logado para gerar tokens');
+        return;
+      }
 
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.post(`${API_URL}/api/tokens/generate`, {
-        token_type: type,
-        validity_hours: validityHours
-      }, { headers });
+      const response = await axios.post(
+        `${API_URL}/api/tokens/generate?token_type=${type}&validity_hours=${validityHours}`, 
+        {}, 
+        { headers }
+      );
 
-      setCurrentToken(response.data);
+      const tokenData = response.data;
+      setCurrentToken(tokenData);
       setShowQRModal(true);
       
       // Refresh stats
-      loadStats();
+      await loadStats();
       
-      Alert.alert('Token Gerado!', `Seu token ${type} foi gerado com sucesso e expira em ${validityHours} horas.`);
+      Alert.alert(
+        'Token Gerado! ✅', 
+        `Seu token ${type === 'gym' ? 'de academia' : 'de nutricionista'} foi gerado com sucesso!\n\nCódigo: ${tokenData.token_code}\n\nExpira em: ${validityHours} horas`,
+        [
+          { text: 'OK', onPress: () => console.log('Token generated:', tokenData.token_code) }
+        ]
+      );
     } catch (error: any) {
       console.error('Error generating token:', error);
-      Alert.alert(
-        'Erro', 
-        error.response?.data?.detail || 'Erro ao gerar token. Tente novamente.'
-      );
+      const errorMessage = error.response?.data?.detail || 'Erro ao gerar token. Verifique sua conexão e tente novamente.';
+      Alert.alert('Erro ao Gerar Token ❌', errorMessage);
     } finally {
       setLoading(false);
     }
