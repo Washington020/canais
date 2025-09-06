@@ -568,7 +568,8 @@ async def get_all_users(
     async for user_doc in users_cursor:
         user_doc["id"] = str(user_doc["_id"])
         del user_doc["_id"]
-        del user_doc.get("hashed_password", "")  # Remove password hash
+        if "hashed_password" in user_doc:
+            del user_doc["hashed_password"]  # Remove password hash
         users.append(user_doc)
     
     total_count = await db.users.count_documents(query)
