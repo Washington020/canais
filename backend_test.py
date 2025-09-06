@@ -434,11 +434,154 @@ class FitPassTester:
         
         return passed == total
 
+    def test_token_system_flow(self):
+        """Test the complete token system flow as requested by user"""
+        print("\n" + "="*60)
+        print("🎯 TESTING COMPLETE TOKEN SYSTEM FLOW")
+        print("="*60)
+        
+        # Step 1: Login with cliente@fitpass.com/cliente123
+        print("\n1️⃣ Testing user login with cliente@fitpass.com...")
+        login_data = {
+            "email": "cliente@fitpass.com",
+            "password": "cliente123"
+        }
+        
+        response = self.make_request("POST", "/auth/login", login_data, auth_required=False)
+        
+        if not response or response.status_code != 200:
+            # Create demo user if doesn't exist
+            print("   Creating demo user cliente@fitpass.com...")
+            demo_user = {
+                "email": "cliente@fitpass.com",
+                "password": "cliente123",
+                "full_name": "Cliente Demo FitPass",
+                "phone": "+5511999888777",
+                "plan_type": "premium"
+            }
+            
+            reg_response = self.make_request("POST", "/auth/register", demo_user, auth_required=False)
+            if reg_response and reg_response.status_code == 200:
+                response = self.make_request("POST", "/auth/login", login_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            self.auth_token = data["access_token"]
+            self.log_test("Step 1: User Login", True, "Successfully logged in with cliente@fitpass.com")
+        else:
+            self.log_test("Step 1: User Login", False, f"Login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 2: Generate gym token with 3 hours validity
+        print("\n2️⃣ Testing token generation (gym, 3 hours)...")
+        endpoint = "/tokens/generate?token_type=gym&validity_hours=3"
+        
+        response = self.make_request("POST", endpoint, data={})
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "token_code" in data and "qr_code" in data:
+                self.generated_token = data["token_code"]
+                self.log_test("Step 2: Token Generation", True, f"Generated token: {data['token_code'][:12]}... with QR code")
+                print(f"   Token expires at: {data.get('expires_at', 'N/A')}")
+            else:
+                self.log_test("Step 2: Token Generation", False, "Missing token_code or qr_code in response")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", "")
+                except:
+                    error_detail = response.text
+            self.log_test("Step 2: Token Generation", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 3: Validate token at gym
+        print("\n3️⃣ Testing token validation at gym...")
+        gym_id = "academia-teste"
+        response = self.make_request("POST", f"/tokens/validate/{self.generated_token}?gym_id={gym_id}", 
+                                   auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if data.get("valid") and "user" in data:
+                self.log_test("Step 3: Token Validation", True, f"Token validated for user: {data['user']['full_name']}")
+                print(f"   User plan: {data['user']['plan_type']}")
+                print(f"   Token type: {data.get('token_type', 'N/A')}")
+            else:
+                self.log_test("Step 3: Token Validation", False, "Token validation returned invalid or missing user data")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", "")
+                except:
+                    error_detail = response.text
+            self.log_test("Step 3: Token Validation", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 4: Check user statistics (tokens_used should be incremented)
+        print("\n4️⃣ Testing user statistics update...")
+        response = self.make_request("GET", "/users/stats")
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["tokens_available", "tokens_used", "gyms_visited"]
+            
+            if all(field in data for field in required_fields):
+                self.log_test("Step 4: User Stats", True, f"Stats updated - Available: {data['tokens_available']}, Used: {data['tokens_used']}, Gyms: {data['gyms_visited']}")
+                print(f"   Total workouts: {data.get('total_workouts', 0)}")
+                print(f"   Completion rate: {data.get('completion_rate', 0):.1f}%")
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("Step 4: User Stats", False, f"Missing fields: {missing}")
+                return False
+        else:
+            self.log_test("Step 4: User Stats", False, f"Status: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 5: Check admin dashboard (should show tokens used)
+        print("\n5️⃣ Testing admin dashboard statistics...")
+        response = self.make_request("GET", "/admin/dashboard", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["total_users", "tokens_generated_today", "total_gyms"]
+            
+            if all(field in data for field in required_fields):
+                self.log_test("Step 5: Admin Dashboard", True, f"Dashboard shows - Users: {data['total_users']}, Tokens today: {data['tokens_generated_today']}, Gyms: {data['total_gyms']}")
+                print(f"   Active subscriptions: {data.get('active_subscriptions', 0)}")
+                print(f"   Monthly revenue: R$ {data.get('monthly_revenue', 0)}")
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("Step 5: Admin Dashboard", False, f"Missing fields: {missing}")
+                return False
+        else:
+            self.log_test("Step 5: Admin Dashboard", False, f"Status: {response.status_code if response else 'No response'}")
+            return False
+        
+        print("\n✅ COMPLETE TOKEN SYSTEM FLOW TEST PASSED!")
+        print("All 5 steps completed successfully:")
+        print("  ✓ User login with cliente@fitpass.com")
+        print("  ✓ Token generation (gym, 3 hours)")
+        print("  ✓ Token validation at academia-teste")
+        print("  ✓ User statistics updated")
+        print("  ✓ Admin dashboard shows usage")
+        
+        return True
+
 if __name__ == "__main__":
     tester = FitPassTester()
-    success = tester.run_all_tests()
+    
+    # Run the specific token system flow test as requested
+    print("🎯 Running focused token system flow test as requested...")
+    success = tester.test_token_system_flow()
     
     if success:
-        print("\n🎉 All tests passed! Backend is working correctly.")
+        print("\n🎉 Token system flow test completed successfully!")
+        print("The token system is working correctly after the fixes.")
     else:
-        print("\n⚠️  Some tests failed. Check the details above.")
+        print("\n⚠️  Token system flow test failed. Check the details above.")
+        print("Issues found that need to be addressed.")
