@@ -382,10 +382,10 @@ async def validate_token(token_code: str, gym_id: str):
     token_doc = await db.token_usage.find_one({"token_code": token_code})
     
     if not token_doc:
-        raise HTTPException(status_code=404, detail="Token not found")
+        raise HTTPException(status_code=404, detail="Token não encontrado")
     
     if token_doc["is_used"]:
-        raise HTTPException(status_code=400, detail="Token already used")
+        raise HTTPException(status_code=400, detail="Token já foi utilizado")
     
     expires_at = token_doc["expires_at"]
     if isinstance(expires_at, str):
@@ -394,7 +394,7 @@ async def validate_token(token_code: str, gym_id: str):
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     
     if datetime.now(timezone.utc) > expires_at:
-        raise HTTPException(status_code=400, detail="Token expired")
+        raise HTTPException(status_code=400, detail="Token expirado")
     
     # Mark token as used
     await db.token_usage.update_one(
@@ -404,6 +404,17 @@ async def validate_token(token_code: str, gym_id: str):
                 "is_used": True,
                 "used_at": datetime.now(timezone.utc),
                 "gym_id": gym_id
+            }
+        }
+    )
+    
+    # Update user statistics
+    await db.users.update_one(
+        {"_id": ObjectId(token_doc["user_id"])},
+        {
+            "$inc": {
+                "tokens_used": 1,
+                "gyms_visited": 1 if token_doc["token_type"] == "gym" else 0
             }
         }
     )
@@ -418,7 +429,9 @@ async def validate_token(token_code: str, gym_id: str):
             "plan_type": user_doc["plan_type"],
             "email": user_doc["email"]
         },
-        "token_type": token_doc["token_type"]
+        "token_type": token_doc["token_type"],
+        "used_at": datetime.now(timezone.utc),
+        "gym_id": gym_id
     }
 
 # Gym routes
