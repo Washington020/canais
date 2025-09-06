@@ -314,7 +314,13 @@ async def validate_token(token_code: str, gym_id: str):
     if token_doc["is_used"]:
         raise HTTPException(status_code=400, detail="Token already used")
     
-    if datetime.now(timezone.utc) > token_doc["expires_at"]:
+    expires_at = token_doc["expires_at"]
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+    elif expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    
+    if datetime.now(timezone.utc) > expires_at:
         raise HTTPException(status_code=400, detail="Token expired")
     
     # Mark token as used
