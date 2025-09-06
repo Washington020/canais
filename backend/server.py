@@ -321,8 +321,22 @@ async def generate_token(
     validity_hours: int = 3,
     current_user: User = Depends(get_current_user)
 ):
+    # Check if user is blocked due to payment issues
+    if current_user.is_blocked or current_user.payment_status != "active":
+        raise HTTPException(
+            status_code=403, 
+            detail="Conta bloqueada por pendências financeiras. Entre em contato com o suporte."
+        )
+    
     if current_user.tokens_available <= 0:
         raise HTTPException(status_code=400, detail="No tokens available")
+    
+    # Check subscription validity
+    if current_user.subscription_end and current_user.subscription_end < datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=403,
+            detail="Assinatura expirada. Renove sua assinatura para continuar gerando tokens."
+        )
     
     # Generate unique token code
     token_code = secrets.token_urlsafe(16)
