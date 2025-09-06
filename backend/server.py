@@ -64,11 +64,39 @@ class UserLogin(BaseModel):
 class User(UserBase):
     id: str
     is_active: bool = True
+    is_blocked: bool = False  # New field for financial blocking
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     subscription_end: Optional[datetime] = None
+    last_payment_date: Optional[datetime] = None
+    payment_status: str = "active"  # active, overdue, suspended
     tokens_available: int = 0
     tokens_used: int = 0
     gyms_visited: int = 0
+
+class GymCreate(BaseModel):
+    name: str
+    email: EmailStr
+    phone: str
+    address: str
+    latitude: float
+    longitude: float
+    cnpj: str
+    accepted_plans: List[str]  # basic, intermediate, premium
+    equipments: List[str]
+    max_capacity: int = 100
+    
+class GymLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class GymUser(BaseModel):
+    id: str
+    name: str
+    email: str
+    password_hash: str
+    gym_id: str
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Token(BaseModel):
     access_token: str
