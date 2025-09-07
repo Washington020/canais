@@ -86,7 +86,7 @@ export default function Dashboard() {
     loadDashboard();
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log('🔥 LOGOUT CLICADO - FUNÇÃO EXECUTANDO');
     
     Alert.alert(
@@ -101,29 +101,25 @@ export default function Dashboard() {
         {
           text: 'SAIR',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             console.log('🚀 EXECUTANDO LOGOUT DEFINITIVO');
             
             try {
-              // Fechar modal
+              // Fechar modal primeiro
               setShowSettingsModal(false);
               
               // Limpar storage
-              AsyncStorage.clear().then(() => {
-                console.log('✅ AsyncStorage limpo');
-                
-                // Navegar para home
-                router.push('/');
-                console.log('✅ Navegação para home executada');
-                
-              }).catch(error => {
-                console.error('❌ Erro ao limpar storage:', error);
-                router.push('/');
-              });
+              await AsyncStorage.clear();
+              console.log('✅ AsyncStorage limpo');
+              
+              // Navegar para tela inicial
+              router.replace('/');
+              console.log('✅ Navegação executada');
               
             } catch (error) {
               console.error('❌ Erro no logout:', error);
-              router.push('/');
+              // Força navegação mesmo com erro
+              router.replace('/');
             }
           }
         }
