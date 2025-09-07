@@ -302,66 +302,7 @@ export default function AdminGyms() {
     } else {
       Alert.alert('Info', 'Esta academia ainda não possui credenciais geradas.');
     }
-  const createTestGym = async () => {
-    setRegisterLoading(true);
-    try {
-      const testData = {
-        name: 'Academia Teste',
-        cnpj: '12.345.678/0001-90',
-        razao_social: 'Academia Teste Ltda',
-        endereco: 'Rua Teste, 123',
-        numero: '123',
-        complemento: 'Sala 1',
-        bairro: 'Centro',
-        cidade: 'São Paulo',
-        estado: 'SP',
-        cep: '01234-567',
-        site: 'www.academiateste.com',
-        email: 'contato@academiateste.com',
-        telefone_principal: '(11) 99999-9999',
-        telefone_secundario: '(11) 88888-8888',
-        horario_funcionamento: 'Segunda a Sexta: 6h às 22h',
-        tipo_academia: 'Tradicional',
-        franquia: 'Independente',
-        num_unidades: '1',
-        responsavel_nome: 'João Silva',
-        responsavel_cargo: 'Gerente',
-        responsavel_email: 'joao@academiateste.com',
-        responsavel_telefone: '(11) 77777-7777',
-        modelo_negocio: 'Mensalidade',
-        inscricao_estadual: '123.456.789.012',
-        alvara_funcionamento: 'ALV123456',
-        documento_responsavel: '123.456.789-00',
-        recursos_oferecidos: 'Musculação, Cardio, Aulas em grupo',
-        politicas_cancelamento: 'Cancelamento com 30 dias de antecedência',
-        observacoes_qualidade: 'Academia com equipamentos modernos e profissionais qualificados'
-      };
-
-      const token = await AsyncStorage.getItem('token');
-      if (!token) return;
-
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.post(`${API_URL}/api/admin/gyms/register`, testData, { headers });
-
-      Alert.alert(
-        'Academia Teste Criada! ✅', 
-        `Academia de teste cadastrada com sucesso!\n\nLogin: ${response.data.login}\nSenha: ${response.data.password}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              loadGyms();
-            }
-          }
-        ]
-      );
-    } catch (error: any) {
-      console.error('Error creating test gym:', error);
-      Alert.alert('Erro', error.response?.data?.detail || 'Erro ao criar academia de teste');
-    } finally {
-      setRegisterLoading(false);
-    }
-  };  };
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -404,7 +345,7 @@ export default function AdminGyms() {
         <Text style={styles.subtitle}>Cadastre e gerencie parcerias</Text>
       </View>
 
-      {/* Header com tabs e botão de teste */}
+      {/* Tabs */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'list' && styles.activeTab]}
@@ -422,15 +363,8 @@ export default function AdminGyms() {
             Cadastrar Nova
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.testButton}
-          onPress={createTestGym}
-          disabled={registerLoading}
-        >
-          <Ionicons name="flash" size={16} color="#FFFFFF" />
-          <Text style={styles.testButtonText}>Teste</Text>
-        </TouchableOpacity>
       </View>
+
       {activeTab === 'list' ? (
         <ScrollView 
           style={styles.scrollView}
@@ -1347,105 +1281,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(245, 158, 11, 0.3)',
   },
   modalActionText: {
-  testButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#F59E0B',
-    marginLeft: 8,
-  },
-  testButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
-  },
     color: '#3B82F6',
-  testButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#F59E0B',
-    marginLeft: 8,
-  },
-  testButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
-  },
     fontSize: 14,
-  testButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#F59E0B',
-    marginLeft: 8,
-  },
-  testButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
     fontWeight: '500',
-    marginLeft: 4,
-  },
-    fontWeight: '500',
-  testButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#F59E0B',
-    marginLeft: 8,
-  },
-  testButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
-  },
     marginLeft: 6,
-  testButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#F59E0B',
-    marginLeft: 8,
-  },
-  testButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
-  },
-  },
-  testButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#F59E0B',
-    marginLeft: 8,
-  },
-  testButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
   },
 });
