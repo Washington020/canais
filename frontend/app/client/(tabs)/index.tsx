@@ -87,37 +87,43 @@ export default function Dashboard() {
   };
 
   const handleLogout = () => {
+    console.log('🔥 LOGOUT CLICADO - FUNÇÃO EXECUTANDO');
+    
     Alert.alert(
       'Sair da Conta',
       'Tem certeza que deseja fazer logout?',
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Cancelar', 
+          style: 'cancel',
+          onPress: () => console.log('❌ Logout cancelado')
+        },
         {
-          text: 'Sair',
+          text: 'SAIR',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
+            console.log('🚀 EXECUTANDO LOGOUT DEFINITIVO');
+            
             try {
-              console.log('🔄 Iniciando logout do cliente...');
-              
-              // Fechar modal primeiro
+              // Fechar modal
               setShowSettingsModal(false);
               
-              // Aguardar modal fechar
-              await new Promise(resolve => setTimeout(resolve, 300));
-              
-              // Limpar TODOS os dados do AsyncStorage
-              await AsyncStorage.clear();
-              
-              console.log('✅ AsyncStorage limpo');
-              
-              // Navegar para página inicial IMEDIATAMENTE
-              router.push('/');
-              
-              console.log('✅ Redirecionado para página inicial');
+              // Limpar storage
+              AsyncStorage.clear().then(() => {
+                console.log('✅ AsyncStorage limpo');
+                
+                // Navegar para home
+                router.push('/');
+                console.log('✅ Navegação para home executada');
+                
+              }).catch(error => {
+                console.error('❌ Erro ao limpar storage:', error);
+                router.push('/');
+              });
               
             } catch (error) {
               console.error('❌ Erro no logout:', error);
-              Alert.alert('Erro', 'Erro ao fazer logout. Tente novamente.');
+              router.push('/');
             }
           }
         }
