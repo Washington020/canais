@@ -433,61 +433,159 @@ async def generate_token(
     }
 
 @api_router.post("/tokens/validate/{token_code}")
-async def validate_token(token_code: str, gym_id: str):
+async def validate_token(token_code: str, request: Request, gym_id: str):
+    # Get client information for audit
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    device_info = request.headers.get("user-agent", "unknown")
+    
+    # Find token in database
     token_doc = await db.token_usage.find_one({"token_code": token_code})
     
     if not token_doc:
+        # Log failed validation attempt
+        audit_log = token_manager.create_audit_log(
+            action="validation_failed",
+            token_id="unknown",
+            user_id="unknown",
+            gym_id=gym_id,
+            success=False,
+            failure_reason="Token não encontrado",
+            device_info=device_info,
+            ip_address=client_ip
+        )
+        await db.token_audit_logs.insert_one(audit_log.dict())
+        
         raise HTTPException(status_code=404, detail="Token não encontrado")
     
-    if token_doc["is_used"]:
-        raise HTTPException(status_code=400, detail="Token já foi utilizado")
-    
-    expires_at = token_doc["expires_at"]
-    if isinstance(expires_at, str):
-        expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
-    elif expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    
-    if datetime.now(timezone.utc) > expires_at:
-        raise HTTPException(status_code=400, detail="Token expirado")
-    
-    # Mark token as used
-    await db.token_usage.update_one(
-        {"token_code": token_code},
-        {
-            "$set": {
-                "is_used": True,
-                "used_at": datetime.now(timezone.utc),
-                "gym_id": gym_id
+    # Convert database document to AdvancedToken object
+    try:
+        # Reconstruct AdvancedToken from database document
+        from token_system import TokenLimits, TokenSecurity
+        
+        usage_limits = TokenLimits(**token_doc["usage_limits"])
+        security = TokenSecurity(**token_doc["security"])
+        
+        advanced_token = AdvancedToken(
+            token_id=token_doc["token_id"],
+            token_code=token_doc["token_code"],
+            hash_unique=token_doc["hash_unique"],
+            gym_id=token_doc["gym_id"],
+            user_id=str(token_doc["user_id"]),
+            issued_at=token_doc["issued_at"],
+            expires_at=token_doc["expires_at"],
+            status=token_doc["status"],
+            access_type=token_doc["access_type"],
+            usage_limits=usage_limits,
+            security=security,
+            metadata=token_doc["metadata"],
+            created_by=str(token_doc["user_id"]),
+            last_validated_at=token_doc.get("last_validated_at"),
+            validation_count=token_doc.get("validation_count", 0)
+        )
+        
+        # Validate token security
+        validation_result = token_manager.validate_token_security(advanced_token)
+        
+        if not validation_result["valid"]:
+            # Log failed validation
+            audit_log = token_manager.create_audit_log(
+                action="validation_failed",
+                token_id=advanced_token.token_id,
+                user_id=advanced_token.user_id,
+                gym_id=gym_id,
+                success=False,
+                failure_reason="; ".join(validation_result["errors"]),
+                device_info=device_info,
+                ip_address=client_ip
+            )
+            await db.token_audit_logs.insert_one(audit_log.dict())
+            
+            error_message = "Token inválido: " + "; ".join(validation_result["errors"])
+            raise HTTPException(status_code=400, detail=error_message)
+        
+        # Update usage statistics
+        advanced_token = token_manager.update_usage_statistics(advanced_token)
+        
+        # Update token in database
+        await db.token_usage.update_one(
+            {"token_code": token_code},
+            {
+                "$set": {
+                    "is_used": True,
+                    "used_at": datetime.now(timezone.utc),
+                    "gym_id": gym_id,
+                    "last_validated_at": advanced_token.last_validated_at,
+                    "validation_count": advanced_token.validation_count,
+                    "usage_limits": advanced_token.usage_limits.dict(),
+                    "status": "used"
+                }
+            }
+        )
+        
+        # Update user statistics
+        await db.users.update_one(
+            {"_id": ObjectId(advanced_token.user_id)},
+            {
+                "$inc": {
+                    "tokens_used": 1,
+                    "gyms_visited": 1 if token_doc["token_type"] == "gym" else 0
+                }
+            }
+        )
+        
+        # Get user info for response
+        user_doc = await db.users.find_one({"_id": ObjectId(advanced_token.user_id)})
+        
+        # Log successful validation
+        audit_log = token_manager.create_audit_log(
+            action="validated",
+            token_id=advanced_token.token_id,
+            user_id=advanced_token.user_id,
+            gym_id=gym_id,
+            success=True,
+            device_info=device_info,
+            ip_address=client_ip
+        )
+        await db.token_audit_logs.insert_one(audit_log.dict())
+        
+        return {
+            "valid": True,
+            "token_info": {
+                "token_id": advanced_token.token_id,
+                "token_code": advanced_token.token_code,
+                "access_type": advanced_token.access_type,
+                "validation_count": advanced_token.validation_count,
+                "security_score": validation_result["security_score"],
+                "usage_limits": advanced_token.usage_limits.dict()
+            },
+            "user": {
+                "full_name": user_doc["full_name"],
+                "plan_type": user_doc["plan_type"],
+                "email": user_doc["email"]
+            },
+            "validation": {
+                "validated_at": datetime.now(timezone.utc),
+                "gym_id": gym_id,
+                "client_ip": client_ip,
+                "security_warnings": validation_result.get("warnings", [])
             }
         }
-    )
-    
-    # Update user statistics
-    await db.users.update_one(
-        {"_id": ObjectId(token_doc["user_id"])},
-        {
-            "$inc": {
-                "tokens_used": 1,
-                "gyms_visited": 1 if token_doc["token_type"] == "gym" else 0
-            }
-        }
-    )
-    
-    # Get user info
-    user_doc = await db.users.find_one({"_id": ObjectId(token_doc["user_id"])})
-    
-    return {
-        "valid": True,
-        "user": {
-            "full_name": user_doc["full_name"],
-            "plan_type": user_doc["plan_type"],
-            "email": user_doc["email"]
-        },
-        "token_type": token_doc["token_type"],
-        "used_at": datetime.now(timezone.utc),
-        "gym_id": gym_id
-    }
+        
+    except Exception as e:
+        # Log system error
+        audit_log = token_manager.create_audit_log(
+            action="validation_error",
+            token_id=token_doc.get("token_id", "unknown"),
+            user_id=str(token_doc.get("user_id", "unknown")),
+            gym_id=gym_id,
+            success=False,
+            failure_reason=f"Erro do sistema: {str(e)}",
+            device_info=device_info,
+            ip_address=client_ip
+        )
+        await db.token_audit_logs.insert_one(audit_log.dict())
+        
+        raise HTTPException(status_code=500, detail="Erro interno do sistema na validação")
 
 # Gym routes
 @api_router.get("/gyms", response_model=List[Gym])
