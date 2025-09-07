@@ -196,7 +196,12 @@ class TokenSystemManager:
         
         # Verificar expiração
         now = datetime.now(timezone.utc)
-        if now > token.expires_at:
+        # Ensure expires_at has timezone info
+        expires_at = token.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        
+        if now > expires_at:
             validation_result["valid"] = False
             validation_result["errors"].append("Token expirado")
             validation_result["security_score"] -= 50
