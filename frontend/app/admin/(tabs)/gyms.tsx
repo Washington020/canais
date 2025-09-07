@@ -1066,7 +1066,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   activeTabText: {
-    color: '#F59E0B',
   },
   testButton: {
     backgroundColor: '#8B5CF6',
@@ -1082,7 +1081,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-    color: '#F59E0B',
   scrollView: {
     flex: 1,
   },
