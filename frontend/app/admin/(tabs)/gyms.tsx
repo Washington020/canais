@@ -234,6 +234,90 @@ export default function AdminGyms() {
     }
   };
 
+
+  const createTestGym = async () => {
+    Alert.alert(
+      'Criar Academia de Teste',
+      'Deseja criar uma academia de teste com todos os dados preenchidos automaticamente?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Criar',
+          onPress: async () => {
+            setRegisterLoading(true);
+            try {
+              const token = await AsyncStorage.getItem('token');
+              if (!token) return;
+
+              // Dados de teste completos
+              const testGymData = {
+                name: 'SmartFit Luxe Forma - Unidade Teste',
+                cnpj: '12.345.678/0001-90',
+                razao_social: 'SmartFit Luxe Forma Academias Ltda',
+                endereco: 'Rua Augusta',
+                numero: '1234',
+                complemento: 'Sala 101',
+                bairro: 'Consolação',
+                cidade: 'São Paulo',
+                estado: 'SP',
+                cep: '01305-100',
+                site: 'https://smartfit-luxeforma.com.br',
+                email: 'contato@smartfit-luxeforma.com.br',
+                telefone_principal: '(11) 3456-7890',
+                telefone_secundario: '(11) 99876-5432',
+                horario_funcionamento: '24 horas - Seg a Dom',
+                tipo_academia: 'Premium',
+                franquia: 'SmartFit',
+                num_unidades: '1',
+                responsavel_nome: 'João Silva Santos',
+                responsavel_cargo: 'Gerente Geral',
+                responsavel_email: 'joao.santos@smartfit-luxeforma.com.br',
+                responsavel_telefone: '(11) 98765-4321',
+                modelo_negocio: 'Mensal/Anual',
+                inscricao_estadual: '123.456.789.012',
+                alvara_funcionamento: 'ALV-2024-SP-001234',
+                documento_responsavel: '123.456.789-00',
+                recursos_oferecidos: 'Musculação, Cardio, Aulas Coletivas, Personal Trainer, Natação, Sauna, Vestiários Premium',
+                politicas_cancelamento: 'Cancelamento com 30 dias de antecedência. Sem multa após 12 meses.',
+                observacoes_qualidade: 'Academia premium com equipamentos de última geração, ambiente climatizado e profissionais altamente qualificados.'
+              };
+
+              const headers = { Authorization: `Bearer ${token}` };
+              const response = await axios.post(`${API_URL}/api/admin/gyms/register`, testGymData, { headers });
+
+              // Mostrar credenciais geradas
+              Alert.alert(
+                'Academia de Teste Criada! 🎉',
+                `Academia de teste cadastrada com sucesso!\n\n🏢 Nome: ${testGymData.name}\n\n🔐 CREDENCIAIS GERADAS:\n\n👤 Login: ${response.data.login}\n🔑 Senha: ${response.data.password}\n\n📧 Email: ${testGymData.email}\n📱 Telefone: ${testGymData.telefone_principal}\n\n✅ Status: Aprovado automaticamente\n\n💡 Use essas credenciais para testar o Sistema da Academia!`,
+                [
+                  {
+                    text: 'Copiar Credenciais',
+                    onPress: () => {
+                      // Simulação de copiar para clipboard
+                      Alert.alert(
+                        'Credenciais Copiadas! 📋',
+                        `Login: ${response.data.login}\nSenha: ${response.data.password}\n\nAgora você pode usar essas credenciais no Sistema da Academia para testar!`
+                      );
+                    }
+                  },
+                  { text: 'OK' }
+                ]
+              );
+
+              // Recarregar lista de academias
+              loadGyms();
+
+            } catch (error: any) {
+              console.error('Error creating test gym:', error);
+              Alert.alert('Erro', error.response?.data?.detail || 'Erro ao criar academia de teste');
+            } finally {
+              setRegisterLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
   const updateGymStatus = async (gymId: string, status: string) => {
     try {
       const token = await AsyncStorage.getItem('token');
