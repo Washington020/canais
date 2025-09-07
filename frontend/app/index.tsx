@@ -52,9 +52,13 @@ export default function Index() {
           {/* Logo and Brand */}
           <View style={styles.logoContainer}>
             <View style={styles.logo}>
-              <Text style={styles.logoText}>💪</Text>
+              <Image 
+                source={{ uri: 'https://customer-assets.emergentagent.com/job_fitness-token-app/artifacts/8gnzidak_IMG_0187.png' }}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
-            <Text style={styles.brandName}>Luxe Forma</Text>
+            <Text style={styles.brandName}>LuxePass</Text>
             <Text style={styles.tagline}>Seu passaporte para o fitness</Text>
           </View>
 
