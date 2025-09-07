@@ -134,7 +134,7 @@ export default function AdminDashboard() {
             </View>
             <View>
               <Text style={styles.welcomeText}>Painel Administrativo</Text>
-              <Text style={styles.adminRole}>FitPass Brasil</Text>
+              <Text style={styles.adminRole}>Luxe Forma</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
