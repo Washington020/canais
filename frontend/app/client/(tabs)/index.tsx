@@ -517,6 +517,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
   },
+  backButton: {
+    padding: 8,
+  },
   settingsButton: {
     padding: 8,
   },
