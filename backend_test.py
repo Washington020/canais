@@ -960,6 +960,12 @@ class FitPassTester:
         elif response and response.status_code == 401:
             # Credentials invalid - gym might not exist, let's try to find or create one
             print("   Provided credentials invalid. Checking if gym exists or needs to be created...")
+            error_detail = ""
+            try:
+                error_detail = response.json().get("detail", response.text)
+            except:
+                error_detail = response.text
+            print(f"   Error: {error_detail}")
             
             # First, let's check existing gyms
             print("\n2️⃣ Checking existing gyms...")
