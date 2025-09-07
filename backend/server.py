@@ -263,10 +263,10 @@ async def login(user_credentials: UserLogin):
     user_doc = await db.users.find_one({"email": user_credentials.email})
     
     # Create demo admin user if doesn't exist
-    if not user_doc and user_credentials.email == "admin@fitpass.com":
+    if not user_doc and user_credentials.email == "admin@luxepass.com":
         admin_user = {
-            "email": "admin@fitpass.com",
-            "full_name": "Administrador FitPass",
+            "email": "admin@luxepass.com",
+            "full_name": "Administrador Luxe Forma",
             "phone": "+5511000000000",
             "hashed_password": get_password_hash("admin123"),
             "plan_type": "admin",
@@ -277,6 +277,23 @@ async def login(user_credentials: UserLogin):
             "role": "admin"
         }
         result = await db.users.insert_one(admin_user)
+        user_doc = await db.users.find_one({"_id": result.inserted_id})
+    
+    # Create demo client user if doesn't exist
+    if not user_doc and user_credentials.email == "cliente@luxepass.com":
+        client_user = {
+            "email": "cliente@luxepass.com",
+            "full_name": "Cliente Premium",
+            "phone": "+5511999999999",
+            "hashed_password": get_password_hash("cliente123"),
+            "plan_type": "premium",
+            "is_active": True,
+            "created_at": datetime.now(timezone.utc),
+            "tokens_available": 46,
+            "tokens_used": 4,
+            "role": "client"
+        }
+        result = await db.users.insert_one(client_user)
         user_doc = await db.users.find_one({"_id": result.inserted_id})
     
     if not user_doc or not verify_password(user_credentials.password, user_doc["hashed_password"]):
