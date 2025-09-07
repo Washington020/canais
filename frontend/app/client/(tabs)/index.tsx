@@ -181,7 +181,8 @@ export default function Dashboard() {
               </View>
             </View>
           </View>
-          <TouchableOpacity style={styles.settingsButton} 
+          <TouchableOpacity
+            style={styles.settingsButton} 
             onPress={() => setShowSettingsModal(true)}>
             <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
           </TouchableOpacity>
