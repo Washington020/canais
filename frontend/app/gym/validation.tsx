@@ -66,21 +66,20 @@ export default function GymValidation() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Clear all stored data
-              await AsyncStorage.removeItem('token');
-              await AsyncStorage.removeItem('gymToken');
-              await AsyncStorage.removeItem('gymId');
-              await AsyncStorage.clear(); // Clear all AsyncStorage data
+              console.log('🔄 Iniciando logout do sistema academia...');
               
-              // Navigate back to main screen
+              // Limpar TODOS os dados do AsyncStorage
+              await AsyncStorage.clear();
+              
+              // Confirmar limpeza
+              console.log('✅ AsyncStorage limpo');
+              
+              // Navegar para página inicial IMEDIATAMENTE
               router.replace('/');
+              console.log('✅ Redirecionado para página inicial');
               
-              // Show success message
-              setTimeout(() => {
-                Alert.alert('Sucesso', 'Logout do sistema da academia realizado com sucesso!');
-              }, 500);
             } catch (error) {
-              console.error('Logout error:', error);
+              console.error('❌ Erro no logout da academia:', error);
               Alert.alert('Erro', 'Erro ao fazer logout. Tente novamente.');
             }
           }
