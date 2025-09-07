@@ -426,7 +426,7 @@ export default function AdminGyms() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Gestão de Academias</Text>
-        <Text style={styles.subtitle}>Cadastre e gerencie parcerias</Text>
+        <Text style={styles.subtitle}>VERSÃO ATUALIZADA - Cadastre e gerencie parcerias</Text>
       </View>
 
       {/* Tabs */}
