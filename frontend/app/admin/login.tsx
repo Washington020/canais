@@ -80,9 +80,13 @@ export default function AdminLogin() {
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <View style={styles.logo}>
-              <Text style={styles.logoText}>⚙️</Text>
+              <Image 
+                source={{ uri: 'https://customer-assets.emergentagent.com/job_fitness-token-app/artifacts/8gnzidak_IMG_0187.png' }}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
-            <Text style={styles.title}>Admin Luxe Forma</Text>
+            <Text style={styles.title}>Admin LuxePass</Text>
             <Text style={styles.subtitle}>Painel de Administração</Text>
           </View>
 
