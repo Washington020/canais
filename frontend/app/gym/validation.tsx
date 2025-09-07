@@ -48,6 +48,40 @@ export default function GymValidation() {
   });
   const router = useRouter();
 
+  const handleLogout = async () => {
+    Alert.alert(
+      'Sair do Sistema',
+      'Tem certeza que deseja sair do sistema da academia?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear all stored data
+              await AsyncStorage.removeItem('token');
+              await AsyncStorage.removeItem('gymToken');
+              await AsyncStorage.removeItem('gymId');
+              await AsyncStorage.clear(); // Clear all AsyncStorage data
+              
+              // Navigate back to main screen
+              router.replace('/');
+              
+              // Show success message
+              setTimeout(() => {
+                Alert.alert('Sucesso', 'Logout do sistema da academia realizado com sucesso!');
+              }, 500);
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Erro', 'Erro ao fazer logout. Tente novamente.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   useEffect(() => {
     // Load initial active users
     const mockActiveUsers: ActiveUser[] = [
