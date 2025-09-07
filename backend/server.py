@@ -1260,7 +1260,7 @@ async def checkin_nutritionist(nutritionist_id: str, current_user: User = Depend
 async def get_checkin_history(current_user: User = Depends(get_current_user)):
     """Histórico de check-ins do usuário"""
     try:
-        user_id = str(current_user["_id"])
+        user_id = str(current_user.id)
         
         # Buscar check-ins do usuário
         checkins = await db.checkins.find(
