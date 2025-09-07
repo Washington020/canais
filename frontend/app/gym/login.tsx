@@ -35,30 +35,12 @@ export default function GymLogin() {
 
     setLoading(true);
     try {
-      console.log('🔄 Iniciando login com:', { login, apiUrl: API_URL });
-      
       const response = await axios.post(`${API_URL}/api/gym/auth`, {
         login,
         password
       });
 
-      console.log('✅ Resposta recebida:', response.data);
-      console.log('📊 Status:', response.status);
-      console.log('🏗️ Estrutura da resposta:', Object.keys(response.data));
-
       const { access_token, gym_info } = response.data;
-      
-      console.log('🎫 Access token:', access_token ? 'Recebido' : 'Não recebido');
-      console.log('🏢 Gym info:', gym_info);
-      console.log('📝 Gym info keys:', gym_info ? Object.keys(gym_info) : 'Gym info é undefined');
-      
-      if (!gym_info) {
-        throw new Error('gym_info não encontrado na resposta');
-      }
-      
-      if (!gym_info.name) {
-        throw new Error('gym_info.name não encontrado na resposta');
-      }
       
       // Store gym token and info
       await AsyncStorage.setItem('gymToken', access_token);
