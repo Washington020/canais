@@ -28,6 +28,11 @@ export default function ClientLogin() {
   const router = useRouter();
 
   const handleLogin = async () => {
+    console.log('🔄 handleLogin chamado!');
+    console.log('📧 Email:', email);
+    console.log('🔐 Password:', password ? 'Preenchido' : 'Vazio');
+    console.log('🌐 API_URL:', API_URL);
+    
     if (!email || !password) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos');
       return;
@@ -35,16 +40,22 @@ export default function ClientLogin() {
 
     setLoading(true);
     try {
+      console.log('📡 Fazendo requisição para:', `${API_URL}/api/auth/login`);
+      
       const response = await axios.post(`${API_URL}/api/auth/login`, {
         email,
         password
       });
 
+      console.log('✅ Resposta recebida:', response.data);
+      
       const { access_token } = response.data;
       
       // Store token and user type
       await AsyncStorage.setItem('token', access_token);
       await AsyncStorage.setItem('userType', 'client');
+      
+      console.log('🎯 Redirecionando para client dashboard...');
       
       // Navigate to client dashboard
       router.replace('/client/(tabs)');
