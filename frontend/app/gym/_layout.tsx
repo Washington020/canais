@@ -9,6 +9,7 @@ export default function GymLayout() {
         contentStyle: { backgroundColor: '#0B0D17' },
       }}
     >
+      <Stack.Screen name="login" />
       <Stack.Screen name="validation" />
       <Stack.Screen name="dashboard" />
     </Stack>
