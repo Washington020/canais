@@ -226,6 +226,19 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     del user_doc["_id"]
     return User(**user_doc)
 
+@app.get("/")
+async def root():
+    return {"message": "Luxe Forma API - Sistema funcionando perfeitamente!", "status": "active"}
+
+@api_router.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "message": "Luxe Forma API está funcionando",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "version": "1.0.0"
+    }
+
 # Authentication routes
 @api_router.post("/auth/register", response_model=User)
 async def register(user: UserCreate):
