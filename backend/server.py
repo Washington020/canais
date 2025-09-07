@@ -1292,7 +1292,7 @@ async def generate_simple_token(
 ):
     """Gera token simples manual (sem check-in)"""
     try:
-        user_id = str(current_user["_id"])
+        user_id = str(current_user.id)
         
         # Gerar token simples
         token_manager = TokenSystemManager()
