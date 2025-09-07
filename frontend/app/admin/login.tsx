@@ -132,7 +132,7 @@ export default function AdminLogin() {
             <Text style={styles.demoTitle}>🔑 Credenciais de Administrador</Text>
             <View style={styles.demoItem}>
               <Text style={styles.demoLabel}>Email:</Text>
-              <Text style={styles.demoValue}>admin@fitpass.com</Text>
+              <Text style={styles.demoValue}>admin@luxepass.com</Text>
             </View>
             <View style={styles.demoItem}>
               <Text style={styles.demoLabel}>Senha:</Text>
