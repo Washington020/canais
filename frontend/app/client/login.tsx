@@ -131,7 +131,10 @@ export default function ClientLogin() {
 
             <TouchableOpacity 
               style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
+              onPress={() => {
+                console.log('🔥 BOTÃO CLICADO - TESTE INICIAL');
+                handleLogin();
+              }}
               disabled={loading}
             >
               {loading ? (
