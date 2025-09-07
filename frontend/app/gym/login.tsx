@@ -103,9 +103,13 @@ export default function GymLogin() {
           {/* Logo and Title */}
           <View style={styles.logoContainer}>
             <View style={styles.logo}>
-              <Text style={styles.logoEmoji}>🏋️</Text>
+              <Image 
+                source={{ uri: 'https://customer-assets.emergentagent.com/job_fitness-token-app/artifacts/8gnzidak_IMG_0187.png' }}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
-            <Text style={styles.title}>Acesso Academia</Text>
+            <Text style={styles.title}>Acesso LuxePass</Text>
             <Text style={styles.subtitle}>Sistema de Validação de Tokens</Text>
           </View>
 
