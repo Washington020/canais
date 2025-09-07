@@ -142,7 +142,7 @@ export default function AdminDashboard() {
           </View>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <View style={styles.logoutButtonContent}>
-              <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+              <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
               <Text style={styles.logoutButtonText}>Sair</Text>
             </View>
           </TouchableOpacity>
