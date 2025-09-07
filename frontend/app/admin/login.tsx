@@ -22,7 +22,7 @@ import Constants from 'expo-constants';
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState('admin@fitpass.com');
+  const [email, setEmail] = useState('admin@luxepass.com');
   const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
