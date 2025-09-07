@@ -91,45 +91,6 @@ export default function AdminDashboard() {
     loadDashboard();
   };
 
-
-  const handleLogout = async () => {
-    console.log('🔥 ADMIN LOGOUT CLICADO - FUNÇÃO EXECUTANDO');
-    
-    Alert.alert(
-      'Sair do Painel',
-      'Tem certeza que deseja sair do painel administrativo?',
-      [
-        { 
-          text: 'Cancelar', 
-          style: 'cancel',
-          onPress: () => console.log('❌ Admin logout cancelado')
-        },
-        {
-          text: 'SAIR AGORA',
-          style: 'destructive',
-          onPress: async () => {
-            console.log('🚀 EXECUTANDO ADMIN LOGOUT DEFINITIVO');
-            
-            try {
-              // Limpar storage
-              await AsyncStorage.clear();
-              console.log('✅ Admin AsyncStorage limpo');
-              
-              // Navegar para tela inicial
-              router.replace('/');
-              console.log('✅ Admin navegação executada');
-              
-            } catch (error) {
-              console.error('❌ Erro no admin logout:', error);
-              // Força navegação mesmo com erro
-              router.replace('/');
-            }
-          }
-        }
-      ]
-    );
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
