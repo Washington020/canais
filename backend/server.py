@@ -1149,6 +1149,184 @@ async def get_admin_token_stats():
         "usage_rate": round(usage_rate, 2)
     }
 
+# Check-in and Simple Token Routes
+@api_router.post("/checkin/gym/{gym_id}")
+async def checkin_gym(gym_id: str, current_user: dict = Depends(get_current_user)):
+    """Check-in na academia com geração automática de token"""
+    try:
+        user_id = str(current_user["_id"])
+        
+        # Verificar se a academia existe
+        gym = await db.gyms.find_one({"_id": ObjectId(gym_id)})
+        if not gym:
+            raise HTTPException(404, "Academia não encontrada")
+        
+        # Gerar token simples para academia
+        token_manager = TokenSystemManager()
+        token_data = token_manager.generate_checkin_token(
+            user_id=user_id,
+            location_id=gym_id,
+            token_type="gym"
+        )
+        
+        # Salvar check-in no banco
+        checkin_data = {
+            "user_id": user_id,
+            "gym_id": gym_id,
+            "gym_name": gym.get("name", "Academia"),
+            "checkin_time": datetime.now(timezone.utc),
+            "token_code": token_data["token_code"],
+            "token_id": token_data["token_id"],
+            "status": "checked_in"
+        }
+        
+        await db.checkins.insert_one(checkin_data)
+        
+        # Salvar token na coleção de tokens
+        await db.tokens.insert_one({
+            **token_data,
+            "created_at": datetime.now(timezone.utc),
+            "location_name": gym.get("name", "Academia")
+        })
+        
+        return {
+            "success": True,
+            "message": f"Check-in realizado na {gym.get('name', 'Academia')}!",
+            "token_code": token_data["token_code"],
+            "checkin_time": checkin_data["checkin_time"],
+            "expires_at": token_data["expires_at"],
+            "gym_name": gym.get("name", "Academia")
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro no check-in: {e}")
+        raise HTTPException(500, "Erro interno no check-in")
+
+@api_router.post("/checkin/nutritionist/{nutritionist_id}")
+async def checkin_nutritionist(nutritionist_id: str, current_user: dict = Depends(get_current_user)):
+    """Check-in com nutricionista com geração automática de token"""
+    try:
+        user_id = str(current_user["_id"])
+        
+        # Para demonstração, criar dados de nutricionista
+        nutritionist_data = {
+            "name": "Dra. Carla Nutricionista",
+            "speciality": "Nutrição Esportiva",
+            "clinic": "Clínica Luxe Forma"
+        }
+        
+        # Gerar token simples para nutricionista
+        token_manager = TokenSystemManager()
+        token_data = token_manager.generate_checkin_token(
+            user_id=user_id,
+            location_id=nutritionist_id,
+            token_type="nutritionist"
+        )
+        
+        # Salvar check-in no banco
+        checkin_data = {
+            "user_id": user_id,
+            "nutritionist_id": nutritionist_id,
+            "nutritionist_name": nutritionist_data["name"],
+            "checkin_time": datetime.now(timezone.utc),
+            "token_code": token_data["token_code"],
+            "token_id": token_data["token_id"],
+            "status": "checked_in"
+        }
+        
+        await db.checkins.insert_one(checkin_data)
+        
+        # Salvar token na coleção de tokens
+        await db.tokens.insert_one({
+            **token_data,
+            "created_at": datetime.now(timezone.utc),
+            "location_name": nutritionist_data["name"]
+        })
+        
+        return {
+            "success": True,
+            "message": f"Check-in realizado com {nutritionist_data['name']}!",
+            "token_code": token_data["token_code"],
+            "checkin_time": checkin_data["checkin_time"],
+            "expires_at": token_data["expires_at"],
+            "nutritionist_name": nutritionist_data["name"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro no check-in: {e}")
+        raise HTTPException(500, "Erro interno no check-in")
+
+@api_router.get("/checkins/history")
+async def get_checkin_history(current_user: dict = Depends(get_current_user)):
+    """Histórico de check-ins do usuário"""
+    try:
+        user_id = str(current_user["_id"])
+        
+        # Buscar check-ins do usuário
+        checkins = await db.checkins.find(
+            {"user_id": user_id}
+        ).sort("checkin_time", -1).limit(20).to_list(20)
+        
+        # Formatar dados para resposta
+        history = []
+        for checkin in checkins:
+            history.append({
+                "id": str(checkin["_id"]),
+                "type": "gym" if "gym_id" in checkin else "nutritionist",
+                "location_name": checkin.get("gym_name") or checkin.get("nutritionist_name"),
+                "checkin_time": checkin["checkin_time"],
+                "token_code": checkin["token_code"],
+                "status": checkin["status"]
+            })
+        
+        return {"history": history}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar histórico: {e}")
+        raise HTTPException(500, "Erro ao buscar histórico")
+
+@api_router.post("/tokens/generate-simple")
+async def generate_simple_token(
+    token_type: str = "gym", 
+    current_user: dict = Depends(get_current_user)
+):
+    """Gera token simples manual (sem check-in)"""
+    try:
+        user_id = str(current_user["_id"])
+        
+        # Gerar token simples
+        token_manager = TokenSystemManager()
+        simple_code = token_manager.generate_simple_token_code(token_type)
+        
+        # Criar dados do token
+        token_data = {
+            "token_id": str(uuid.uuid4()),
+            "token_code": simple_code,
+            "user_id": user_id,
+            "token_type": token_type,
+            "created_at": datetime.now(timezone.utc),
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=24),
+            "status": "active",
+            "created_by_checkin": False,
+            "usage_count": 0,
+            "max_usage": 3
+        }
+        
+        # Salvar no banco
+        await db.tokens.insert_one(token_data)
+        
+        return {
+            "success": True,
+            "token_code": simple_code,
+            "token_type": token_type,
+            "expires_at": token_data["expires_at"],
+            "message": f"Token {token_type} gerado com sucesso!"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao gerar token: {e}")
+        raise HTTPException(500, "Erro ao gerar token")
+
 @api_router.get("/admin/tokens")
 async def get_admin_tokens():
     # Get tokens with user information
