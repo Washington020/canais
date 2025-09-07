@@ -166,16 +166,24 @@ export default function GymLogin() {
             </TouchableOpacity>
           </View>
 
-          {/* Demo Credentials */}
-          <View style={styles.demoContainer}>
-            <View style={styles.demoHeader}>
-              <Ionicons name="information-circle" size={20} color="#22C55E" />
-              <Text style={styles.demoTitle}>Credenciais de Demonstração</Text>
+          {/* Instructions */}
+          <View style={styles.instructionsContainer}>
+            <View style={styles.instructionHeader}>
+              <Ionicons name="information-circle" size={20} color="#8B5CF6" />
+              <Text style={styles.instructionTitle}>Como Obter suas Credenciais</Text>
             </View>
-            <View style={styles.demoCredentials}>
-              <Text style={styles.demoText}>Login: gym_academia_teste_2039</Text>
-              <Text style={styles.demoText}>Senha: sm7zK4QN</Text>
-            </View>
+            <Text style={styles.instructionText}>
+              1. Acesse o <Text style={styles.highlightText}>App Administrador</Text> do FitPass Brasil
+            </Text>
+            <Text style={styles.instructionText}>
+              2. Vá em <Text style={styles.highlightText}>Academias</Text> → <Text style={styles.highlightText}>Gerenciar</Text>
+            </Text>
+            <Text style={styles.instructionText}>
+              3. Localize sua academia e visualize as <Text style={styles.highlightText}>credenciais geradas</Text>
+            </Text>
+            <Text style={styles.instructionText}>
+              4. Use o <Text style={styles.highlightText}>Login</Text> e <Text style={styles.highlightText}>Senha</Text> fornecidos acima
+            </Text>
           </View>
 
           {/* Help Section */}
