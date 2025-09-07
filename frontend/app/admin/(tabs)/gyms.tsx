@@ -845,6 +845,89 @@ export default function AdminGyms() {
           </ScrollView>
         </KeyboardAvoidingView>
       )}
+
+      {/* Modal de Credenciais */}
+      <Modal
+        visible={showCredentialsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCredentialsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Credenciais da Academia</Text>
+              <TouchableOpacity 
+                style={styles.modalCloseButton}
+                onPress={() => setShowCredentialsModal(false)}
+              >
+                <Ionicons name="close" size={24} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            {selectedGymCredentials && (
+              <View style={styles.modalBody}>
+                <View style={styles.gymInfoModal}>
+                  <Text style={styles.gymNameModal}>{selectedGymCredentials.gym.name}</Text>
+                  <Text style={styles.gymEmailModal}>{selectedGymCredentials.gym.email}</Text>
+                </View>
+
+                <View style={styles.credentialsContainer}>
+                  <View style={styles.credentialRow}>
+                    <View style={styles.credentialLabel}>
+                      <Ionicons name="person-circle" size={20} color="#8B5CF6" />
+                      <Text style={styles.credentialLabelText}>Login:</Text>
+                    </View>
+                    <Text style={styles.credentialValue}>{selectedGymCredentials.gym.login}</Text>
+                  </View>
+
+                  <View style={styles.credentialRow}>
+                    <View style={styles.credentialLabel}>
+                      <Ionicons name="key" size={20} color="#8B5CF6" />
+                      <Text style={styles.credentialLabelText}>Senha:</Text>
+                    </View>
+                    <Text style={styles.credentialValue}>{selectedGymCredentials.password}</Text>
+                  </View>
+
+                  {selectedGymCredentials.gym.responsavel && (
+                    <View style={styles.credentialRow}>
+                      <View style={styles.credentialLabel}>
+                        <Ionicons name="mail" size={20} color="#22C55E" />
+                        <Text style={styles.credentialLabelText}>Responsável:</Text>
+                      </View>
+                      <Text style={styles.credentialValue}>{selectedGymCredentials.gym.responsavel.nome}</Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity 
+                    style={styles.modalActionButton}
+                    onPress={() => {
+                      // Copiar credenciais para clipboard seria implementado aqui
+                      Alert.alert('Info', 'Credenciais copiadas para área de transferência');
+                    }}
+                  >
+                    <Ionicons name="copy" size={16} color="#3B82F6" />
+                    <Text style={styles.modalActionText}>Copiar</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.modalActionButton, styles.resetModalButton]}
+                    onPress={() => {
+                      setShowCredentialsModal(false);
+                      resetGymPassword(selectedGymCredentials.gym.id);
+                    }}
+                  >
+                    <Ionicons name="refresh" size={16} color="#F59E0B" />
+                    <Text style={[styles.modalActionText, { color: '#F59E0B' }]}>Resetar Senha</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
