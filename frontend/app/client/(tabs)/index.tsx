@@ -118,7 +118,35 @@ export default function Dashboard() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Navigation System */}
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <View style={styles.userInfo}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'C'}
+            </Text>
+          </View>
+          <View style={styles.userDetails}>
+            <Text style={styles.welcomeText}>Olá, {user?.full_name ? user.full_name.split(' ')[0] : 'Cliente'}!</Text>
+            <View style={styles.planBadge}>
+              <Text style={[styles.planText, { color: getPlanColor(user?.plan_type || 'basic') }]}>
+                {getPlanName(user?.plan_type || 'basic')}
+              </Text>
+            </View>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={styles.settingsButton} 
+          onPress={() => setShowSettingsModal(true)}
+          accessibilityLabel="Configurações"
+          testID="settings-button"
+        >
+          <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
 
       <ScrollView 
         style={styles.scrollView}
