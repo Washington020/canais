@@ -88,8 +88,8 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     Alert.alert(
-      'Logout',
-      'Tem certeza que deseja sair?',
+      'Sair da Conta',
+      'Tem certeza que deseja fazer logout?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -97,17 +97,26 @@ export default function Dashboard() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Clear all stored data
-              await AsyncStorage.removeItem('token');
-              await AsyncStorage.removeItem('userType');
-              await AsyncStorage.clear(); // Clear all AsyncStorage data
+              console.log('🔄 Iniciando logout do cliente...');
               
-              // Navigate back to main screen
-              router.replace('/');
+              // Limpar TODOS os dados do AsyncStorage
+              await AsyncStorage.clear();
               
-              Alert.alert('Sucesso', 'Logout realizado com sucesso!');
+              // Confirmar limpeza
+              console.log('✅ AsyncStorage limpo');
+              
+              // Fechar modal primeiro
+              setShowSettingsModal(false);
+              
+              // Aguardar um pouco para o modal fechar
+              setTimeout(() => {
+                // Navegar para página inicial
+                router.replace('/');
+                console.log('✅ Redirecionado para página inicial');
+              }, 500);
+              
             } catch (error) {
-              console.error('Logout error:', error);
+              console.error('❌ Erro no logout:', error);
               Alert.alert('Erro', 'Erro ao fazer logout. Tente novamente.');
             }
           }
