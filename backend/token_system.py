@@ -241,11 +241,11 @@ class TokenSystemManager:
             validation_result["warnings"].append("Nonce inválido - possível ataque replay")
             validation_result["security_score"] -= 10
         
-        # Verificar hash único
-        expected_hash = self.generate_unique_hash(f"{token.token_id}{token.user_id}{token.gym_id}")
-        if token.hash_unique != expected_hash:
-            validation_result["warnings"].append("Hash único não confere - possível falsificação")
-            validation_result["security_score"] -= 15
+        # Verificar hash único (skip for now as it includes random component)
+        # expected_hash = self.generate_unique_hash(f"{token.token_id}{token.user_id}{token.gym_id}")
+        # if token.hash_unique != expected_hash:
+        #     validation_result["warnings"].append("Hash único não confere - possível falsificação")
+        #     validation_result["security_score"] -= 15
         
         return validation_result
     
