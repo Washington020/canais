@@ -68,14 +68,14 @@ export default function Index() {
             
             <TouchableOpacity 
               style={[styles.appButton, styles.clientButton]}
-              onPress={() => router.push('/client/login')}
+              onPress={() => router.push('/client/plans')}
             >
               <View style={styles.buttonIcon}>
                 <Text style={styles.buttonIconText}>📱</Text>
               </View>
               <View style={styles.buttonContent}>
                 <Text style={styles.buttonTitle}>App Cliente</Text>
-                <Text style={styles.buttonSubtitle}>Acesse treinos, academias e tokens</Text>
+                <Text style={styles.buttonSubtitle}>Ver Planos</Text>
               </View>
             </TouchableOpacity>
 
