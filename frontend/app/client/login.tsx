@@ -92,7 +92,7 @@ export default function ClientLogin() {
             <View style={styles.logo}>
               <Text style={styles.logoText}>💪</Text>
             </View>
-            <Text style={styles.title}>Entrar no FitPass</Text>
+            <Text style={styles.title}>Entrar no Luxe Forma</Text>
             <Text style={styles.subtitle}>Acesse sua conta de cliente</Text>
           </View>
 
