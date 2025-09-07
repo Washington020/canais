@@ -43,9 +43,16 @@ export default function GymValidation() {
   const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
   const [gymInfo, setGymInfo] = useState({
     name: 'SmartFit Paulista',
+    cnpj: '12.345.678/0001-99',
+    address: 'Av. Paulista, 1578 - Bela Vista, São Paulo - SP',
+    phone: '(11) 3251-2525',
+    email: 'paulista@smartfit.com.br',
+    type: 'Academia Tradicional',
+    status: 'Aprovada',
     currentOccupancy: 42,
     maxCapacity: 120
   });
+  const [gymData, setGymData] = useState<any>(null);
   const router = useRouter();
 
   const handleLogout = async () => {
