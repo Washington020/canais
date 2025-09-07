@@ -313,7 +313,6 @@ export default function Dashboard() {
             </TouchableOpacity>
           </View>
         </View>
-        </View>
       </ScrollView>
 
       {/* Settings Modal */}
