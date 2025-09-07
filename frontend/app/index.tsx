@@ -90,7 +90,7 @@ export default function Index() {
 
             <TouchableOpacity 
               style={[styles.appButton, styles.gymButton]}
-              onPress={() => router.push('/gym/validation')}
+              onPress={() => router.push('/gym')}
             >
               <View style={styles.buttonIcon}>
                 <Text style={styles.buttonIconText}>🏋️</Text>
