@@ -128,6 +128,9 @@ export default function AdminDashboard() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
           <View style={styles.headerLeft}>
             <View style={styles.adminAvatar}>
               <Text style={styles.adminAvatarText}>A</Text>
