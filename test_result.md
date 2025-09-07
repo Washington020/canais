@@ -255,6 +255,102 @@ backend:
           agent: "testing"
           comment: "✅ Admin dashboard endpoint working correctly. Returns comprehensive statistics including user counts, subscriptions, gyms, and daily token usage."
 
+  - task: "Admin Gyms List API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ GET /api/admin/gyms endpoint working correctly. Retrieved 6 gyms from admin endpoint with proper formatting."
+
+  - task: "Admin Gym Registration API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ POST /api/admin/gyms/register endpoint working correctly. Successfully registered gym 'Academia Teste FitPass' with auto-generated credentials (Login: gym_academia_t_2039, Password: sm7zK4QN). Automatic credential generation system operational."
+
+  - task: "Admin Gym Status Update API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ PUT /api/admin/gyms/{gym_id}/status endpoint working correctly. Successfully updated gym status to 'approved' with proper response message."
+
+  - task: "Admin Token Statistics API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ GET /api/admin/tokens/stats endpoint working correctly. Returns comprehensive token statistics: Generated: 13, Used: 9, Usage Rate: 69.23%."
+
+  - task: "Admin Tokens List API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ GET /api/admin/tokens endpoint working correctly. Returns list of tokens with user information. Currently retrieved 0 tokens (expected as tokens may have expired)."
+
+  - task: "Admin Users List API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ GET /api/admin/users endpoint working correctly. Retrieved 7 users for financial control with proper user information including payment status and plan types."
+
+  - task: "Admin User Block API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ PUT /api/admin/users/{user_id}/block endpoint working correctly. Successfully blocked user with proper Portuguese response message."
+
+  - task: "Admin User Payment Verification API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ POST /api/admin/users/{user_id}/verify-payment endpoint working correctly. Successfully verified payment and renewed subscription with proper Portuguese response message."
+
 frontend:
   # Frontend testing not performed as per instructions
 
