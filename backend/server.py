@@ -19,6 +19,9 @@ import qrcode
 from io import BytesIO
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 
+# Import the advanced token system
+from token_system import token_manager, AdvancedToken, TokenAuditLog
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
