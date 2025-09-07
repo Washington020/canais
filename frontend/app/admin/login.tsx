@@ -81,7 +81,7 @@ export default function AdminLogin() {
             <View style={styles.logo}>
               <Text style={styles.logoText}>⚙️</Text>
             </View>
-            <Text style={styles.title}>Admin FitPass</Text>
+            <Text style={styles.title}>Admin Luxe Forma</Text>
             <Text style={styles.subtitle}>Painel de Administração</Text>
           </View>
 
