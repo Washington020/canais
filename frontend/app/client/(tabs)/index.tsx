@@ -158,42 +158,20 @@ export default function Dashboard() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
+      
+      {/* Navigation System */}
+      <NavigationSystem 
+        title="Dashboard Cliente" 
+        showBackButton={true}
+        showExitButton={true}
+      />
+
       <ScrollView 
         style={styles.scrollView}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <View style={styles.userInfo}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user?.full_name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.userDetails}>
-              <Text style={styles.welcomeText}>Olá, {user?.full_name.split(' ')[0]}!</Text>
-              <View style={styles.planBadge}>
-                <Text style={[styles.planText, { color: getPlanColor(user?.plan_type || 'basic') }]}>
-                  {getPlanName(user?.plan_type || 'basic')}
-                </Text>
-              </View>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.settingsButton} 
-            onPress={() => setShowSettingsModal(true)}
-            accessibilityLabel="Configurações"
-            testID="settings-button"
-          >
-            <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <View style={styles.statsRow}>
