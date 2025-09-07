@@ -388,10 +388,7 @@ export default function Dashboard() {
                 <Text style={styles.supportButtonText}>Central de Ajuda</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.logoutButtonModal} onPress={handleLogout}>
-                <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-                <Text style={styles.logoutButtonText}>Sair da Conta</Text>
-              </TouchableOpacity>
+
             </View>
           </View>
         </View>
