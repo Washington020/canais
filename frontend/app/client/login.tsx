@@ -28,34 +28,51 @@ export default function ClientLogin() {
   const router = useRouter();
 
   const handleLogin = async () => {
-    console.log('🔄 handleLogin chamado!');
-    console.log('📧 Email:', email);
-    console.log('🔐 Password:', password ? 'Preenchido' : 'Vazio');
-    console.log('🌐 API_URL:', API_URL);
-    
-    if (!email || !password) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos');
-      return;
-    }
-
-    setLoading(true);
     try {
-      console.log('📡 Fazendo requisição para:', `${API_URL}/api/auth/login`);
+      console.log('🔄 LOGIN INICIADO!');
       
-      const response = await axios.post(`${API_URL}/api/auth/login`, {
-        email,
-        password
-      }, {
+      // Check if we have the required data
+      if (!email || !password) {
+        console.error('❌ Credenciais faltando');
+        Alert.alert('Erro', 'Por favor, preencha todos os campos');
+        return;
+      }
+
+      console.log('📧 Email:', email);
+      console.log('🌐 API_URL:', API_URL);
+      
+      setLoading(true);
+      
+      // Make the API call with explicit configuration
+      console.log('📡 Fazendo requisição...');
+      
+      const loginData = {
+        email: email.trim(),
+        password: password
+      };
+      
+      console.log('📊 Login data:', loginData);
+      
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 10000, // 10 second timeout
+        body: JSON.stringify(loginData)
       });
 
-      console.log('✅ Resposta recebida:', response.data);
-      console.log('🔑 Access Token:', response.data.access_token);
+      console.log('📈 Response status:', response.status);
       
-      const { access_token } = response.data;
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('❌ Response not ok:', errorData);
+        throw new Error(`HTTP ${response.status}: ${errorData}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Response data:', data);
+      
+      const { access_token } = data;
       
       if (!access_token) {
         throw new Error('No access token received');
@@ -67,24 +84,21 @@ export default function ClientLogin() {
       await AsyncStorage.setItem('userType', 'client');
       console.log('✅ Token salvo com sucesso');
       
-      console.log('🎯 Redirecionando para client dashboard...');
+      console.log('🎯 Iniciando navegação...');
       
       // Navigate to client dashboard
       router.replace('/client/(tabs)');
-      console.log('🚀 Navegação iniciada');
+      console.log('🚀 Navegação chamada');
       
-    } catch (error: any) {
-      console.error('❌ Login error:', error);
-      console.error('📄 Error response:', error.response?.data);
-      console.error('🔢 Error status:', error.response?.status);
-      console.error('📊 Error headers:', error.response?.headers);
-      
+    } catch (error) {
+      console.error('❌ Login error completo:', error);
       Alert.alert(
         'Erro no Login', 
-        error.response?.data?.detail || error.message || 'Erro ao fazer login. Tente novamente.'
+        error.message || 'Erro ao fazer login. Tente novamente.'
       );
     } finally {
       setLoading(false);
+      console.log('🏁 Login process finalizado');
     }
   };
 
