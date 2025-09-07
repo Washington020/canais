@@ -123,9 +123,13 @@ export default function ClientLogin() {
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <View style={styles.logo}>
-              <Text style={styles.logoText}>💪</Text>
+              <Image 
+                source={{ uri: 'https://customer-assets.emergentagent.com/job_fitness-token-app/artifacts/8gnzidak_IMG_0187.png' }}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
-            <Text style={styles.title}>Entrar no Luxe Forma</Text>
+            <Text style={styles.title}>Entrar no LuxePass</Text>
             <Text style={styles.subtitle}>Acesse sua conta de cliente</Text>
           </View>
 
