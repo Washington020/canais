@@ -126,6 +126,29 @@ export default function AdminDashboard() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={styles.headerLeft}>
+            <View style={styles.adminAvatar}>
+              <Text style={styles.adminAvatarText}>A</Text>
+            </View>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.welcomeText}>Painel Admin</Text>
+              <Text style={styles.adminRole}>LuxePass</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <View style={styles.logoutButtonContent}>
+              <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.logoutButtonText}>Sair</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <ScrollView 
         style={styles.scrollView}
