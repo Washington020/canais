@@ -86,7 +86,7 @@ export default function Dashboard() {
     loadDashboard();
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Alert.alert(
       'Sair da Conta',
       'Tem certeza que deseja fazer logout?',
@@ -99,21 +99,21 @@ export default function Dashboard() {
             try {
               console.log('🔄 Iniciando logout do cliente...');
               
-              // Limpar TODOS os dados do AsyncStorage
-              await AsyncStorage.clear();
-              
-              // Confirmar limpeza
-              console.log('✅ AsyncStorage limpo');
-              
               // Fechar modal primeiro
               setShowSettingsModal(false);
               
-              // Aguardar um pouco para o modal fechar
-              setTimeout(() => {
-                // Navegar para página inicial
-                router.replace('/');
-                console.log('✅ Redirecionado para página inicial');
-              }, 500);
+              // Aguardar modal fechar
+              await new Promise(resolve => setTimeout(resolve, 300));
+              
+              // Limpar TODOS os dados do AsyncStorage
+              await AsyncStorage.clear();
+              
+              console.log('✅ AsyncStorage limpo');
+              
+              // Navegar para página inicial IMEDIATAMENTE
+              router.push('/');
+              
+              console.log('✅ Redirecionado para página inicial');
               
             } catch (error) {
               console.error('❌ Erro no logout:', error);
