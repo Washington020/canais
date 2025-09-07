@@ -249,6 +249,61 @@ export default function AdminGyms() {
     }
   };
 
+  const resetGymPassword = async (gymId: string) => {
+    Alert.alert(
+      'Resetar Senha',
+      'Tem certeza que deseja gerar uma nova senha para esta academia?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Resetar',
+          style: 'destructive',
+          onPress: async () => {
+            setResetPasswordLoading(true);
+            try {
+              const token = await AsyncStorage.getItem('token');
+              if (!token) return;
+
+              const headers = { Authorization: `Bearer ${token}` };
+              const response = await axios.put(`${API_URL}/api/admin/gyms/${gymId}/reset-password`, {}, { headers });
+
+              const gym = gyms.find(g => g.id === gymId);
+              if (gym) {
+                setSelectedGymCredentials({
+                  gym: gym,
+                  password: response.data.new_password
+                });
+                setShowCredentialsModal(true);
+              }
+
+              Alert.alert(
+                'Nova Senha Gerada! ✅',
+                `Nova senha criada para a academia.\n\nLogin: ${response.data.login}\nNova Senha: ${response.data.new_password}\n\nCredenciais enviadas por email.`,
+                [{ text: 'OK' }]
+              );
+            } catch (error: any) {
+              Alert.alert('Erro', error.response?.data?.detail || 'Erro ao resetar senha');
+            } finally {
+              setResetPasswordLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const showGymCredentials = (gym: Gym) => {
+    if (gym.login) {
+      setSelectedGymCredentials({
+        gym: gym,
+        password: '••••••••••' // Masked password, since we don't store plain text
+      });
+      setShowCredentialsModal(true);
+    } else {
+      Alert.alert('Info', 'Esta academia ainda não possui credenciais geradas.');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return '#F59E0B';
