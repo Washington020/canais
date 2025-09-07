@@ -22,9 +22,19 @@ const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.
 
 interface TokenData {
   token_code: string;
-  qr_code: string;
+  token_type: string;
   expires_at: string;
-  type: string;
+  created_by_checkin: boolean;
+  location_name?: string;
+}
+
+interface CheckinHistory {
+  id: string;
+  type: 'gym' | 'nutritionist';
+  location_name: string;
+  checkin_time: string;
+  token_code: string;
+  status: string;
 }
 
 export default function Tokens() {
@@ -32,6 +42,7 @@ export default function Tokens() {
   const [refreshing, setRefreshing] = useState(false);
   const [currentToken, setCurrentToken] = useState<TokenData | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [checkinHistory, setCheckinHistory] = useState<CheckinHistory[]>([]);
   const [stats, setStats] = useState({
     tokens_available: 0,
     tokens_used: 0,
@@ -40,6 +51,7 @@ export default function Tokens() {
 
   useEffect(() => {
     loadStats();
+    loadCheckinHistory();
   }, []);
 
   const loadStats = async () => {
@@ -55,7 +67,132 @@ export default function Tokens() {
     }
   };
 
-  const generateToken = async (type: string, validityHours: number = 3) => {
+  const loadCheckinHistory = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/api/checkins/history`, { headers });
+      setCheckinHistory(response.data.history || []);
+    } catch (error) {
+      console.error('Error loading checkin history:', error);
+    }
+  };
+
+  const checkinGym = async () => {
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        Alert.alert('Erro', 'Você precisa estar logado para fazer check-in');
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Para demonstração, usar ID de academia padrão
+      const gymId = "demo_gym_123";
+      
+      const response = await axios.post(
+        `${API_URL}/api/checkin/gym/${gymId}`, 
+        {}, 
+        { headers }
+      );
+
+      const result = response.data;
+      
+      Alert.alert(
+        'Check-in Realizado! 🏋️‍♂️', 
+        `${result.message}\n\n🎟️ Token: ${result.token_code}\n⏰ Válido até: ${new Date(result.expires_at).toLocaleString('pt-BR')}\n🏢 Local: ${result.gym_name}`,
+        [
+          {
+            text: 'Ver Token',
+            onPress: () => {
+              setCurrentToken({
+                token_code: result.token_code,
+                token_type: 'gym',
+                expires_at: result.expires_at,
+                created_by_checkin: true,
+                location_name: result.gym_name
+              });
+              setShowQRModal(true);
+            }
+          },
+          { text: 'OK' }
+        ]
+      );
+
+      // Refresh data
+      await loadStats();
+      await loadCheckinHistory();
+      
+    } catch (error: any) {
+      console.error('Error in gym checkin:', error);
+      const errorMessage = error.response?.data?.detail || 'Erro ao fazer check-in. Tente novamente.';
+      Alert.alert('Erro no Check-in ❌', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkinNutritionist = async () => {
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        Alert.alert('Erro', 'Você precisa estar logado para fazer check-in');
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Para demonstração, usar ID de nutricionista padrão
+      const nutritionistId = "demo_nutritionist_456";
+      
+      const response = await axios.post(
+        `${API_URL}/api/checkin/nutritionist/${nutritionistId}`, 
+        {}, 
+        { headers }
+      );
+
+      const result = response.data;
+      
+      Alert.alert(
+        'Check-in Realizado! 🍎', 
+        `${result.message}\n\n🎟️ Token: ${result.token_code}\n⏰ Válido até: ${new Date(result.expires_at).toLocaleString('pt-BR')}\n👩‍⚕️ Profissional: ${result.nutritionist_name}`,
+        [
+          {
+            text: 'Ver Token',
+            onPress: () => {
+              setCurrentToken({
+                token_code: result.token_code,
+                token_type: 'nutritionist',
+                expires_at: result.expires_at,
+                created_by_checkin: true,
+                location_name: result.nutritionist_name
+              });
+              setShowQRModal(true);
+            }
+          },
+          { text: 'OK' }
+        ]
+      );
+
+      // Refresh data
+      await loadStats();
+      await loadCheckinHistory();
+      
+    } catch (error: any) {
+      console.error('Error in nutritionist checkin:', error);
+      const errorMessage = error.response?.data?.detail || 'Erro ao fazer check-in. Tente novamente.';
+      Alert.alert('Erro no Check-in ❌', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateSimpleToken = async (type: 'gym' | 'nutritionist') => {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
@@ -66,28 +203,40 @@ export default function Tokens() {
 
       const headers = { Authorization: `Bearer ${token}` };
       const response = await axios.post(
-        `${API_URL}/api/tokens/generate?token_type=${type}&validity_hours=${validityHours}`, 
+        `${API_URL}/api/tokens/generate-simple?token_type=${type}`, 
         {}, 
         { headers }
       );
 
-      const tokenData = response.data;
-      setCurrentToken(tokenData);
-      setShowQRModal(true);
-      
-      // Refresh stats
-      await loadStats();
+      const result = response.data;
       
       Alert.alert(
         'Token Gerado! ✅', 
-        `Seu token ${type === 'gym' ? 'de academia' : 'de nutricionista'} foi gerado com sucesso!\n\nCódigo: ${tokenData.token_code}\n\nExpira em: ${validityHours} horas`,
+        `${result.message}\n\n🎟️ Código: ${result.token_code}\n📱 Tipo: ${type === 'gym' ? 'Academia' : 'Nutricionista'}\n⏰ Válido até: ${new Date(result.expires_at).toLocaleString('pt-BR')}`,
         [
-          { text: 'OK', onPress: () => console.log('Token generated:', tokenData.token_code) }
+          {
+            text: 'Ver Token',
+            onPress: () => {
+              setCurrentToken({
+                token_code: result.token_code,
+                token_type: result.token_type,
+                expires_at: result.expires_at,
+                created_by_checkin: false
+              });
+              setShowQRModal(true);
+            }
+          },
+          { text: 'OK' }
         ]
       );
+
+      // Refresh data
+      await loadStats();
+      await loadCheckinHistory();
+      
     } catch (error: any) {
       console.error('Error generating token:', error);
-      const errorMessage = error.response?.data?.detail || 'Erro ao gerar token. Verifique sua conexão e tente novamente.';
+      const errorMessage = error.response?.data?.detail || 'Erro ao gerar token. Tente novamente.';
       Alert.alert('Erro ao Gerar Token ❌', errorMessage);
     } finally {
       setLoading(false);
@@ -167,14 +316,14 @@ export default function Tokens() {
               <View style={styles.tokenHeader}>
                 <View style={styles.tokenTypeIcon}>
                   <Ionicons 
-                    name={currentToken.type === 'gym' ? 'fitness' : 'restaurant'} 
+                    name={currentToken.token_type === 'gym' ? 'fitness' : 'restaurant'} 
                     size={24} 
                     color="#FFFFFF" 
                   />
                 </View>
                 <View style={styles.tokenInfo}>
                   <Text style={styles.tokenType}>
-                    {currentToken.type === 'gym' ? 'Academia' : 'Nutricionista'}
+                    {currentToken.token_type === 'gym' ? 'Academia' : 'Nutricionista'}
                   </Text>
                   <Text style={styles.tokenExpiry}>
                     {getTimeRemaining(currentToken.expires_at)}
@@ -199,7 +348,7 @@ export default function Tokens() {
           <View style={styles.tokenTypes}>
             <TouchableOpacity 
               style={[styles.tokenTypeCard, styles.gymTokenCard]}
-              onPress={() => generateToken('gym')}
+              onPress={() => generateSimpleToken('gym')}
               disabled={loading || stats.tokens_available <= 0}
             >
               <View style={styles.tokenCardIcon}>
@@ -218,7 +367,7 @@ export default function Tokens() {
 
             <TouchableOpacity 
               style={[styles.tokenTypeCard, styles.nutritionistTokenCard]}
-              onPress={() => generateToken('nutritionist')}
+              onPress={() => generateSimpleToken('nutritionist')}
               disabled={loading || stats.tokens_available <= 0}
             >
               <View style={styles.tokenCardIcon}>
@@ -232,6 +381,51 @@ export default function Tokens() {
                 <Text style={styles.tokenFeature}>• Consulta online/presencial</Text>
                 <Text style={styles.tokenFeature}>• Plano personalizado</Text>
                 <Text style={styles.tokenFeature}>• Acompanhamento</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Check-in Section */}
+        <View style={styles.generationContainer}>
+          <Text style={styles.sectionTitle}>Check-in Direto</Text>
+          
+          <View style={styles.tokenTypes}>
+            <TouchableOpacity 
+              style={[styles.tokenTypeCard, styles.checkinCard]}
+              onPress={checkinGym}
+              disabled={loading}
+            >
+              <View style={styles.tokenCardIcon}>
+                <Ionicons name="location" size={32} color="#3B82F6" />
+              </View>
+              <Text style={styles.tokenCardTitle}>Check-in Academia</Text>
+              <Text style={styles.tokenCardDescription}>
+                Fazer check-in direto na academia e gerar token automaticamente
+              </Text>
+              <View style={styles.tokenCardFeatures}>
+                <Text style={styles.tokenFeature}>• Token gerado automaticamente</Text>
+                <Text style={styles.tokenFeature}>• Localização automática</Text>
+                <Text style={styles.tokenFeature}>• Histórico salvo</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.tokenTypeCard, styles.checkinCard]}
+              onPress={checkinNutritionist}
+              disabled={loading}
+            >
+              <View style={styles.tokenCardIcon}>
+                <Ionicons name="person" size={32} color="#8B5CF6" />
+              </View>
+              <Text style={styles.tokenCardTitle}>Check-in Nutricionista</Text>
+              <Text style={styles.tokenCardDescription}>
+                Fazer check-in com nutricionista e gerar token de consulta
+              </Text>
+              <View style={styles.tokenCardFeatures}>
+                <Text style={styles.tokenFeature}>• Consulta confirmada</Text>
+                <Text style={styles.tokenFeature}>• Profissional identificado</Text>
+                <Text style={styles.tokenFeature}>• Histórico completo</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -266,6 +460,51 @@ export default function Tokens() {
               </Text>
             </View>
           </View>
+        </View>
+
+        {/* Check-in History */}
+        <View style={styles.historyContainer}>
+          <Text style={styles.sectionTitle}>Histórico de Check-ins</Text>
+          {checkinHistory.length > 0 ? (
+            checkinHistory.map((item, index) => (
+              <View key={index} style={styles.historyItem}>
+                <View style={[
+                  styles.historyIcon,
+                  { backgroundColor: item.status === 'completed' ? '#22C55E20' : '#EF444420' }
+                ]}>
+                  <Ionicons 
+                    name={item.type === 'gym' ? 'fitness' : 'restaurant'} 
+                    size={20} 
+                    color={item.status === 'completed' ? '#22C55E' : '#EF4444'} 
+                  />
+                </View>
+                <View style={styles.historyContent}>
+                  <Text style={styles.historyTitle}>{item.location_name}</Text>
+                  <Text style={styles.historyDate}>{formatDate(item.checkin_time)}</Text>
+                  <Text style={styles.historyToken}>Token: {item.token_code}</Text>
+                </View>
+                <View style={[
+                  styles.historyStatus,
+                  { backgroundColor: item.status === 'completed' ? '#22C55E20' : '#EF444420' }
+                ]}>
+                  <Text style={[
+                    styles.historyStatusText,
+                    { color: item.status === 'completed' ? '#22C55E' : '#EF4444' }
+                  ]}>
+                    {item.status === 'completed' ? 'Concluído' : 'Pendente'}
+                  </Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyHistory}>
+              <Ionicons name="time-outline" size={48} color="#64748B" />
+              <Text style={styles.emptyHistoryText}>Nenhum check-in realizado ainda</Text>
+              <Text style={styles.emptyHistorySubtext}>
+                Faça seu primeiro check-in usando os botões acima
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Token History */}
@@ -330,16 +569,16 @@ export default function Tokens() {
             {currentToken && (
               <>
                 <View style={styles.qrContainer}>
-                  <Image 
-                    source={{ uri: `data:image/png;base64,${currentToken.qr_code}` }}
-                    style={styles.qrImage}
-                  />
+                  <View style={styles.qrPlaceholder}>
+                    <Ionicons name="qr-code" size={120} color="#8B5CF6" />
+                    <Text style={styles.qrPlaceholderText}>QR Code</Text>
+                  </View>
                 </View>
                 
                 <View style={styles.tokenDetails}>
                   <Text style={styles.tokenDetailLabel}>Tipo:</Text>
                   <Text style={styles.tokenDetailValue}>
-                    {currentToken.type === 'gym' ? 'Academia' : 'Nutricionista'}
+                    {currentToken.token_type === 'gym' ? 'Academia' : 'Nutricionista'}
                   </Text>
                   
                   <Text style={styles.tokenDetailLabel}>Código:</Text>
@@ -349,10 +588,20 @@ export default function Tokens() {
                   <Text style={styles.tokenDetailValue}>
                     {getTimeRemaining(currentToken.expires_at)}
                   </Text>
+
+                  {currentToken.created_by_checkin && currentToken.location_name && (
+                    <>
+                      <Text style={styles.tokenDetailLabel}>Local:</Text>
+                      <Text style={styles.tokenDetailValue}>{currentToken.location_name}</Text>
+                    </>
+                  )}
                 </View>
                 
                 <Text style={styles.qrInstructions}>
-                  Apresente este QR Code na recepção da academia ou para o nutricionista
+                  {currentToken.created_by_checkin 
+                    ? 'Token gerado automaticamente pelo check-in'
+                    : 'Apresente este QR Code na recepção da academia ou para o nutricionista'
+                  }
                 </Text>
               </>
             )}
@@ -364,7 +613,9 @@ export default function Tokens() {
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Gerando token...</Text>
+          <Text style={styles.loadingText}>
+            {currentToken?.created_by_checkin ? 'Fazendo check-in...' : 'Gerando token...'}
+          </Text>
         </View>
       )}
     </SafeAreaView>
@@ -495,6 +746,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(245, 158, 11, 0.3)',
   },
+  checkinCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+  },
   tokenCardIcon: {
     marginBottom: 12,
   },
@@ -569,6 +824,11 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 12,
   },
+  historyToken: {
+    color: '#8B5CF6',
+    fontSize: 11,
+    fontFamily: 'monospace',
+  },
   historyStatus: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -577,6 +837,22 @@ const styles = StyleSheet.create({
   historyStatusText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  emptyHistory: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyHistoryText: {
+    color: '#94A3B8',
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyHistorySubtext: {
+    color: '#64748B',
+    fontSize: 14,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -614,6 +890,23 @@ const styles = StyleSheet.create({
     height: 200,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
+  },
+  qrPlaceholder: {
+    width: 200,
+    height: 200,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#8B5CF6',
+    borderStyle: 'dashed',
+  },
+  qrPlaceholderText: {
+    color: '#8B5CF6',
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 8,
   },
   tokenDetails: {
     marginBottom: 16,
