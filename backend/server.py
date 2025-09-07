@@ -1151,7 +1151,7 @@ async def get_admin_token_stats():
 
 # Check-in and Simple Token Routes
 @api_router.post("/checkin/gym/{gym_id}")
-async def checkin_gym(gym_id: str, current_user: dict = Depends(get_current_user)):
+async def checkin_gym(gym_id: str, current_user: User = Depends(get_current_user)):
     """Check-in na academia com geração automática de token"""
     try:
         user_id = str(current_user["_id"])
