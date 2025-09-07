@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import time
 
 # Get backend URL from environment
-BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fitpass-ecosystem.preview.emergentagent.com')
+BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://brasil-fitness.preview.emergentagent.com')
 API_BASE = f"{BACKEND_URL}/api"
 
 class FitPassTester:
