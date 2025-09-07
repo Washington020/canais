@@ -12,12 +12,12 @@ export default function AdminTabLayout() {
         tabBarStyle: {
           backgroundColor: '#1E293B',
           borderTopColor: 'rgba(255, 255, 255, 0.1)',
-          height: 70,
-          paddingBottom: 10,
+          height: 80,
+          paddingBottom: 15,
           paddingTop: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: '600',
           marginTop: 2,
         },
@@ -29,36 +29,36 @@ export default function AdminTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="analytics" size={22} color={color} />
+            <Ionicons name="analytics" size={20} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="users"
         options={{
-          title: 'Usuários',
+          title: 'Users',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={22} color={color} />
+            <Ionicons name="people" size={20} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="gyms"
         options={{
-          title: 'Academias',
+          title: 'Gyms',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="business" size={22} color={color} />
+            <Ionicons name="business" size={20} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="financial"
         options={{
-          title: 'Financeiro',
+          title: 'Finance',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cash" size={22} color={color} />
+            <Ionicons name="cash" size={20} color={color} />
           ),
         }}
       />
@@ -67,7 +67,7 @@ export default function AdminTabLayout() {
         options={{
           title: 'Tokens',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="qr-code" size={22} color={color} />
+            <Ionicons name="qr-code" size={20} color={color} />
           ),
         }}
       />
