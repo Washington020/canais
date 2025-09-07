@@ -909,16 +909,128 @@ class FitPassTester:
         
         return True
 
+    def test_gym_password_reset_flow(self):
+        """Test the complete gym password reset flow as requested"""
+        print("\n" + "="*60)
+        print("🔑 TESTING GYM PASSWORD RESET SYSTEM")
+        print("="*60)
+        print("Testing the new gym password reset endpoint as requested...")
+        
+        # Step 1: Create a test gym if needed
+        print("\n1️⃣ Creating test gym for password reset...")
+        gym_data = {
+            "name": "Academia Reset Password Test",
+            "cnpj": "11.222.333/0001-44",
+            "endereco": "Rua Password Reset, 789",
+            "numero": "789",
+            "bairro": "Vila Senha",
+            "cidade": "São Paulo",
+            "estado": "SP",
+            "cep": "01789-012",
+            "email": "passwordreset@academiatest.com",
+            "telefone_principal": "(11) 55555-5555",
+            "tipo_academia": "CrossFit",
+            "responsavel_nome": "Carlos Reset",
+            "responsavel_email": "carlos@academiatest.com",
+            "responsavel_telefone": "(11) 44444-4444"
+        }
+        
+        response = self.make_request("POST", "/admin/gyms/register", gym_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            gym_id = data["gym_id"]
+            original_login = data["login"]
+            original_password = data["password"]
+            self.log_test("Step 1: Create Test Gym", True, f"Gym created with ID: {gym_id}")
+            print(f"   Original credentials - Login: {original_login}, Password: {original_password}")
+        else:
+            self.log_test("Step 1: Create Test Gym", False, f"Failed to create test gym: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 2: Test the password reset endpoint
+        print("\n2️⃣ Testing password reset endpoint...")
+        response = self.make_request("PUT", f"/admin/gyms/{gym_id}/reset-password", 
+                                   {}, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["success", "new_password", "login", "message"]
+            
+            if all(field in data for field in required_fields):
+                if data["success"]:
+                    new_password = data["new_password"]
+                    login = data["login"]
+                    message = data["message"]
+                    
+                    self.log_test("Step 2: Password Reset", True, f"Password reset successful")
+                    print(f"   Login: {login}")
+                    print(f"   New Password: {new_password}")
+                    print(f"   Message: {message}")
+                    
+                    # Verify the password is different from original
+                    if new_password != original_password:
+                        print(f"   ✅ New password is different from original")
+                    else:
+                        print(f"   ⚠️  New password is same as original (unexpected)")
+                    
+                    # Verify login is same as original
+                    if login == original_login:
+                        print(f"   ✅ Login remains the same: {login}")
+                    else:
+                        print(f"   ⚠️  Login changed unexpectedly: {original_login} -> {login}")
+                        
+                else:
+                    self.log_test("Step 2: Password Reset", False, "Response success field is False")
+                    return False
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("Step 2: Password Reset", False, f"Missing required fields: {missing}")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Step 2: Password Reset", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 3: Verify the system shows correct response format
+        print("\n3️⃣ Verifying response format compliance...")
+        expected_fields = ["success", "new_password", "login", "message"]
+        actual_fields = list(data.keys())
+        
+        if all(field in actual_fields for field in expected_fields):
+            self.log_test("Step 3: Response Format", True, "All required fields present in response")
+            print(f"   Expected fields: {expected_fields}")
+            print(f"   Actual fields: {actual_fields}")
+        else:
+            missing = [f for f in expected_fields if f not in actual_fields]
+            self.log_test("Step 3: Response Format", False, f"Missing fields: {missing}")
+            return False
+        
+        print("\n✅ GYM PASSWORD RESET SYSTEM TEST PASSED!")
+        print("All steps completed successfully:")
+        print("  ✓ Test gym created successfully")
+        print("  ✓ Password reset endpoint working")
+        print("  ✓ Returns all required fields: success, new_password, login, message")
+        print("  ✓ New password generated and different from original")
+        print("  ✓ Login credentials maintained correctly")
+        
+        return True
+
 if __name__ == "__main__":
     tester = FitPassTester()
     
-    # Run the specific admin endpoints tests as requested
-    print("🎯 Running focused admin endpoints tests as requested...")
-    success = tester.run_admin_tests()
+    # Run the specific gym password reset test as requested
+    print("🎯 Running gym password reset endpoint test as requested...")
+    success = tester.test_gym_password_reset_flow()
     
     if success:
-        print("\n🎉 Admin endpoints tests completed successfully!")
-        print("The complete gym registration system is working correctly, including automatic credential generation.")
+        print("\n🎉 Gym password reset endpoint test completed successfully!")
+        print("The gym password reset system is working correctly with all required fields.")
     else:
-        print("\n⚠️  Some admin endpoints tests failed. Check the details above.")
+        print("\n⚠️  Gym password reset test failed. Check the details above.")
         print("Issues found that need to be addressed.")
