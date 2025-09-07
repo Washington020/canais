@@ -87,6 +87,9 @@ export default function AdminGyms() {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'list' | 'register'>('list');
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [selectedGymCredentials, setSelectedGymCredentials] = useState<{gym: Gym, password: string} | null>(null);
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [formData, setFormData] = useState<GymRegistrationForm>({
     name: '',
     cnpj: '',
