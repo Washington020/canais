@@ -393,7 +393,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoutButton: {
-    padding: 8,
+    padding: 10,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   logoutButtonContent: {
     flexDirection: 'row',
