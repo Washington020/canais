@@ -224,15 +224,57 @@ export default function GymValidation() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <View style={styles.gymDetails}>
-            <Text style={styles.gymName}>{gymInfo.name}</Text>
-            <Text style={styles.gymSubtitle}>Sistema de Validação de Tokens</Text>
+        {/* Professional Gym Header */}
+        <View style={styles.professionalHeader}>
+          <View style={styles.gymLogoSection}>
+            <View style={styles.gymLogo}>
+              <Text style={styles.gymLogoText}>🏋️</Text>
+            </View>
+            <View style={styles.gymMainInfo}>
+              <Text style={styles.gymName}>{gymInfo.name}</Text>
+              <Text style={styles.gymType}>{gymInfo.type}</Text>
+            </View>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+            </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={24} color="#EF4444" />
-          </TouchableOpacity>
+
+          {/* Gym Details Card */}
+          <View style={styles.gymDetailsCard}>
+            <View style={styles.gymDetailsRow}>
+              <View style={styles.gymDetailItem}>
+                <Ionicons name="document-text" size={16} color="#8B5CF6" />
+                <Text style={styles.gymDetailLabel}>CNPJ:</Text>
+                <Text style={styles.gymDetailValue}>{gymInfo.cnpj}</Text>
+              </View>
+              <View style={styles.gymDetailItem}>
+                <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                <Text style={styles.gymDetailLabel}>Status:</Text>
+                <Text style={[styles.gymDetailValue, { color: '#22C55E' }]}>{gymInfo.status}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.gymDetailsRow}>
+              <View style={styles.gymDetailItem}>
+                <Ionicons name="location" size={16} color="#8B5CF6" />
+                <Text style={styles.gymDetailLabel}>Endereço:</Text>
+                <Text style={[styles.gymDetailValue, styles.addressText]}>{gymInfo.address}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.gymDetailsRow}>
+              <View style={styles.gymDetailItem}>
+                <Ionicons name="call" size={16} color="#8B5CF6" />
+                <Text style={styles.gymDetailLabel}>Telefone:</Text>
+                <Text style={styles.gymDetailValue}>{gymInfo.phone}</Text>
+              </View>
+              <View style={styles.gymDetailItem}>
+                <Ionicons name="mail" size={16} color="#8B5CF6" />
+                <Text style={styles.gymDetailLabel}>Email:</Text>
+                <Text style={styles.gymDetailValue}>{gymInfo.email}</Text>
+              </View>
+            </View>
+          </View>
         </View>
         <TouchableOpacity 
           style={styles.dashboardButton}
