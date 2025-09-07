@@ -86,47 +86,6 @@ export default function Dashboard() {
     loadDashboard();
   };
 
-  const handleLogout = async () => {
-    console.log('🔥 LOGOUT CLICADO - FUNÇÃO EXECUTANDO');
-    
-    Alert.alert(
-      'Sair da Conta',
-      'Tem certeza que deseja fazer logout?',
-      [
-        { 
-          text: 'Cancelar', 
-          style: 'cancel',
-          onPress: () => console.log('❌ Logout cancelado')
-        },
-        {
-          text: 'SAIR',
-          style: 'destructive',
-          onPress: async () => {
-            console.log('🚀 EXECUTANDO LOGOUT DEFINITIVO');
-            
-            try {
-              // Fechar modal primeiro
-              setShowSettingsModal(false);
-              
-              // Limpar storage
-              await AsyncStorage.clear();
-              console.log('✅ AsyncStorage limpo');
-              
-              // Navegar para tela inicial
-              router.replace('/');
-              console.log('✅ Navegação executada');
-              
-            } catch (error) {
-              console.error('❌ Erro no logout:', error);
-              // Força navegação mesmo com erro
-              router.replace('/');
-            }
-          }
-        }
-      ]
-    );
-  };
-
   const getPlanColor = (planType: string) => {
     switch (planType) {
       case 'premium': return '#FFD700';
