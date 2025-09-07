@@ -696,60 +696,7 @@ async def gym_authenticate(credentials: dict):
         }
     }
 
-@api_router.get("/admin/users")
-async def get_all_users(
-    skip: int = 0,
-    limit: int = 50,
-    filter_status: Optional[str] = None
-):
-    """Get all users with filtering options"""
-    query = {}
-    
-    if filter_status == "blocked":
-        query["is_blocked"] = True
-    elif filter_status == "overdue":
-        query["payment_status"] = "overdue"
-    elif filter_status == "active":
-        query["payment_status"] = "active"
-        query["is_blocked"] = False
-    
-    users_cursor = db.users.find(query).skip(skip).limit(limit)
-    users = []
-    
-    async for user_doc in users_cursor:
-        user_doc["id"] = str(user_doc["_id"])
-        del user_doc["_id"]
-        if "hashed_password" in user_doc:
-            del user_doc["hashed_password"]  # Remove password hash
-        users.append(user_doc)
-    
-    total_count = await db.users.count_documents(query)
-    
-    return {
-        "users": users,
-        "total": total_count,
-        "skip": skip,
-        "limit": limit
-    }
 
-@api_router.post("/admin/users/{user_id}/block")
-async def block_user(user_id: str, reason: str = "Inadimplência"):
-    """Block user due to payment issues"""
-    result = await db.users.update_one(
-        {"_id": ObjectId(user_id)},
-        {
-            "$set": {
-                "is_blocked": True,
-                "block_reason": reason,
-                "blocked_at": datetime.now(timezone.utc)
-            }
-        }
-    )
-    
-    if result.matched_count == 0:
-        raise HTTPException(404, "Usuário não encontrado")
-    
-    return {"message": "Usuário bloqueado com sucesso"}
 
 @api_router.post("/admin/users/{user_id}/unblock")
 async def unblock_user(user_id: str):
