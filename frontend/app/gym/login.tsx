@@ -342,6 +342,36 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
+  instructionsContainer: {
+    marginHorizontal: 24,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    marginBottom: 24,
+  },
+  instructionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  instructionTitle: {
+    color: '#8B5CF6',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  instructionText: {
+    color: '#E2E8F0',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 6,
+  },
+  highlightText: {
+    color: '#8B5CF6',
+    fontWeight: '600',
+  },
   demoContainer: {
     marginHorizontal: 24,
     backgroundColor: 'rgba(34, 197, 94, 0.1)',
