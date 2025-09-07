@@ -20,7 +20,7 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'https://fitness-token-app.preview.emergentagent.com';
 
 interface UserStats {
   total_workouts: number;
