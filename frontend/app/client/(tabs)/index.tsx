@@ -87,6 +87,40 @@ export default function Dashboard() {
     loadDashboard();
   };
 
+  const handleLogout = async () => {
+    Alert.alert(
+      'Sair da Conta',
+      'Tem certeza que deseja sair do aplicativo?',
+      [
+        { 
+          text: 'Cancelar', 
+          style: 'cancel'
+        },
+        {
+          text: 'SAIR',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Fechar modal
+              setShowSettingsModal(false);
+              
+              // Limpar storage
+              await AsyncStorage.clear();
+              
+              // Navegar para tela inicial
+              router.replace('/');
+              
+            } catch (error) {
+              console.error('Erro no logout:', error);
+              // Força navegação mesmo com erro
+              router.replace('/');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const getPlanColor = (planType: string) => {
     switch (planType) {
       case 'premium': return '#FFD700';
