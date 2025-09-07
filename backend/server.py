@@ -1257,7 +1257,7 @@ async def checkin_nutritionist(nutritionist_id: str, current_user: User = Depend
         raise HTTPException(500, "Erro interno no check-in")
 
 @api_router.get("/checkins/history")
-async def get_checkin_history(current_user: dict = Depends(get_current_user)):
+async def get_checkin_history(current_user: User = Depends(get_current_user)):
     """Histórico de check-ins do usuário"""
     try:
         user_id = str(current_user["_id"])
