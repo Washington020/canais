@@ -609,6 +609,70 @@ class FitPassTester:
             self.log_test("Admin User Payment Verification", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
             
         return False
+
+    def test_admin_gym_reset_password(self):
+        """Test PUT /api/admin/gyms/{gym_id}/reset-password - Reset gym password"""
+        print("\n=== Testing Admin Gym Password Reset ===")
+        
+        # First ensure we have a gym to test with
+        if not hasattr(self, 'registered_gym_id'):
+            # Try to register a gym first
+            print("   No gym ID available, registering a test gym first...")
+            gym_data = {
+                "name": "Academia Reset Test",
+                "cnpj": "98.765.432/0001-11",
+                "endereco": "Rua do Reset, 456",
+                "numero": "456",
+                "bairro": "Vila Reset",
+                "cidade": "São Paulo",
+                "estado": "SP",
+                "cep": "04567-890",
+                "email": "reset@academiatest.com",
+                "telefone_principal": "(11) 77777-7777",
+                "tipo_academia": "Funcional",
+                "responsavel_nome": "Maria Reset",
+                "responsavel_email": "maria@academiatest.com",
+                "responsavel_telefone": "(11) 66666-6666"
+            }
+            
+            reg_response = self.make_request("POST", "/admin/gyms/register", gym_data, auth_required=False)
+            if reg_response and reg_response.status_code == 200:
+                reg_data = reg_response.json()
+                self.registered_gym_id = reg_data["gym_id"]
+                print(f"   Test gym registered with ID: {self.registered_gym_id}")
+            else:
+                self.log_test("Admin Gym Password Reset", False, "Could not register test gym for password reset")
+                return False
+        
+        # Test the password reset endpoint
+        response = self.make_request("PUT", f"/admin/gyms/{self.registered_gym_id}/reset-password", 
+                                   {}, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["success", "new_password", "login", "message"]
+            
+            if all(field in data for field in required_fields):
+                if data["success"]:
+                    self.log_test("Admin Gym Password Reset", True, f"Password reset successful for gym: {data['login']}")
+                    print(f"   New password generated: {data['new_password']}")
+                    print(f"   Message: {data['message']}")
+                    return True
+                else:
+                    self.log_test("Admin Gym Password Reset", False, "Response success field is False")
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("Admin Gym Password Reset", False, f"Missing required fields: {missing}")
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Admin Gym Password Reset", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            
+        return False
         
     def run_all_tests(self):
         """Run all backend tests in sequence"""
