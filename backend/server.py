@@ -326,7 +326,7 @@ async def generate_token(
     gym_id: Optional[str] = None,
     access_type: str = "entry"
 ):
-    user_id = str(current_user["_id"])
+    user_id = current_user.id
     
     # Check if user is blocked
     if current_user.get("is_blocked", False):
