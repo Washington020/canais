@@ -1206,7 +1206,7 @@ async def checkin_gym(gym_id: str, current_user: User = Depends(get_current_user
 async def checkin_nutritionist(nutritionist_id: str, current_user: User = Depends(get_current_user)):
     """Check-in com nutricionista com geração automática de token"""
     try:
-        user_id = str(current_user["_id"])
+        user_id = str(current_user.id)
         
         # Para demonstração, criar dados de nutricionista
         nutritionist_data = {
