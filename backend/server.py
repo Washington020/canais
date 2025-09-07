@@ -913,6 +913,120 @@ async def financial_overview():
         "revenue_by_plan": revenue_by_plan
     }
 
+@api_router.get("/admin/users")
+async def get_admin_users():
+    users = await db.users.find({}).to_list(100)
+    result = []
+    
+    for user in users:
+        result.append({
+            "id": str(user["_id"]),
+            "full_name": user["full_name"],
+            "email": user["email"],
+            "plan_type": user["plan_type"],
+            "payment_status": user.get("payment_status", "active"),
+            "subscription_end": user.get("subscription_end", datetime.now(timezone.utc) + timedelta(days=30)),
+            "monthly_amount": user.get("monthly_amount", 89.90),
+            "is_blocked": user.get("is_blocked", False),
+            "created_at": user.get("created_at", datetime.now(timezone.utc))
+        })
+    
+    return result
+
+@api_router.put("/admin/users/{user_id}/block")
+async def block_user(user_id: str):
+    result = await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$set": {
+                "is_blocked": True,
+                "blocked_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    return {"success": True, "message": "Usuário bloqueado com sucesso"}
+
+@api_router.post("/admin/users/{user_id}/verify-payment")
+async def verify_user_payment(user_id: str):
+    result = await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$set": {
+                "payment_status": "active",
+                "subscription_end": datetime.now(timezone.utc) + timedelta(days=30),
+                "payment_verified_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    return {"success": True, "message": "Pagamento verificado e assinatura renovada"}
+
+@api_router.get("/admin/tokens/stats")
+async def get_admin_token_stats():
+    total_generated = await db.token_usage.count_documents({})
+    total_used = await db.token_usage.count_documents({"is_used": True})
+    gym_tokens = await db.token_usage.count_documents({"token_type": "gym"})
+    nutritionist_tokens = await db.token_usage.count_documents({"token_type": "nutritionist"})
+    
+    usage_rate = (total_used / total_generated * 100) if total_generated > 0 else 0
+    
+    return {
+        "total_generated": total_generated,
+        "total_used": total_used,
+        "gym_tokens": gym_tokens,
+        "nutritionist_tokens": nutritionist_tokens,
+        "usage_rate": round(usage_rate, 2)
+    }
+
+@api_router.get("/admin/tokens")
+async def get_admin_tokens():
+    # Get tokens with user information
+    pipeline = [
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "_id",
+                "as": "user"
+            }
+        },
+        {
+            "$unwind": "$user"
+        },
+        {
+            "$sort": {"created_at": -1}
+        },
+        {
+            "$limit": 100
+        }
+    ]
+    
+    tokens = await db.token_usage.aggregate(pipeline).to_list(100)
+    result = []
+    
+    for token in tokens:
+        result.append({
+            "id": str(token["_id"]),
+            "token_code": token["token_code"],
+            "user_name": token["user"]["full_name"],
+            "user_email": token["user"]["email"],
+            "token_type": token["token_type"],
+            "gym_name": token.get("gym_name"),
+            "is_used": token["is_used"],
+            "created_at": token["created_at"].isoformat(),
+            "used_at": token.get("used_at").isoformat() if token.get("used_at") else None,
+            "expires_at": token["expires_at"].isoformat()
+        })
+    
+    return result
+
 # Include the router in the main app
 app.include_router(api_router)
 
