@@ -404,7 +404,7 @@ export default function AdminGyms() {
         <Text style={styles.subtitle}>Cadastre e gerencie parcerias</Text>
       </View>
 
-      {/* Tabs */}
+      {/* Header com tabs e botão de teste */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'list' && styles.activeTab]}
@@ -422,8 +422,15 @@ export default function AdminGyms() {
             Cadastrar Nova
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.testButton}
+          onPress={createTestGym}
+          disabled={registerLoading}
+        >
+          <Ionicons name="flash" size={16} color="#FFFFFF" />
+          <Text style={styles.testButtonText}>Teste</Text>
+        </TouchableOpacity>
       </View>
-
       {activeTab === 'list' ? (
         <ScrollView 
           style={styles.scrollView}
