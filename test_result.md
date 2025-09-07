@@ -351,6 +351,18 @@ backend:
           agent: "testing"
           comment: "✅ POST /api/admin/users/{user_id}/verify-payment endpoint working correctly. Successfully verified payment and renewed subscription with proper Portuguese response message."
 
+  - task: "Admin Gym Password Reset API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ PUT /api/admin/gyms/{gym_id}/reset-password endpoint working correctly. Successfully tested complete flow: 1) Created test gym 'Academia Reset Password Test' with original credentials (gym_academia_r_6189/1Tv0HfRk), 2) Reset password endpoint generated new password (YzkY64Lk64), 3) Verified all required fields returned: success, new_password, login, message, 4) Confirmed login remains same while password changes, 5) Portuguese message 'Nova senha gerada para Academia Reset Password Test' working correctly. Complete gym credential management system operational."
+
 frontend:
   # Frontend testing not performed as per instructions
 
