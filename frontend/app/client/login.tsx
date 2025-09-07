@@ -73,9 +73,9 @@ export default function ClientLogin() {
           <View style={styles.header}>
             <TouchableOpacity 
               style={styles.backButton}
-              onPress={() => router.back()}
+              onPress={() => router.replace('/')}
             >
-              <Text style={styles.backButtonText}>←</Text>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <View style={styles.logo}>
               <Text style={styles.logoText}>💪</Text>
