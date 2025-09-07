@@ -93,7 +93,7 @@ export default function AdminLogin() {
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="admin@fitpass.com"
+                placeholder="admin@luxepass.com"
                 placeholderTextColor="#64748B"
                 keyboardType="email-address"
                 autoCapitalize="none"
