@@ -374,6 +374,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "✅ POST /api/gym/auth endpoint working correctly. Successfully tested gym authentication system with auto-generated credentials. Endpoint returns proper JWT access_token and complete gym_info with all required fields (id, name, type, status). Tested with both invalid credentials (returns proper 401 error 'Credenciais inválidas') and valid credentials (returns 200 with complete authentication data). Created test gym 'Academia Teste Autenticação FitPass' with login: gym_academia_t_5633 and verified full authentication flow. System properly validates gym status (approved) before allowing authentication. Complete gym login system operational and ready for frontend integration."
+        - working: true
+          agent: "testing"
+          comment: "✅ SPECIFIC CREDENTIALS TEST COMPLETED: Successfully tested POST /api/gym/auth with exact credentials requested (gym_academia_teste_2039/sm7zK4QN). Created gym 'Academia Teste 2039 - Credenciais Específicas' with these specific credentials. CONFIRMED: Response structure is 100% correct for frontend - returns {access_token, token_type, gym_info: {id, name, type, status}}. Frontend CAN access response.gym_info.name successfully. Verified complete response structure: access_token (167 chars JWT), gym_info.name='Academia Teste 2039 - Credenciais Específicas', all required fields present and populated. Backend is working correctly - if frontend still fails, issue is in frontend code, network/CORS, or different credentials being used."
 
 frontend:
   # Frontend testing not performed as per instructions
