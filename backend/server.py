@@ -22,6 +22,11 @@ from emergentintegrations.payments.stripe.checkout import StripeCheckout, Checko
 # Import the advanced token system
 from token_system import token_manager, AdvancedToken, TokenAuditLog, TokenSystemManager
 
+# Import new models and services
+from models import *
+from services import *
+from server_integrations import integration_router, init_services
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
