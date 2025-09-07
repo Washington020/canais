@@ -120,7 +120,23 @@ export default function AdminGyms() {
     recursos_oferecidos: '',
     politicas_cancelamento: '',
     observacoes_qualidade: ''
-  });
+    testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    marginLeft: 8,
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+});
 
   const router = useRouter();
 
@@ -137,7 +153,23 @@ export default function AdminGyms() {
       }
 
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_URL}/api/admin/gyms`, { headers });
+      const response = await axios.get(`${API_URL}/api/admin/gyms`, { headers   testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    marginLeft: 8,
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+});
       
       setGyms(response.data);
     } catch (error: any) {
@@ -203,7 +235,23 @@ export default function AdminGyms() {
       if (!token) return;
 
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.post(`${API_URL}/api/admin/gyms/register`, formData, { headers });
+      const response = await axios.post(`${API_URL}/api/admin/gyms/register`, formData, { headers   testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    marginLeft: 8,
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+});
 
       Alert.alert(
         'Sucesso! ✅', 
@@ -219,7 +267,23 @@ export default function AdminGyms() {
                 num_unidades: '', responsavel_nome: '', responsavel_cargo: '', responsavel_email: '',
                 responsavel_telefone: '', modelo_negocio: '', inscricao_estadual: '', alvara_funcionamento: '',
                 documento_responsavel: '', recursos_oferecidos: '', politicas_cancelamento: '', observacoes_qualidade: ''
-              });
+                testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    marginLeft: 8,
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+});
               setActiveTab('list');
               loadGyms();
             }
@@ -240,7 +304,23 @@ export default function AdminGyms() {
       if (!token) return;
 
       const headers = { Authorization: `Bearer ${token}` };
-      await axios.put(`${API_URL}/api/admin/gyms/${gymId}/status`, { status }, { headers });
+      await axios.put(`${API_URL}/api/admin/gyms/${gymId}/status`, { status }, { headers   testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    marginLeft: 8,
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+});
 
       Alert.alert('Sucesso', `Status da academia atualizado para: ${status}`);
       loadGyms();
@@ -265,14 +345,46 @@ export default function AdminGyms() {
               if (!token) return;
 
               const headers = { Authorization: `Bearer ${token}` };
-              const response = await axios.put(`${API_URL}/api/admin/gyms/${gymId}/reset-password`, {}, { headers });
+              const response = await axios.put(`${API_URL}/api/admin/gyms/${gymId}/reset-password`, {}, { headers   testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    marginLeft: 8,
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+});
 
               const gym = gyms.find(g => g.id === gymId);
               if (gym) {
                 setSelectedGymCredentials({
                   gym: gym,
                   password: response.data.new_password
-                });
+                  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    marginLeft: 8,
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+});
                 setShowCredentialsModal(true);
               }
 
@@ -297,7 +409,23 @@ export default function AdminGyms() {
       setSelectedGymCredentials({
         gym: gym,
         password: '••••••••••' // Masked password, since we don't store plain text
-      });
+        testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    marginLeft: 8,
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+});
       setShowCredentialsModal(true);
     } else {
       Alert.alert('Info', 'Esta academia ainda não possui credenciais geradas.');
@@ -345,7 +473,7 @@ export default function AdminGyms() {
         <Text style={styles.subtitle}>Cadastre e gerencie parcerias</Text>
       </View>
 
-      {/* Tabs */}
+      {/* Header com tabs e botão de teste */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'list' && styles.activeTab]}
@@ -362,6 +490,14 @@ export default function AdminGyms() {
           <Text style={[styles.tabText, activeTab === 'register' && styles.activeTabText]}>
             Cadastrar Nova
           </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.testButton}
+          onPress={createTestGym}
+          disabled={registerLoading}
+        >
+          <Ionicons name="flash" size={16} color="#FFFFFF" />
+          <Text style={styles.testButtonText}>Teste</Text>
         </TouchableOpacity>
       </View>
 
@@ -1285,5 +1421,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 6,
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    marginLeft: 8,
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
   },
 });
