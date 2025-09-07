@@ -44,17 +44,22 @@ class FitPassTester:
             headers["Authorization"] = f"Bearer {self.auth_token}"
             
         try:
+            print(f"Making {method} request to: {url}")
+            if data:
+                print(f"Request data: {data}")
+                
             if method.upper() == "GET":
-                response = self.session.get(url, headers=headers)
+                response = self.session.get(url, headers=headers, timeout=30)
             elif method.upper() == "POST":
-                response = self.session.post(url, json=data, headers=headers)
+                response = self.session.post(url, json=data, headers=headers, timeout=30)
             elif method.upper() == "PUT":
-                response = self.session.put(url, json=data, headers=headers)
+                response = self.session.put(url, json=data, headers=headers, timeout=30)
             elif method.upper() == "DELETE":
-                response = self.session.delete(url, headers=headers)
+                response = self.session.delete(url, headers=headers, timeout=30)
             else:
                 raise ValueError(f"Unsupported method: {method}")
                 
+            print(f"Response status: {response.status_code}")
             return response
         except requests.exceptions.RequestException as e:
             print(f"Request failed: {e}")
