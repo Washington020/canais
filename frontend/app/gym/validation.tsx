@@ -191,8 +191,14 @@ export default function GymValidation() {
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.gymName}>{gymInfo.name}</Text>
-          <Text style={styles.systemTitle}>Sistema de Validação</Text>
+          <View style={styles.gymDetails}>
+            <Text style={styles.gymName}>{gymInfo.name}</Text>
+            <Text style={styles.gymSubtitle}>Sistema de Validação de Tokens</Text>
+          </View>
+          
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+          </TouchableOpacity>
         </View>
         <TouchableOpacity 
           style={styles.dashboardButton}
