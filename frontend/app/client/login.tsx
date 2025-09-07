@@ -45,25 +45,43 @@ export default function ClientLogin() {
       const response = await axios.post(`${API_URL}/api/auth/login`, {
         email,
         password
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, // 10 second timeout
       });
 
       console.log('✅ Resposta recebida:', response.data);
+      console.log('🔑 Access Token:', response.data.access_token);
       
       const { access_token } = response.data;
       
+      if (!access_token) {
+        throw new Error('No access token received');
+      }
+      
       // Store token and user type
+      console.log('💾 Salvando token...');
       await AsyncStorage.setItem('token', access_token);
       await AsyncStorage.setItem('userType', 'client');
+      console.log('✅ Token salvo com sucesso');
       
       console.log('🎯 Redirecionando para client dashboard...');
       
       // Navigate to client dashboard
       router.replace('/client/(tabs)');
+      console.log('🚀 Navegação iniciada');
+      
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
+      console.error('📄 Error response:', error.response?.data);
+      console.error('🔢 Error status:', error.response?.status);
+      console.error('📊 Error headers:', error.response?.headers);
+      
       Alert.alert(
         'Erro no Login', 
-        error.response?.data?.detail || 'Erro ao fazer login. Tente novamente.'
+        error.response?.data?.detail || error.message || 'Erro ao fazer login. Tente novamente.'
       );
     } finally {
       setLoading(false);
