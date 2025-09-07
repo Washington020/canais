@@ -13,16 +13,10 @@ export default function GymIndex() {
     
     const checkAuthStatus = async () => {
       try {
-        const gymToken = await AsyncStorage.getItem('gymToken');
-        
+        // SEMPRE ir para login - conforme solicitado pelo usuário
+        // O sistema de academia DEVE sempre solicitar login e senha
         if (isMounted) {
-          if (gymToken) {
-            // User is already logged in, go to validation system
-            router.replace('/gym/validation');
-          } else {
-            // User needs to login
-            router.replace('/gym/login');
-          }
+          router.replace('/gym/login');
         }
       } catch (error) {
         console.error('Auth check error:', error);
