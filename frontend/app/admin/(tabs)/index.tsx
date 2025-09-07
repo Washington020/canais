@@ -79,7 +79,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     Alert.alert(
-      'Logout',
+      'Sair do Painel',
       'Tem certeza que deseja sair do painel administrativo?',
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -88,20 +88,25 @@ export default function AdminDashboard() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Clear all stored data
-              await AsyncStorage.removeItem('token');
-              await AsyncStorage.removeItem('userType');
-              await AsyncStorage.clear(); // Clear all AsyncStorage data
+              console.log('🔄 Iniciando logout do admin...');
               
-              // Navigate back to main screen
+              // Limpar TODOS os dados do AsyncStorage
+              await AsyncStorage.clear();
+              
+              // Confirmar limpeza
+              console.log('✅ AsyncStorage limpo');
+              
+              // Navegar para página inicial IMEDIATAMENTE
               router.replace('/');
+              console.log('✅ Redirecionado para página inicial');
               
-              // Show success message
+              // Mostrar sucesso após navegar
               setTimeout(() => {
-                Alert.alert('Sucesso', 'Logout do painel administrativo realizado com sucesso!');
-              }, 500);
+                Alert.alert('Sucesso', 'Logout realizado com sucesso!');
+              }, 1000);
+              
             } catch (error) {
-              console.error('Logout error:', error);
+              console.error('❌ Erro no logout do admin:', error);
               Alert.alert('Erro', 'Erro ao fazer logout. Tente novamente.');
             }
           }
