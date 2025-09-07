@@ -1066,7 +1066,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   activeTabText: {
-  activeTabText: {
     color: '#F59E0B',
   },
   testButton: {
