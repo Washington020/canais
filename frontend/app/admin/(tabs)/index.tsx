@@ -119,9 +119,6 @@ export default function AdminDashboard() {
       ]
     );
   };
-      ]
-    );
-  };
 
   if (loading) {
     return (
