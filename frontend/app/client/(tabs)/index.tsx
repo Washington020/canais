@@ -119,11 +119,6 @@ export default function Dashboard() {
       <StatusBar style="light" />
       
       {/* Navigation System */}
-      <NavigationSystem 
-        title="Dashboard Cliente" 
-        showBackButton={true}
-        showExitButton={true}
-      />
 
       <ScrollView 
         style={styles.scrollView}
