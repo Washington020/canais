@@ -1448,18 +1448,235 @@ class FitPassTester:
         
         return passed == total
 
+    def test_specific_gym_authentication_issue(self):
+        """Test specific gym authentication issue as requested in review"""
+        print("\n" + "="*70)
+        print("🎯 TESTING SPECIFIC GYM AUTHENTICATION ISSUE")
+        print("="*70)
+        print("Testing POST /api/gym/auth with specific credentials: gym_academia_teste_2039/sm7zK4QN")
+        print("Verifying response structure for frontend compatibility...")
+        
+        # Step 1: Check if gym exists with the specific login
+        print("\n1️⃣ Checking if gym 'gym_academia_teste_2039' exists...")
+        
+        # Get all gyms to check if our specific gym exists
+        gyms_response = self.make_request("GET", "/admin/gyms", auth_required=False)
+        
+        gym_exists = False
+        target_gym_id = None
+        
+        if gyms_response and gyms_response.status_code == 200:
+            gyms_data = gyms_response.json()
+            gyms_list = gyms_data if isinstance(gyms_data, list) else gyms_data.get("gyms", [])
+            
+            for gym in gyms_list:
+                if gym.get("login") == "gym_academia_teste_2039":
+                    gym_exists = True
+                    target_gym_id = gym.get("id")
+                    print(f"   ✅ Found existing gym: {gym.get('name')} with login: gym_academia_teste_2039")
+                    break
+        
+        # Step 2: Create gym if it doesn't exist
+        if not gym_exists:
+            print("\n2️⃣ Gym doesn't exist, creating gym with specific credentials...")
+            
+            # We need to create a gym with the exact login and password specified
+            # Since the auto-generation creates random credentials, we'll need to create and then update
+            
+            gym_data = {
+                "name": "Academia Teste Específica 2039",
+                "cnpj": "12.345.678/0001-39",
+                "endereco": "Rua Teste Específico, 2039",
+                "numero": "2039",
+                "bairro": "Vila Teste",
+                "cidade": "São Paulo",
+                "estado": "SP",
+                "cep": "01234-567",
+                "email": "teste2039@academiateste.com",
+                "telefone_principal": "(11) 99999-2039",
+                "tipo_academia": "Tradicional",
+                "responsavel_nome": "Responsável Teste 2039",
+                "responsavel_email": "responsavel2039@academiateste.com",
+                "responsavel_telefone": "(11) 88888-2039"
+            }
+            
+            create_response = self.make_request("POST", "/admin/gyms/register", gym_data, auth_required=False)
+            
+            if create_response and create_response.status_code == 200:
+                create_data = create_response.json()
+                target_gym_id = create_data["gym_id"]
+                print(f"   ✅ Gym created with ID: {target_gym_id}")
+                print(f"   Auto-generated login: {create_data['login']}")
+                print(f"   Auto-generated password: {create_data['password']}")
+                
+                # Now we need to manually update the database to set the specific credentials
+                # Since we can't directly modify the database, we'll work with what we have
+                # and note this in our test results
+                
+                # Approve the gym first
+                approve_response = self.make_request("PUT", f"/admin/gyms/{target_gym_id}/status", 
+                                                   {"status": "approved"}, auth_required=False)
+                
+                if approve_response and approve_response.status_code == 200:
+                    print("   ✅ Gym approved successfully")
+                    
+                    # Test with the auto-generated credentials first to verify the system works
+                    print(f"\n3️⃣ Testing authentication with auto-generated credentials...")
+                    test_credentials = {
+                        "login": create_data['login'],
+                        "password": create_data['password']
+                    }
+                    
+                    auth_response = self.make_request("POST", "/gym/auth", test_credentials, auth_required=False)
+                    
+                    if auth_response and auth_response.status_code == 200:
+                        auth_data = auth_response.json()
+                        
+                        # Verify response structure for frontend compatibility
+                        required_fields = ["access_token", "token_type", "gym_info"]
+                        
+                        if all(field in auth_data for field in required_fields):
+                            gym_info = auth_data["gym_info"]
+                            gym_info_required = ["id", "name", "type", "status"]
+                            
+                            if all(field in gym_info for field in gym_info_required):
+                                # Check specifically for the 'name' property that frontend needs
+                                if "name" in gym_info and gym_info["name"]:
+                                    self.log_test("Gym Auth Response Structure", True, 
+                                                f"✅ Response structure correct: access_token, gym_info.name='{gym_info['name']}'")
+                                    print(f"   ✅ access_token: {auth_data['access_token'][:20]}...")
+                                    print(f"   ✅ token_type: {auth_data['token_type']}")
+                                    print(f"   ✅ gym_info.id: {gym_info['id']}")
+                                    print(f"   ✅ gym_info.name: '{gym_info['name']}'")
+                                    print(f"   ✅ gym_info.type: {gym_info['type']}")
+                                    print(f"   ✅ gym_info.status: {gym_info['status']}")
+                                    
+                                    # This confirms the endpoint structure is correct for frontend
+                                    print(f"\n✅ FRONTEND COMPATIBILITY CONFIRMED:")
+                                    print(f"   - Response includes 'access_token' ✅")
+                                    print(f"   - Response includes 'gym_info' ✅")
+                                    print(f"   - gym_info includes 'name' property ✅")
+                                    print(f"   - Frontend can access response.gym_info.name ✅")
+                                    
+                                else:
+                                    self.log_test("Gym Auth Response Structure", False, 
+                                                "gym_info missing 'name' property or name is empty")
+                            else:
+                                missing_gym_fields = [f for f in gym_info_required if f not in gym_info]
+                                self.log_test("Gym Auth Response Structure", False, 
+                                            f"gym_info missing fields: {missing_gym_fields}")
+                        else:
+                            missing = [f for f in required_fields if f not in auth_data]
+                            self.log_test("Gym Auth Response Structure", False, 
+                                        f"Response missing fields: {missing}")
+                    else:
+                        error_detail = ""
+                        if auth_response:
+                            try:
+                                error_detail = auth_response.json().get("detail", auth_response.text)
+                            except:
+                                error_detail = auth_response.text
+                        self.log_test("Gym Auth Response Structure", False, 
+                                    f"Auth failed: {auth_response.status_code if auth_response else 'No response'}, Error: {error_detail}")
+                else:
+                    self.log_test("Gym Creation and Approval", False, "Failed to approve created gym")
+            else:
+                self.log_test("Gym Creation", False, "Failed to create test gym")
+        else:
+            print(f"   Using existing gym with ID: {target_gym_id}")
+        
+        # Step 3: Test with the specific credentials requested (even if they fail)
+        print(f"\n4️⃣ Testing with SPECIFIC requested credentials: gym_academia_teste_2039/sm7zK4QN")
+        
+        specific_credentials = {
+            "login": "gym_academia_teste_2039",
+            "password": "sm7zK4QN"
+        }
+        
+        specific_auth_response = self.make_request("POST", "/gym/auth", specific_credentials, auth_required=False)
+        
+        if specific_auth_response and specific_auth_response.status_code == 200:
+            auth_data = specific_auth_response.json()
+            
+            # Verify the exact response structure the frontend expects
+            if "access_token" in auth_data and "gym_info" in auth_data:
+                gym_info = auth_data["gym_info"]
+                if "name" in gym_info:
+                    self.log_test("Specific Credentials Test", True, 
+                                f"✅ Specific credentials work! gym_info.name='{gym_info['name']}'")
+                    print(f"   ✅ Frontend can access: response.gym_info.name = '{gym_info['name']}'")
+                    return True
+                else:
+                    self.log_test("Specific Credentials Test", False, 
+                                "Response structure missing gym_info.name")
+            else:
+                self.log_test("Specific Credentials Test", False, 
+                            "Response missing access_token or gym_info")
+        elif specific_auth_response and specific_auth_response.status_code == 401:
+            error_detail = ""
+            try:
+                error_detail = specific_auth_response.json().get("detail", "")
+            except:
+                error_detail = specific_auth_response.text
+            
+            self.log_test("Specific Credentials Test", False, 
+                        f"❌ Credentials 'gym_academia_teste_2039/sm7zK4QN' are invalid: {error_detail}")
+            
+            print(f"\n📋 DIAGNOSIS:")
+            print(f"   - The specific credentials 'gym_academia_teste_2039/sm7zK4QN' do not exist in database")
+            print(f"   - The gym authentication endpoint structure is CORRECT for frontend")
+            print(f"   - Response format: {{access_token, token_type, gym_info: {{id, name, type, status}}}}")
+            print(f"   - Frontend should be able to access response.gym_info.name")
+            print(f"   - Issue is likely that these specific credentials were not created")
+            
+        else:
+            error_detail = ""
+            if specific_auth_response:
+                try:
+                    error_detail = specific_auth_response.json().get("detail", specific_auth_response.text)
+                except:
+                    error_detail = specific_auth_response.text
+            self.log_test("Specific Credentials Test", False, 
+                        f"Unexpected error: {specific_auth_response.status_code if specific_auth_response else 'No response'}, {error_detail}")
+        
+        return False
+
 if __name__ == "__main__":
     tester = FitPassTester()
     
-    # Run the advanced token system tests as requested
-    print("🎯 Testing Advanced Token System as requested...")
-    print("Using credentials: cliente@fitpass.com / cliente123")
+    # Run the specific gym authentication test as requested in review
+    print("🚀 Starting Specific Gym Authentication Test")
+    print("="*70)
     
-    success = tester.run_advanced_token_tests()
+    # Test the specific gym authentication issue
+    tester.test_specific_gym_authentication_issue()
     
-    if success:
-        print("\n🎉 Advanced Token System tests completed successfully!")
-        print("The advanced token system is fully operational with all security features.")
+    # Summary
+    print("\n" + "="*70)
+    print("📊 SPECIFIC GYM AUTHENTICATION TEST SUMMARY")
+    print("="*70)
+    
+    passed = sum(1 for result in tester.test_results if result["success"])
+    total = len(tester.test_results)
+    
+    print(f"Total Tests: {total}")
+    print(f"Passed: {passed}")
+    print(f"Failed: {total - passed}")
+    
+    # Show all test results
+    for result in tester.test_results:
+        status = "✅ PASS" if result["success"] else "❌ FAIL"
+        print(f"{status} {result['test']}")
+        if result["details"]:
+            print(f"   Details: {result['details']}")
+    
+    print(f"\n🎯 CONCLUSION:")
+    if any("Response Structure" in result["test"] and result["success"] for result in tester.test_results):
+        print(f"✅ The gym authentication endpoint structure is CORRECT for frontend")
+        print(f"✅ Response includes access_token and gym_info.name as required")
+        print(f"✅ Frontend should be able to access response.gym_info.name")
+        print(f"❌ The specific credentials 'gym_academia_teste_2039/sm7zK4QN' may not exist")
+        print(f"💡 RECOMMENDATION: Create gym with these exact credentials or use existing valid credentials")
     else:
-        print("\n⚠️  Some advanced token system tests failed. Check the details above.")
-        print("Issues found that need to be addressed.")
+        print(f"❌ There may be an issue with the gym authentication endpoint structure")
+        print(f"🔍 Further investigation needed")
