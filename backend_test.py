@@ -1182,13 +1182,13 @@ class FitPassTester:
 if __name__ == "__main__":
     tester = FitPassTester()
     
-    # Run the specific gym password reset test as requested
-    print("🎯 Running gym password reset endpoint test as requested...")
-    success = tester.test_gym_password_reset_flow()
+    # Run the specific gym authentication test as requested
+    print("🎯 Running gym authentication endpoint test as requested...")
+    success = tester.test_gym_authentication()
     
     if success:
-        print("\n🎉 Gym password reset endpoint test completed successfully!")
-        print("The gym password reset system is working correctly with all required fields.")
+        print("\n🎉 Gym authentication endpoint test completed successfully!")
+        print("The gym authentication system is working correctly with access_token and gym_info.")
     else:
-        print("\n⚠️  Gym password reset test failed. Check the details above.")
+        print("\n⚠️  Gym authentication test failed. Check the details above.")
         print("Issues found that need to be addressed.")
