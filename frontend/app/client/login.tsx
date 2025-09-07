@@ -274,6 +274,10 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 30,
   },
+  logoImage: {
+    width: 50,
+    height: 50,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
