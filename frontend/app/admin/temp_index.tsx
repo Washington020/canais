@@ -132,13 +132,16 @@ export default function AdminDashboard() {
             <View style={styles.adminAvatar}>
               <Text style={styles.adminAvatarText}>A</Text>
             </View>
-            <View>
-              <Text style={styles.welcomeText}>Painel Administrativo</Text>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.welcomeText}>Painel Admin</Text>
               <Text style={styles.adminRole}>Luxe Forma</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={24} color="#FFFFFF" />
+            <View style={styles.logoutButtonContent}>
+              <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+              <Text style={styles.logoutButtonText}>Sair</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
