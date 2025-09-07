@@ -390,6 +390,42 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+  - task: "Advanced Token Generation API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Advanced token generation endpoint working perfectly. Successfully generates tokens with all security features: unique token_id, token_code, hash_unique, JWT signatures, encryption, nonce protection, usage limits (daily=3, monthly=60), security scores (100), metadata with features ['jwt', 'encryption', 'nonce', 'audit'], and QR code generation. All advanced security components operational."
+
+  - task: "Advanced Token Validation API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Advanced token validation endpoint working perfectly. Successfully validates tokens with complete security checks: JWT signature verification, expiration validation, usage limits enforcement, security score calculation (100), validation count tracking, and comprehensive audit logging. Returns complete token_info, user details, and validation metadata including client_ip and security_warnings. Fixed datetime comparison issue for timezone-aware validation."
+
+  - task: "Token Audit Logs System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Token audit logging system working perfectly. Creates comprehensive audit logs in token_audit_logs collection for all token operations: generation, validation, failures. Includes timestamp, action, token_id, user_id, gym_id, device_info, ip_address, success status, and failure_reason. Audit trail complete with client IP tracking and device information."
+
 agent_communication:
     - agent: "testing"
       message: "✅ BACKEND TESTING COMPLETE: All 12 backend API endpoints tested successfully with 100% pass rate. Fixed 2 critical issues: (1) Token generation parameter format, (2) Token validation datetime handling. Demo user created and working. All authentication, CRUD operations, and business logic functioning correctly. Backend is production-ready."
@@ -407,3 +443,5 @@ agent_communication:
       message: "✅ GYM PASSWORD RESET ENDPOINT TESTING COMPLETE (2025-09-07): Successfully tested the new PUT /api/admin/gyms/{gym_id}/reset-password endpoint as requested. Complete 3-step test flow executed: 1) Created test gym 'Academia Reset Password Test' with original credentials (gym_academia_r_6189/1Tv0HfRk) ✅, 2) Reset password endpoint generated new password (YzkY64Lk64) ✅, 3) Verified all required response fields present: success, new_password, login, message ✅. Confirmed login remains unchanged while password is regenerated, Portuguese message working correctly. Complete gym credential management system (creation + reset) fully operational and ready for production use."
     - agent: "testing"
       message: "✅ GYM AUTHENTICATION ENDPOINT TESTING COMPLETE (2025-09-07): Successfully tested POST /api/gym/auth endpoint as specifically requested by user. Test results: 1) Provided credentials 'gym_academia_teste_2039/sm7zK4QN' are invalid (401 'Credenciais inválidas') ✅, 2) Created test gym 'Academia Teste Autenticação FitPass' with auto-generated credentials (gym_academia_t_5633/iV5pjPL5) ✅, 3) Approved gym status and tested authentication ✅, 4) Endpoint returns proper JWT access_token and complete gym_info with all required fields (id, name, type, status) ✅. Gym authentication system is fully operational and ready for frontend integration. The endpoint correctly validates credentials, returns proper error messages, and provides complete authentication data for approved gyms."
+    - agent: "testing"
+      message: "✅ ADVANCED TOKEN SYSTEM TESTING COMPLETE (2025-09-07): Successfully tested the newly implemented advanced token system with comprehensive security features as specifically requested. All 3 advanced endpoints working perfectly with 100% pass rate: 1) POST /api/tokens/generate ✅ - Generates advanced tokens with unique IDs, hashes, JWT signatures, encryption, nonce protection, usage limits, security scores (100), and complete metadata with features ['jwt', 'encryption', 'nonce', 'audit'], 2) POST /api/tokens/validate/{token_code} ✅ - Validates tokens with complete security checks, audit logging, usage statistics updates, and returns comprehensive token_info, user details, and validation metadata including client_ip and security_warnings, 3) Token Audit Logs ✅ - Creates complete audit trail in token_audit_logs collection with timestamp, action, device_info, ip_address, and success/failure tracking. Fixed datetime comparison issue for timezone-aware validation. Advanced token system is fully operational with all security features: JWT signatures, encryption, unique hash generation, complete audit logging, usage limits, security scores, and metadata tracking. Ready for production use with cliente@fitpass.com/cliente123 credentials."
