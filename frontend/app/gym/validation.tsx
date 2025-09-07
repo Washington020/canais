@@ -90,6 +90,33 @@ export default function GymValidation() {
   };
 
   useEffect(() => {
+    loadGymData();
+    loadActiveUsers();
+    const interval = setInterval(loadActiveUsers, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadGymData = async () => {
+    try {
+      const storedGymInfo = await AsyncStorage.getItem('gymInfo');
+      if (storedGymInfo) {
+        const parsedGymInfo = JSON.parse(storedGymInfo);
+        setGymData(parsedGymInfo);
+        
+        // Update gym info with real data
+        setGymInfo(prevInfo => ({
+          ...prevInfo,
+          name: parsedGymInfo.name || prevInfo.name,
+          type: parsedGymInfo.type || prevInfo.type,
+          status: parsedGymInfo.status || prevInfo.status,
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading gym data:', error);
+    }
+  };
+
+  const loadActiveUsers = () => {
     // Load initial active users
     const mockActiveUsers: ActiveUser[] = [
       { id: '1', name: 'João Silva', plan: 'Premium', checkInTime: '14:30' },
@@ -98,7 +125,7 @@ export default function GymValidation() {
       { id: '4', name: 'Ana Oliveira', plan: 'Básico', checkInTime: '13:45' }
     ];
     setActiveUsers(mockActiveUsers);
-  }, []);
+  };
 
   const validateToken = async () => {
     if (!tokenCode.trim()) {
