@@ -380,6 +380,26 @@ export default function AdminGyms() {
                     <Text style={styles.gymName}>{gym.name}</Text>
                     <Text style={styles.gymDetails}>{gym.type} • {gym.email}</Text>
                     <Text style={styles.gymAddress}>{gym.address}</Text>
+                    
+                    {/* Mostrar credenciais se existirem */}
+                    {gym.login && (
+                      <View style={styles.credentialsInfo}>
+                        <View style={styles.credentialItem}>
+                          <Ionicons name="person-circle" size={16} color="#8B5CF6" />
+                          <Text style={styles.credentialText}>Login: {gym.login}</Text>
+                        </View>
+                        <View style={styles.credentialItem}>
+                          <Ionicons name="key" size={16} color="#8B5CF6" />
+                          <Text style={styles.credentialText}>Senha: ••••••••••</Text>
+                        </View>
+                        {gym.responsavel && (
+                          <View style={styles.credentialItem}>
+                            <Ionicons name="mail" size={16} color="#22C55E" />
+                            <Text style={styles.credentialText}>Responsável: {gym.responsavel.nome}</Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(gym.status) + '20' }]}>
                     <Text style={[styles.statusText, { color: getStatusColor(gym.status) }]}>
@@ -413,6 +433,34 @@ export default function AdminGyms() {
                     <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>Recusar</Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* Ações de Credenciais */}
+                {gym.login && (
+                  <View style={styles.credentialActions}>
+                    <TouchableOpacity 
+                      style={styles.credentialButton}
+                      onPress={() => showGymCredentials(gym)}
+                    >
+                      <Ionicons name="eye" size={16} color="#8B5CF6" />
+                      <Text style={styles.credentialButtonText}>Ver Credenciais</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[styles.credentialButton, styles.resetButton]}
+                      onPress={() => resetGymPassword(gym.id)}
+                      disabled={resetPasswordLoading}
+                    >
+                      {resetPasswordLoading ? (
+                        <ActivityIndicator size="small" color="#F59E0B" />
+                      ) : (
+                        <>
+                          <Ionicons name="refresh" size={16} color="#F59E0B" />
+                          <Text style={[styles.credentialButtonText, { color: '#F59E0B' }]}>Resetar Senha</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             )) : (
               <View style={styles.emptyContainer}>
