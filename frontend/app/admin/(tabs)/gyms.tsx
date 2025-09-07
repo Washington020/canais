@@ -1084,6 +1084,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   testButtonText: {
     color: '#FFFFFF',
