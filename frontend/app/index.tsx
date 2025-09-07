@@ -36,7 +36,7 @@ export default function Index() {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#8B5CF6" />
-        <Text style={styles.loadingText}>Carregando FitPass Brasil...</Text>
+        <Text style={styles.loadingText}>Carregando Luxe Forma...</Text>
       </SafeAreaView>
     );
   }
