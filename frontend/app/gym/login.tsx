@@ -372,34 +372,6 @@ const styles = StyleSheet.create({
     color: '#8B5CF6',
     fontWeight: '600',
   },
-  demoContainer: {
-    marginHorizontal: 24,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
-    marginBottom: 24,
-  },
-  demoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  demoTitle: {
-    color: '#22C55E',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  demoCredentials: {
-    gap: 4,
-  },
-  demoText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontFamily: 'monospace',
-  },
   helpContainer: {
     paddingHorizontal: 24,
     marginBottom: 32,
