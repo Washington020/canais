@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Image
+  Share
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -41,7 +41,7 @@ export default function Tokens() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [currentToken, setCurrentToken] = useState<TokenData | null>(null);
-  const [showQRModal, setShowQRModal] = useState(false);
+  const [showTokenModal, setShowTokenModal] = useState(false);
   const [checkinHistory, setCheckinHistory] = useState<CheckinHistory[]>([]);
   const [stats, setStats] = useState({
     tokens_available: 0,
@@ -50,20 +50,28 @@ export default function Tokens() {
   });
 
   useEffect(() => {
-    loadStats();
-    loadCheckinHistory();
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    await Promise.all([
+      loadStats(),
+      loadCheckinHistory()
+    ]);
+  };
 
   const loadStats = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
+      console.log('🔍 Loading stats from:', `${API_URL}/api/users/stats`);
       const headers = { Authorization: `Bearer ${token}` };
       const response = await axios.get(`${API_URL}/api/users/stats`, { headers });
+      console.log('📊 Stats response:', response.data);
       setStats(response.data);
     } catch (error) {
-      console.error('Error loading stats:', error);
+      console.error('❌ Error loading stats:', error);
     }
   };
 
@@ -76,170 +84,86 @@ export default function Tokens() {
       const response = await axios.get(`${API_URL}/api/checkins/history`, { headers });
       setCheckinHistory(response.data.history || []);
     } catch (error) {
-      console.error('Error loading checkin history:', error);
+      console.error('❌ Error loading checkin history:', error);
     }
   };
 
-  const checkinGym = async () => {
+  const generateToken = async (type: 'gym' | 'nutritionist') => {
+    console.log(`🎫 Generating ${type} token...`);
     setLoading(true);
+    
     try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        Alert.alert('Erro', 'Você precisa estar logado para fazer check-in');
-        return;
-      }
-
-      const headers = { Authorization: `Bearer ${token}` };
-      
-      // Para demonstração, usar ID de academia padrão
-      const gymId = "demo_gym_123";
-      
-      const response = await axios.post(
-        `${API_URL}/api/checkin/gym/${gymId}`, 
-        {}, 
-        { headers }
-      );
-
-      const result = response.data;
-      
-      Alert.alert(
-        'Check-in Realizado! 🏋️‍♂️', 
-        `${result.message}\n\n🎟️ Token: ${result.token_code}\n⏰ Válido até: ${new Date(result.expires_at).toLocaleString('pt-BR')}\n🏢 Local: ${result.gym_name}`,
-        [
-          {
-            text: 'Ver Token',
-            onPress: () => {
-              setCurrentToken({
-                token_code: result.token_code,
-                token_type: 'gym',
-                expires_at: result.expires_at,
-                created_by_checkin: true,
-                location_name: result.gym_name
-              });
-              setShowQRModal(true);
-            }
-          },
-          { text: 'OK' }
-        ]
-      );
-
-      // Refresh data
-      await loadStats();
-      await loadCheckinHistory();
-      
-    } catch (error: any) {
-      console.error('Error in gym checkin:', error);
-      const errorMessage = error.response?.data?.detail || 'Erro ao fazer check-in. Tente novamente.';
-      Alert.alert('Erro no Check-in ❌', errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkinNutritionist = async () => {
-    setLoading(true);
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        Alert.alert('Erro', 'Você precisa estar logado para fazer check-in');
-        return;
-      }
-
-      const headers = { Authorization: `Bearer ${token}` };
-      
-      // Para demonstração, usar ID de nutricionista padrão
-      const nutritionistId = "demo_nutritionist_456";
-      
-      const response = await axios.post(
-        `${API_URL}/api/checkin/nutritionist/${nutritionistId}`, 
-        {}, 
-        { headers }
-      );
-
-      const result = response.data;
-      
-      Alert.alert(
-        'Check-in Realizado! 🍎', 
-        `${result.message}\n\n🎟️ Token: ${result.token_code}\n⏰ Válido até: ${new Date(result.expires_at).toLocaleString('pt-BR')}\n👩‍⚕️ Profissional: ${result.nutritionist_name}`,
-        [
-          {
-            text: 'Ver Token',
-            onPress: () => {
-              setCurrentToken({
-                token_code: result.token_code,
-                token_type: 'nutritionist',
-                expires_at: result.expires_at,
-                created_by_checkin: true,
-                location_name: result.nutritionist_name
-              });
-              setShowQRModal(true);
-            }
-          },
-          { text: 'OK' }
-        ]
-      );
-
-      // Refresh data
-      await loadStats();
-      await loadCheckinHistory();
-      
-    } catch (error: any) {
-      console.error('Error in nutritionist checkin:', error);
-      const errorMessage = error.response?.data?.detail || 'Erro ao fazer check-in. Tente novamente.';
-      Alert.alert('Erro no Check-in ❌', errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateSimpleToken = async (type: 'gym' | 'nutritionist') => {
-    setLoading(true);
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
+      const authToken = await AsyncStorage.getItem('token');
+      if (!authToken) {
         Alert.alert('Erro', 'Você precisa estar logado para gerar tokens');
         return;
       }
 
-      const headers = { Authorization: `Bearer ${token}` };
+      console.log('🌐 API URL:', `${API_URL}/api/tokens/generate-simple?token_type=${type}`);
+      
+      const headers = { 
+        Authorization: `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      };
+      
       const response = await axios.post(
         `${API_URL}/api/tokens/generate-simple?token_type=${type}`, 
         {}, 
         { headers }
       );
 
+      console.log('✅ Token generated successfully:', response.data);
       const result = response.data;
       
+      const tokenData = {
+        token_code: result.token_code,
+        token_type: result.token_type,
+        expires_at: result.expires_at,
+        created_by_checkin: false
+      };
+      
+      setCurrentToken(tokenData);
+      setShowTokenModal(true);
+      
       Alert.alert(
-        'Token Gerado! ✅', 
-        `${result.message}\n\n🎟️ Código: ${result.token_code}\n📱 Tipo: ${type === 'gym' ? 'Academia' : 'Nutricionista'}\n⏰ Válido até: ${new Date(result.expires_at).toLocaleString('pt-BR')}`,
+        '🎉 Token Gerado!', 
+        `Código: ${result.token_code}\nTipo: ${type === 'gym' ? '🏋️ Academia' : '🥗 Nutrição'}\nVálido até: ${new Date(result.expires_at).toLocaleString('pt-BR')}`,
         [
-          {
-            text: 'Ver Token',
-            onPress: () => {
-              setCurrentToken({
-                token_code: result.token_code,
-                token_type: result.token_type,
-                expires_at: result.expires_at,
-                created_by_checkin: false
-              });
-              setShowQRModal(true);
-            }
-          },
           { text: 'OK' }
         ]
       );
 
       // Refresh data
-      await loadStats();
-      await loadCheckinHistory();
+      await loadData();
       
     } catch (error: any) {
-      console.error('Error generating token:', error);
-      const errorMessage = error.response?.data?.detail || 'Erro ao gerar token. Tente novamente.';
-      Alert.alert('Erro ao Gerar Token ❌', errorMessage);
+      console.error('❌ Error generating token:', error);
+      console.error('📄 Error response:', error.response?.data);
+      console.error('🔢 Error status:', error.response?.status);
+      
+      const errorMessage = error.response?.data?.detail || 'Erro ao gerar token. Verifique sua conexão.';
+      Alert.alert('❌ Erro ao Gerar Token', errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const shareToken = async () => {
+    if (!currentToken) return;
+    
+    const message = `🎟️ Token LuxePass\n\n` +
+                   `Código: ${currentToken.token_code}\n` +
+                   `Tipo: ${currentToken.token_type === 'gym' ? '🏋️ Academia' : '🥗 Nutrição'}\n` +
+                   `Válido até: ${new Date(currentToken.expires_at).toLocaleString('pt-BR')}\n\n` +
+                   `Apresente este código na recepção.`;
+    
+    try {
+      await Share.share({
+        message: message,
+        title: 'Token LuxePass'
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
     }
   };
 
@@ -265,20 +189,26 @@ export default function Tokens() {
     return `${hours}h ${minutes}m restantes`;
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Tokens</Text>
-        <Text style={styles.subtitle}>Gerencie seus tokens de acesso</Text>
+        <Text style={styles.title}>🎟️ Meus Tokens</Text>
+        <Text style={styles.subtitle}>Gere tokens para academia e nutrição</Text>
       </View>
 
       <ScrollView 
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={loadStats} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {/* Stats Cards */}
@@ -301,323 +231,146 @@ export default function Tokens() {
           
           <View style={styles.statCard}>
             <View style={styles.statIcon}>
-              <Ionicons name="location" size={24} color="#F59E0B" />
+              <Ionicons name="fitness" size={24} color="#F59E0B" />
             </View>
             <Text style={styles.statNumber}>{stats.gyms_visited}</Text>
             <Text style={styles.statLabel}>Academias Visitadas</Text>
           </View>
         </View>
 
-        {/* Current Token */}
-        {currentToken && !isTokenExpired(currentToken.expires_at) && (
-          <View style={styles.currentTokenContainer}>
-            <Text style={styles.sectionTitle}>Token Ativo</Text>
-            <View style={styles.currentTokenCard}>
-              <View style={styles.tokenHeader}>
-                <View style={styles.tokenTypeIcon}>
-                  <Ionicons 
-                    name={currentToken.token_type === 'gym' ? 'fitness' : 'restaurant'} 
-                    size={24} 
-                    color="#FFFFFF" 
-                  />
-                </View>
-                <View style={styles.tokenInfo}>
-                  <Text style={styles.tokenType}>
-                    {currentToken.token_type === 'gym' ? 'Academia' : 'Nutricionista'}
-                  </Text>
-                  <Text style={styles.tokenExpiry}>
-                    {getTimeRemaining(currentToken.expires_at)}
-                  </Text>
-                </View>
-                <TouchableOpacity 
-                  style={styles.qrButton}
-                  onPress={() => setShowQRModal(true)}
-                >
-                  <Ionicons name="qr-code" size={20} color="#8B5CF6" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.tokenCode}>Código: {currentToken.token_code}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Token Generation */}
-        <View style={styles.generationContainer}>
-          <Text style={styles.sectionTitle}>Gerar Novo Token</Text>
+        {/* Token Generation Buttons */}
+        <View style={styles.actionContainer}>
+          <Text style={styles.sectionTitle}>🎯 Gerar Novos Tokens</Text>
           
-          <View style={styles.tokenTypes}>
-            <TouchableOpacity 
-              style={[styles.tokenTypeCard, styles.gymTokenCard]}
-              onPress={() => generateSimpleToken('gym')}
-              disabled={loading || stats.tokens_available <= 0}
-            >
-              <View style={styles.tokenCardIcon}>
-                <Ionicons name="fitness" size={32} color="#22C55E" />
+          <TouchableOpacity 
+            style={[styles.generateButton, styles.gymButton]} 
+            onPress={() => generateToken('gym')}
+            disabled={loading}
+          >
+            <View style={styles.buttonContent}>
+              <Ionicons name="fitness" size={24} color="#FFFFFF" />
+              <View style={styles.buttonText}>
+                <Text style={styles.buttonTitle}>🏋️ Token Academia</Text>
+                <Text style={styles.buttonSubtitle}>Acesso para treinos</Text>
               </View>
-              <Text style={styles.tokenCardTitle}>Academia</Text>
-              <Text style={styles.tokenCardDescription}>
-                Gerar token para acesso às academias parceiras
-              </Text>
-              <View style={styles.tokenCardFeatures}>
-                <Text style={styles.tokenFeature}>• Válido por 3 horas</Text>
-                <Text style={styles.tokenFeature}>• QR Code único</Text>
-                <Text style={styles.tokenFeature}>• Acesso direto</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.tokenTypeCard, styles.nutritionistTokenCard]}
-              onPress={() => generateSimpleToken('nutritionist')}
-              disabled={loading || stats.tokens_available <= 0}
-            >
-              <View style={styles.tokenCardIcon}>
-                <Ionicons name="restaurant" size={32} color="#F59E0B" />
-              </View>
-              <Text style={styles.tokenCardTitle}>Nutricionista</Text>
-              <Text style={styles.tokenCardDescription}>
-                Gerar token para consulta nutricional
-              </Text>
-              <View style={styles.tokenCardFeatures}>
-                <Text style={styles.tokenFeature}>• Consulta online/presencial</Text>
-                <Text style={styles.tokenFeature}>• Plano personalizado</Text>
-                <Text style={styles.tokenFeature}>• Acompanhamento</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Check-in Section */}
-        <View style={styles.generationContainer}>
-          <Text style={styles.sectionTitle}>Check-in Direto</Text>
-          
-          <View style={styles.tokenTypes}>
-            <TouchableOpacity 
-              style={[styles.tokenTypeCard, styles.checkinCard]}
-              onPress={checkinGym}
-              disabled={loading}
-            >
-              <View style={styles.tokenCardIcon}>
-                <Ionicons name="location" size={32} color="#3B82F6" />
-              </View>
-              <Text style={styles.tokenCardTitle}>Check-in Academia</Text>
-              <Text style={styles.tokenCardDescription}>
-                Fazer check-in direto na academia e gerar token automaticamente
-              </Text>
-              <View style={styles.tokenCardFeatures}>
-                <Text style={styles.tokenFeature}>• Token gerado automaticamente</Text>
-                <Text style={styles.tokenFeature}>• Localização automática</Text>
-                <Text style={styles.tokenFeature}>• Histórico salvo</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.tokenTypeCard, styles.checkinCard]}
-              onPress={checkinNutritionist}
-              disabled={loading}
-            >
-              <View style={styles.tokenCardIcon}>
-                <Ionicons name="person" size={32} color="#8B5CF6" />
-              </View>
-              <Text style={styles.tokenCardTitle}>Check-in Nutricionista</Text>
-              <Text style={styles.tokenCardDescription}>
-                Fazer check-in com nutricionista e gerar token de consulta
-              </Text>
-              <View style={styles.tokenCardFeatures}>
-                <Text style={styles.tokenFeature}>• Consulta confirmada</Text>
-                <Text style={styles.tokenFeature}>• Profissional identificado</Text>
-                <Text style={styles.tokenFeature}>• Histórico completo</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Tips */}
-        <View style={styles.tipsContainer}>
-          <Text style={styles.sectionTitle}>Dicas de Uso</Text>
-          <View style={styles.tipsCard}>
-            <View style={styles.tip}>
-              <Ionicons name="time" size={20} color="#8B5CF6" />
-              <Text style={styles.tipText}>
-                Gere seu token com antecedência, mas lembre-se da validade
-              </Text>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              )}
             </View>
-            <View style={styles.tip}>
-              <Ionicons name="qr-code" size={20} color="#8B5CF6" />
-              <Text style={styles.tipText}>
-                Apresente o QR Code na recepção da academia
-              </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.generateButton, styles.nutritionButton]} 
+            onPress={() => generateToken('nutritionist')}
+            disabled={loading}
+          >
+            <View style={styles.buttonContent}>
+              <Ionicons name="restaurant" size={24} color="#FFFFFF" />
+              <View style={styles.buttonText}>
+                <Text style={styles.buttonTitle}>🥗 Token Nutrição</Text>
+                <Text style={styles.buttonSubtitle}>Consulta nutricional</Text>
+              </View>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              )}
             </View>
-            <View style={styles.tip}>
-              <Ionicons name="calendar" size={20} color="#8B5CF6" />
-              <Text style={styles.tipText}>
-                Novos tokens são creditados diariamente
-              </Text>
-            </View>
-            <View style={styles.tip}>
-              <Ionicons name="shield-checkmark" size={20} color="#8B5CF6" />
-              <Text style={styles.tipText}>
-                Não compartilhe seus tokens com outras pessoas
-              </Text>
-            </View>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Check-in History */}
-        <View style={styles.historyContainer}>
-          <Text style={styles.sectionTitle}>Histórico de Check-ins</Text>
-          {checkinHistory.length > 0 ? (
-            checkinHistory.map((item, index) => (
+        {checkinHistory.length > 0 && (
+          <View style={styles.historyContainer}>
+            <Text style={styles.sectionTitle}>📋 Histórico Recente</Text>
+            {checkinHistory.slice(0, 5).map((item, index) => (
               <View key={index} style={styles.historyItem}>
-                <View style={[
-                  styles.historyIcon,
-                  { backgroundColor: item.status === 'completed' ? '#22C55E20' : '#EF444420' }
-                ]}>
+                <View style={styles.historyIcon}>
                   <Ionicons 
                     name={item.type === 'gym' ? 'fitness' : 'restaurant'} 
-                    size={20} 
-                    color={item.status === 'completed' ? '#22C55E' : '#EF4444'} 
+                    size={16} 
+                    color={item.type === 'gym' ? '#8B5CF6' : '#22C55E'} 
                   />
                 </View>
                 <View style={styles.historyContent}>
                   <Text style={styles.historyTitle}>{item.location_name}</Text>
                   <Text style={styles.historyDate}>{formatDate(item.checkin_time)}</Text>
-                  <Text style={styles.historyToken}>Token: {item.token_code}</Text>
                 </View>
-                <View style={[
-                  styles.historyStatus,
-                  { backgroundColor: item.status === 'completed' ? '#22C55E20' : '#EF444420' }
-                ]}>
-                  <Text style={[
-                    styles.historyStatusText,
-                    { color: item.status === 'completed' ? '#22C55E' : '#EF4444' }
-                  ]}>
-                    {item.status === 'completed' ? 'Concluído' : 'Pendente'}
-                  </Text>
+                <View style={styles.historyToken}>
+                  <Text style={styles.historyTokenCode}>{item.token_code}</Text>
                 </View>
               </View>
-            ))
-          ) : (
-            <View style={styles.emptyHistory}>
-              <Ionicons name="time-outline" size={48} color="#64748B" />
-              <Text style={styles.emptyHistoryText}>Nenhum check-in realizado ainda</Text>
-              <Text style={styles.emptyHistorySubtext}>
-                Faça seu primeiro check-in usando os botões acima
-              </Text>
-            </View>
-          )}
-        </View>
+            ))}
+          </View>
+        )}
 
-        {/* Token History */}
-        <View style={styles.historyContainer}>
-          <Text style={styles.sectionTitle}>Histórico Recente</Text>
-          {[
-            { type: 'gym', gym: 'SmartFit Paulista', date: '2025-01-20T14:30:00Z', status: 'used' },
-            { type: 'nutritionist', gym: 'Dra. Ana Carolina', date: '2025-01-19T10:00:00Z', status: 'used' },
-            { type: 'gym', gym: 'Bio Ritmo', date: '2025-01-18T18:15:00Z', status: 'expired' },
-            { type: 'gym', gym: 'Academia Central', date: '2025-01-17T16:45:00Z', status: 'used' }
-          ].map((item, index) => (
-            <View key={index} style={styles.historyItem}>
-              <View style={[
-                styles.historyIcon,
-                { backgroundColor: item.status === 'used' ? '#22C55E20' : '#EF444420' }
-              ]}>
-                <Ionicons 
-                  name={item.type === 'gym' ? 'fitness' : 'restaurant'} 
-                  size={20} 
-                  color={item.status === 'used' ? '#22C55E' : '#EF4444'} 
-                />
-              </View>
-              <View style={styles.historyContent}>
-                <Text style={styles.historyTitle}>{item.gym}</Text>
-                <Text style={styles.historyDate}>{formatDate(item.date)}</Text>
-              </View>
-              <View style={[
-                styles.historyStatus,
-                { backgroundColor: item.status === 'used' ? '#22C55E20' : '#EF444420' }
-              ]}>
-                <Text style={[
-                  styles.historyStatusText,
-                  { color: item.status === 'used' ? '#22C55E' : '#EF4444' }
-                ]}>
-                  {item.status === 'used' ? 'Usado' : 'Expirado'}
-                </Text>
-              </View>
-            </View>
-          ))}
+        {/* Instructions */}
+        <View style={styles.instructionsContainer}>
+          <Text style={styles.instructionsTitle}>💡 Como Usar</Text>
+          <View style={styles.instructionItem}>
+            <Text style={styles.instructionNumber}>1</Text>
+            <Text style={styles.instructionText}>Gere seu token clicando nos botões acima</Text>
+          </View>
+          <View style={styles.instructionItem}>
+            <Text style={styles.instructionNumber}>2</Text>
+            <Text style={styles.instructionText}>Apresente o código na recepção da academia/nutricionista</Text>
+          </View>
+          <View style={styles.instructionItem}>
+            <Text style={styles.instructionNumber}>3</Text>
+            <Text style={styles.instructionText}>Os tokens são válidos por 4 horas após geração</Text>
+          </View>
         </View>
       </ScrollView>
 
-      {/* QR Code Modal */}
+      {/* Token Display Modal */}
       <Modal
-        visible={showQRModal}
+        visible={showTokenModal}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setShowQRModal(false)}
+        onRequestClose={() => setShowTokenModal(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Seu Token</Text>
-              <TouchableOpacity 
-                style={styles.modalCloseButton}
-                onPress={() => setShowQRModal(false)}
-              >
-                <Ionicons name="close" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.modalTitle}>🎟️ Seu Token</Text>
             
             {currentToken && (
-              <>
-                <View style={styles.qrContainer}>
-                  <View style={styles.qrPlaceholder}>
-                    <Ionicons name="qr-code" size={120} color="#8B5CF6" />
-                    <Text style={styles.qrPlaceholderText}>QR Code</Text>
-                  </View>
+              <View style={styles.tokenDisplay}>
+                <View style={styles.tokenCodeContainer}>
+                  <Text style={styles.tokenCode}>{currentToken.token_code}</Text>
                 </View>
                 
-                <View style={styles.tokenDetails}>
-                  <Text style={styles.tokenDetailLabel}>Tipo:</Text>
-                  <Text style={styles.tokenDetailValue}>
-                    {currentToken.token_type === 'gym' ? 'Academia' : 'Nutricionista'}
-                  </Text>
-                  
-                  <Text style={styles.tokenDetailLabel}>Código:</Text>
-                  <Text style={styles.tokenDetailValue}>{currentToken.token_code}</Text>
-                  
-                  <Text style={styles.tokenDetailLabel}>Expira em:</Text>
-                  <Text style={styles.tokenDetailValue}>
-                    {getTimeRemaining(currentToken.expires_at)}
-                  </Text>
-
-                  {currentToken.created_by_checkin && currentToken.location_name && (
-                    <>
-                      <Text style={styles.tokenDetailLabel}>Local:</Text>
-                      <Text style={styles.tokenDetailValue}>{currentToken.location_name}</Text>
-                    </>
-                  )}
-                </View>
-                
-                <Text style={styles.qrInstructions}>
-                  {currentToken.created_by_checkin 
-                    ? 'Token gerado automaticamente pelo check-in'
-                    : 'Apresente este QR Code na recepção da academia ou para o nutricionista'
-                  }
+                <Text style={styles.tokenType}>
+                  {currentToken.token_type === 'gym' ? '🏋️ Academia' : '🥗 Nutrição'}
                 </Text>
-              </>
+                
+                <Text style={styles.tokenInfo}>
+                  Válido até: {new Date(currentToken.expires_at).toLocaleString('pt-BR')}
+                </Text>
+                
+                <Text style={styles.tokenStatus}>
+                  {getTimeRemaining(currentToken.expires_at)}
+                </Text>
+              </View>
             )}
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.shareButton} onPress={shareToken}>
+                <Ionicons name="share" size={20} color="#FFFFFF" />
+                <Text style={styles.shareButtonText}>Compartilhar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.closeButton} 
+                onPress={() => setShowTokenModal(false)}
+              >
+                <Text style={styles.closeButtonText}>Fechar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
-
-      {/* Loading Overlay */}
-      {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>
-            {currentToken?.created_by_checkin ? 'Fazendo check-in...' : 'Gerando token...'}
-          </Text>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -629,185 +382,120 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
   },
   title: {
-    color: '#FFFFFF',
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 4,
+    color: '#FFFFFF',
+    marginBottom: 8,
   },
   subtitle: {
-    color: '#94A3B8',
     fontSize: 16,
+    color: '#94A3B8',
   },
   scrollView: {
     flex: 1,
   },
   statsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingHorizontal: 24,
-    marginBottom: 24,
+    marginBottom: 32,
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
     padding: 16,
-    alignItems: 'center',
     marginHorizontal: 4,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   statIcon: {
-    marginBottom: 8,
-  },
-  statNumber: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  statLabel: {
-    color: '#94A3B8',
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  currentTokenContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  currentTokenCard: {
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#8B5CF6',
-  },
-  tokenHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  tokenTypeIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  tokenInfo: {
-    flex: 1,
-  },
-  tokenType: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  tokenExpiry: {
-    color: '#A855F7',
-    fontSize: 14,
-  },
-  qrButton: {
-    padding: 8,
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    borderRadius: 8,
-  },
-  tokenCode: {
-    color: '#94A3B8',
-    fontSize: 12,
-    fontFamily: 'monospace',
-  },
-  generationContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  tokenTypes: {
-    gap: 16,
-  },
-  tokenTypeCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-  },
-  gymTokenCard: {
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
-  },
-  nutritionistTokenCard: {
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-  },
-  checkinCard: {
-    borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
-  },
-  tokenCardIcon: {
-    marginBottom: 12,
-  },
-  tokenCardTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
     marginBottom: 8,
   },
-  tokenCardDescription: {
-    color: '#94A3B8',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  tokenCardFeatures: {
-    alignItems: 'flex-start',
-  },
-  tokenFeature: {
-    color: '#A1A1AA',
-    fontSize: 12,
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
-  tipsContainer: {
+  statLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+  },
+  actionContainer: {
     paddingHorizontal: 24,
-    marginBottom: 24,
+    marginBottom: 32,
   },
-  tipsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 16,
   },
-  tip: {
+  generateButton: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  gymButton: {
+    backgroundColor: '#8B5CF6',
+  },
+  nutritionButton: {
+    backgroundColor: '#22C55E',
+  },
+  buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  tipText: {
-    color: '#94A3B8',
-    fontSize: 14,
-    marginLeft: 12,
+  buttonText: {
     flex: 1,
+    marginLeft: 16,
+  },
+  buttonTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  buttonSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   historyContainer: {
     paddingHorizontal: 24,
-    marginBottom: 40,
+    marginBottom: 32,
   },
   historyItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   historyIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -816,131 +504,156 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   historyTitle: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  historyDate: {
-    color: '#94A3B8',
-    fontSize: 12,
-  },
-  historyToken: {
-    color: '#8B5CF6',
-    fontSize: 11,
-    fontFamily: 'monospace',
-  },
-  historyStatus: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  historyStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  emptyHistory: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyHistoryText: {
-    color: '#94A3B8',
     fontSize: 16,
     fontWeight: '500',
-    marginTop: 16,
-    marginBottom: 8,
+    color: '#FFFFFF',
+    marginBottom: 4,
   },
-  emptyHistorySubtext: {
-    color: '#64748B',
+  historyDate: {
+    fontSize: 12,
+    color: '#94A3B8',
+  },
+  historyToken: {
+    backgroundColor: 'rgba(139, 92, 246, 0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  historyTokenCode: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8B5CF6',
+  },
+  instructionsContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  instructionsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  instructionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  instructionNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#8B5CF6',
+    color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '600',
     textAlign: 'center',
+    lineHeight: 24,
+    marginRight: 12,
+  },
+  instructionText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#94A3B8',
+    lineHeight: 20,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
   },
   modalContent: {
     backgroundColor: '#1E293B',
     borderRadius: 20,
     padding: 24,
-    width: '90%',
+    width: '100%',
     maxWidth: 400,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 24,
   },
-  modalCloseButton: {
-    padding: 4,
-  },
-  qrContainer: {
+  tokenDisplay: {
     alignItems: 'center',
     marginBottom: 24,
   },
-  qrImage: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-  },
-  qrPlaceholder: {
-    width: 200,
-    height: 200,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+  tokenCodeContainer: {
+    backgroundColor: '#0B0D17',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     borderWidth: 2,
     borderColor: '#8B5CF6',
-    borderStyle: 'dashed',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  qrPlaceholderText: {
+  tokenCode: {
+    fontSize: 32,
+    fontWeight: 'bold',
     color: '#8B5CF6',
-    fontSize: 16,
+    textAlign: 'center',
+    letterSpacing: 4,
+  },
+  tokenType: {
+    fontSize: 18,
     fontWeight: '600',
-    marginTop: 8,
+    color: '#FFFFFF',
+    marginBottom: 8,
   },
-  tokenDetails: {
-    marginBottom: 16,
-  },
-  tokenDetailLabel: {
-    color: '#94A3B8',
+  tokenInfo: {
     fontSize: 14,
+    color: '#94A3B8',
+    textAlign: 'center',
     marginBottom: 4,
   },
-  tokenDetailValue: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 12,
-  },
-  qrInstructions: {
-    color: '#94A3B8',
+  tokenStatus: {
     fontSize: 14,
+    fontWeight: '500',
+    color: '#22C55E',
     textAlign: 'center',
-    lineHeight: 20,
   },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  shareButton: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8B5CF6',
+    borderRadius: 12,
+    padding: 16,
   },
-  loadingText: {
+  shareButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    marginTop: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  closeButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
