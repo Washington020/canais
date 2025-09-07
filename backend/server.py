@@ -1154,7 +1154,7 @@ async def get_admin_token_stats():
 async def checkin_gym(gym_id: str, current_user: User = Depends(get_current_user)):
     """Check-in na academia com geração automática de token"""
     try:
-        user_id = str(current_user["_id"])
+        user_id = str(current_user.id)
         
         # Verificar se a academia existe
         gym = await db.gyms.find_one({"_id": ObjectId(gym_id)})
