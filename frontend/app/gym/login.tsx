@@ -201,7 +201,7 @@ export default function GymLogin() {
               </TouchableOpacity>
               <TouchableOpacity style={styles.helpOption}>
                 <Ionicons name="mail" size={16} color="#8B5CF6" />
-                <Text style={styles.helpText}>suporte@fitpass.com</Text>
+                <Text style={styles.helpText}>suporte@luxepass.com</Text>
               </TouchableOpacity>
             </View>
           </View>
