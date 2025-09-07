@@ -1388,7 +1388,14 @@ async def get_admin_tokens():
     return result
 
 # Include the router in the main app
+# Include routers
 app.include_router(api_router)
+app.include_router(integration_router)
+
+# Initialize services
+@app.on_event("startup")
+async def startup_event():
+    init_services(db)
 
 app.add_middleware(
     CORSMiddleware,
