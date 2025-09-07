@@ -54,7 +54,7 @@ export default function Index() {
             <View style={styles.logo}>
               <Text style={styles.logoText}>💪</Text>
             </View>
-            <Text style={styles.brandName}>FitPass Brasil</Text>
+            <Text style={styles.brandName}>Luxe Forma</Text>
             <Text style={styles.tagline}>Seu passaporte para o fitness</Text>
           </View>
 
