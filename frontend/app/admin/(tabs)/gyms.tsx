@@ -447,6 +447,14 @@ export default function AdminGyms() {
             Cadastrar Nova
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.testButton}
+          onPress={createTestGym}
+          disabled={registerLoading}
+        >
+          <Ionicons name="flash" size={16} color="#FFFFFF" />
+          <Text style={styles.testButtonText}>Teste</Text>
+        </TouchableOpacity>
       </View>
 
       {activeTab === 'list' ? (
