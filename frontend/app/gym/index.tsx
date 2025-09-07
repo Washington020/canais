@@ -13,6 +13,10 @@ export default function GymIndex() {
     
     const checkAuthStatus = async () => {
       try {
+        // LIMPAR SEMPRE qualquer token antigo da academia
+        await AsyncStorage.removeItem('gymToken');
+        await AsyncStorage.removeItem('gymInfo');
+        
         // SEMPRE ir para login - conforme solicitado pelo usuário
         // O sistema de academia DEVE sempre solicitar login e senha
         if (isMounted) {
