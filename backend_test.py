@@ -847,13 +847,13 @@ class FitPassTester:
 if __name__ == "__main__":
     tester = FitPassTester()
     
-    # Run the specific token system flow test as requested
-    print("🎯 Running focused token system flow test as requested...")
-    success = tester.test_token_system_flow()
+    # Run the specific admin endpoints tests as requested
+    print("🎯 Running focused admin endpoints tests as requested...")
+    success = tester.run_admin_tests()
     
     if success:
-        print("\n🎉 Token system flow test completed successfully!")
-        print("The token system is working correctly after the fixes.")
+        print("\n🎉 Admin endpoints tests completed successfully!")
+        print("The complete gym registration system is working correctly, including automatic credential generation.")
     else:
-        print("\n⚠️  Token system flow test failed. Check the details above.")
+        print("\n⚠️  Some admin endpoints tests failed. Check the details above.")
         print("Issues found that need to be addressed.")
