@@ -329,7 +329,7 @@ async def generate_token(
     user_id = current_user.id
     
     # Check if user is blocked
-    if current_user.get("is_blocked", False):
+    if getattr(current_user, 'is_blocked', False):
         raise HTTPException(
             status_code=403, 
             detail="Usuário bloqueado. Não é possível gerar tokens."
