@@ -78,7 +78,7 @@ export default function AdminDashboard() {
   };
 
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log('🔥 ADMIN LOGOUT CLICADO - FUNÇÃO EXECUTANDO');
     
     Alert.alert(
@@ -93,26 +93,22 @@ export default function AdminDashboard() {
         {
           text: 'SAIR AGORA',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             console.log('🚀 EXECUTANDO ADMIN LOGOUT DEFINITIVO');
             
             try {
-              // Limpar storage imediatamente
-              AsyncStorage.clear().then(() => {
-                console.log('✅ Admin AsyncStorage limpo');
-                
-                // Navegar para home
-                router.push('/');
-                console.log('✅ Admin navegação para home executada');
-                
-              }).catch(error => {
-                console.error('❌ Erro ao limpar admin storage:', error);
-                router.push('/');
-              });
+              // Limpar storage
+              await AsyncStorage.clear();
+              console.log('✅ Admin AsyncStorage limpo');
+              
+              // Navegar para tela inicial
+              router.replace('/');
+              console.log('✅ Admin navegação executada');
               
             } catch (error) {
               console.error('❌ Erro no admin logout:', error);
-              router.push('/');
+              // Força navegação mesmo com erro
+              router.replace('/');
             }
           }
         }
