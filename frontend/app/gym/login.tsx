@@ -22,8 +22,8 @@ import Constants from 'expo-constants';
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function GymLogin() {
-  const [login, setLogin] = useState('gym_academia_teste_2039'); // Exemplo para demonstração
-  const [password, setPassword] = useState('sm7zK4QN'); // Exemplo para demonstração
+  const [login, setLogin] = useState(''); // Campo vazio - credenciais do admin
+  const [password, setPassword] = useState(''); // Campo vazio - credenciais do admin
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
