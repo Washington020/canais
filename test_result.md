@@ -363,6 +363,18 @@ backend:
           agent: "testing"
           comment: "✅ PUT /api/admin/gyms/{gym_id}/reset-password endpoint working correctly. Successfully tested complete flow: 1) Created test gym 'Academia Reset Password Test' with original credentials (gym_academia_r_6189/1Tv0HfRk), 2) Reset password endpoint generated new password (YzkY64Lk64), 3) Verified all required fields returned: success, new_password, login, message, 4) Confirmed login remains same while password changes, 5) Portuguese message 'Nova senha gerada para Academia Reset Password Test' working correctly. Complete gym credential management system operational."
 
+  - task: "Gym Authentication API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ POST /api/gym/auth endpoint working correctly. Successfully tested gym authentication system with auto-generated credentials. Endpoint returns proper JWT access_token and complete gym_info with all required fields (id, name, type, status). Tested with both invalid credentials (returns proper 401 error 'Credenciais inválidas') and valid credentials (returns 200 with complete authentication data). Created test gym 'Academia Teste Autenticação FitPass' with login: gym_academia_t_5633 and verified full authentication flow. System properly validates gym status (approved) before allowing authentication. Complete gym login system operational and ready for frontend integration."
+
 frontend:
   # Frontend testing not performed as per instructions
 
