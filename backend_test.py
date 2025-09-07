@@ -663,6 +663,49 @@ class FitPassTester:
         
         return passed == total
 
+    def run_admin_tests(self):
+        """Run focused admin endpoint tests as requested"""
+        print("🚀 Starting FitPass Brasil Admin Endpoints Tests")
+        print(f"Testing against: {API_BASE}")
+        print("Testing the new admin endpoints that were just implemented...")
+        
+        # Admin endpoint tests in logical order
+        self.test_admin_gyms_list()
+        self.test_admin_gym_register()
+        self.test_admin_gym_status_update()
+        self.test_admin_token_stats()
+        self.test_admin_tokens_list()
+        self.test_admin_users_list()
+        self.test_admin_user_block()
+        self.test_admin_user_verify_payment()
+        
+        # Summary
+        print("\n" + "="*60)
+        print("📊 ADMIN ENDPOINTS TEST SUMMARY")
+        print("="*60)
+        
+        passed = sum(1 for result in self.test_results if result["success"])
+        total = len(self.test_results)
+        
+        print(f"Total Admin Tests: {total}")
+        print(f"Passed: {passed}")
+        print(f"Failed: {total - passed}")
+        print(f"Success Rate: {(passed/total)*100:.1f}%")
+        
+        # Show failed tests
+        failed_tests = [result for result in self.test_results if not result["success"]]
+        if failed_tests:
+            print("\n❌ Failed Tests:")
+            for test in failed_tests:
+                print(f"  - {test['test']}: {test['details']}")
+        else:
+            print("\n✅ All admin endpoints are working correctly!")
+            print("The complete gym registration system is operational, including:")
+            print("  ✓ Automatic credential generation")
+            print("  ✓ All admin endpoints functioning")
+        
+        return passed == total
+
     def test_token_system_flow(self):
         """Test the complete token system flow as requested by user"""
         print("\n" + "="*60)
