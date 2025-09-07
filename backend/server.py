@@ -44,7 +44,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Create the main app
-app = FastAPI(title="FitPass Brasil API", version="1.0.0")
+app = FastAPI(title="Luxe Forma API", version="1.0.0")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
