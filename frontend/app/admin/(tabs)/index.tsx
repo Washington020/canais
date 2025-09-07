@@ -105,12 +105,6 @@ export default function AdminDashboard() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Navigation System */}
-      <NavigationSystem 
-        title="Painel Administrativo" 
-        showBackButton={true}
-        showExitButton={true}
-      />
 
       <ScrollView 
         style={styles.scrollView}
