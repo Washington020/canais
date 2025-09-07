@@ -428,16 +428,36 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  gymDetails: {
+    flex: 1,
   },
   gymName: {
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gymSubtitle: {
+    color: '#22C55E',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   systemTitle: {
     color: '#22C55E',
     fontSize: 14,
     fontWeight: '500',
+  },
+  logoutButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
   },
   dashboardButton: {
     width: 40,
