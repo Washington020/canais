@@ -40,23 +40,35 @@ export default function AdminDashboard() {
   }, []);
 
   const loadDashboard = async () => {
+    console.log('🔄 Admin loadDashboard iniciado');
+    console.log('🌐 API_URL:', API_URL);
+    
     try {
       const token = await AsyncStorage.getItem('token');
+      console.log('🔑 Token encontrado:', token ? 'Sim' : 'Não');
+      
       if (!token) {
+        console.log('❌ Sem token, redirecionando para login');
         router.replace('/admin/login');
         return;
       }
 
+      console.log('📡 Fazendo requisição para dashboard admin');
       const headers = { Authorization: `Bearer ${token}` };
       const response = await axios.get(`${API_URL}/api/admin/dashboard`, { headers });
       
+      console.log('✅ Dashboard admin carregado com sucesso');
       setStats(response.data);
     } catch (error: any) {
-      console.error('Admin dashboard error:', error);
+      console.error('❌ Admin dashboard error:', error);
+      console.error('📊 Error status:', error.response?.status);
+      
       if (error.response?.status === 401) {
+        console.log('🔓 Token inválido, removendo e redirecionando');
         await AsyncStorage.removeItem('token');
         router.replace('/admin/login');
       } else {
+        console.log('🎭 Usando dados mock devido ao erro');
         // Use mock data for demonstration
         const mockStats = {
           total_users: 2847,
@@ -67,6 +79,7 @@ export default function AdminDashboard() {
         setStats(mockStats);
       }
     } finally {
+      console.log('🏁 Admin loadDashboard finalizado');
       setLoading(false);
       setRefreshing(false);
     }
