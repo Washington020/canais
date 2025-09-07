@@ -275,6 +275,10 @@ const styles = StyleSheet.create({
   logoEmoji: {
     fontSize: 40,
   },
+  logoImage: {
+    width: 60,
+    height: 60,
+  },
   title: {
     color: '#FFFFFF',
     fontSize: 28,
