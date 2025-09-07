@@ -382,8 +382,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  headerTextContainer: {
+    flex: 1,
+  },
   logoutButton: {
     padding: 8,
+  },
+  logoutButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
