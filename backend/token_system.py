@@ -102,6 +102,56 @@ class TokenSystemManager:
         """Descriptografa dados sensíveis"""
         return self.cipher_suite.decrypt(encrypted_data.encode()).decode()
     
+    def generate_simple_token_code(self, token_type: str = "gym") -> str:
+        """Gera código de token simples e amigável"""
+        import random
+        
+        if token_type == "gym":
+            # Token para academia: 4 números + 2 letras (ex: 1234AB)
+            numbers = ''.join([str(random.randint(0, 9)) for _ in range(4)])
+            letters = ''.join([random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ') for _ in range(2)])
+            return f"{numbers}{letters}"
+        elif token_type == "nutritionist":
+            # Token para nutricionista: N + 3 números + 1 letra (ex: N123A)
+            numbers = ''.join([str(random.randint(0, 9)) for _ in range(3)])
+            letter = random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+            return f"N{numbers}{letter}"
+        else:
+            # Token genérico: 5 números (ex: 12345)
+            return ''.join([str(random.randint(0, 9)) for _ in range(5)])
+
+    def generate_checkin_token(
+        self,
+        user_id: str,
+        location_id: str,  # gym_id ou nutritionist_id
+        token_type: str = "gym",  # "gym" ou "nutritionist"
+        check_in_time: datetime = None
+    ) -> Dict[str, Any]:
+        """Gera token automático no check-in"""
+        
+        if check_in_time is None:
+            check_in_time = datetime.now(timezone.utc)
+        
+        # Gerar código simples
+        simple_code = self.generate_simple_token_code(token_type)
+        
+        # Criar token simplificado para check-in
+        token_data = {
+            "token_id": str(uuid.uuid4()),
+            "token_code": simple_code,
+            "user_id": user_id,
+            "location_id": location_id,
+            "token_type": token_type,
+            "check_in_time": check_in_time,
+            "expires_at": check_in_time + timedelta(hours=4),  # 4 horas de validade
+            "status": "active",
+            "created_by_checkin": True,
+            "usage_count": 0,
+            "max_usage": 1  # Uso único
+        }
+        
+        return token_data
+
     def generate_advanced_token(
         self,
         user_id: str,
