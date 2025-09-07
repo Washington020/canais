@@ -793,4 +793,71 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
   },
+  // Professional Header Styles
+  professionalHeader: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  gymLogoSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  gymLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  gymLogoText: {
+    fontSize: 24,
+  },
+  gymMainInfo: {
+    flex: 1,
+  },
+  gymType: {
+    color: '#8B5CF6',
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  gymDetailsCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  gymDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  gymDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  gymDetailLabel: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 6,
+    marginRight: 4,
+  },
+  gymDetailValue: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
+  },
+  addressText: {
+    fontSize: 11,
+    lineHeight: 14,
+  },
 });
