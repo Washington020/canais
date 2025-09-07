@@ -73,7 +73,7 @@ export default function GymLogin() {
   const handleForgotPassword = () => {
     Alert.alert(
       'Recuperar Senha',
-      'Entre em contato com o administrador do FitPass Brasil para redefinir sua senha.\n\nTelefone: (11) 99999-9999\nEmail: suporte@fitpass.com',
+      'Entre em contato com o administrador do Luxe Forma para redefinir sua senha.\n\nTelefone: (11) 99999-9999\nEmail: suporte@luxepass.com',
       [{ text: 'OK' }]
     );
   };
