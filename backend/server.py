@@ -657,6 +657,43 @@ async def update_gym_status(gym_id: str, status_data: dict):
     
     return {"success": True, "message": f"Status atualizado para: {status}"}
 
+@api_router.put("/admin/gyms/{gym_id}/reset-password")
+async def reset_gym_password(gym_id: str):
+    import random
+    import string
+    
+    # Generate new password
+    new_password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+    
+    # Hash the new password
+    from passlib.context import CryptContext
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    hashed_password = pwd_context.hash(new_password)
+    
+    # Update gym password
+    result = await db.gyms.update_one(
+        {"_id": ObjectId(gym_id)},
+        {
+            "$set": {
+                "hashed_password": hashed_password,
+                "password_reset_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Academia não encontrada")
+    
+    # Get gym info for email
+    gym = await db.gyms.find_one({"_id": ObjectId(gym_id)})
+    
+    return {
+        "success": True,
+        "new_password": new_password,
+        "login": gym["login"],
+        "message": f"Nova senha gerada para {gym['name']}"
+    }
+
 # Gym authentication endpoint for validation system
 @api_router.post("/gym/auth")
 async def gym_authenticate(credentials: dict):
