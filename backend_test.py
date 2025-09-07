@@ -380,6 +380,235 @@ class FitPassTester:
             self.log_test("Admin Dashboard", False, f"Status: {response.status_code if response else 'No response'}")
             
         return False
+
+    def test_admin_gyms_list(self):
+        """Test GET /api/admin/gyms - List registered gyms"""
+        print("\n=== Testing Admin Gyms List ===")
+        
+        response = self.make_request("GET", "/admin/gyms", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list):
+                self.log_test("Admin Gyms List", True, f"Retrieved {len(data)} gyms from admin endpoint")
+                return True
+            elif isinstance(data, dict) and "gyms" in data:
+                gyms = data["gyms"]
+                self.log_test("Admin Gyms List", True, f"Retrieved {len(gyms)} gyms from admin endpoint")
+                return True
+            else:
+                self.log_test("Admin Gyms List", False, "Response is not a list or dict with gyms")
+        else:
+            self.log_test("Admin Gyms List", False, f"Status: {response.status_code if response else 'No response'}")
+            
+        return False
+
+    def test_admin_gym_register(self):
+        """Test POST /api/admin/gyms/register - Register new gym"""
+        print("\n=== Testing Admin Gym Registration ===")
+        
+        # Use the exact test data provided by the user
+        gym_data = {
+            "name": "Academia Teste FitPass",
+            "cnpj": "12.345.678/0001-99",
+            "endereco": "Rua das Flores, 123",
+            "numero": "123",
+            "bairro": "Centro",
+            "cidade": "São Paulo",
+            "estado": "SP",
+            "cep": "01234-567",
+            "email": "contato@academiateste.com",
+            "telefone_principal": "(11) 99999-9999",
+            "tipo_academia": "Tradicional",
+            "responsavel_nome": "João Silva",
+            "responsavel_email": "joao@academiateste.com",
+            "responsavel_telefone": "(11) 88888-8888"
+        }
+        
+        response = self.make_request("POST", "/admin/gyms/register", gym_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["success", "gym_id", "login", "password", "message"]
+            
+            if all(field in data for field in required_fields):
+                self.registered_gym_id = data["gym_id"]
+                self.log_test("Admin Gym Registration", True, f"Gym registered with ID: {data['gym_id']}, Login: {data['login']}")
+                print(f"   Generated credentials - Login: {data['login']}, Password: {data['password']}")
+                return True
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("Admin Gym Registration", False, f"Missing fields: {missing}")
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Admin Gym Registration", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            
+        return False
+
+    def test_admin_gym_status_update(self):
+        """Test PUT /api/admin/gyms/{gym_id}/status - Update gym status"""
+        print("\n=== Testing Admin Gym Status Update ===")
+        
+        if not hasattr(self, 'registered_gym_id'):
+            self.log_test("Admin Gym Status Update", False, "No gym ID available to update status")
+            return False
+        
+        # Test updating gym status to approved
+        status_data = {"status": "approved"}
+        
+        response = self.make_request("PUT", f"/admin/gyms/{self.registered_gym_id}/status", 
+                                   status_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "success" in data and data["success"] and "message" in data:
+                self.log_test("Admin Gym Status Update", True, f"Status updated: {data['message']}")
+                return True
+            else:
+                self.log_test("Admin Gym Status Update", False, "Response missing success or message fields")
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Admin Gym Status Update", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            
+        return False
+
+    def test_admin_token_stats(self):
+        """Test GET /api/admin/tokens/stats - Token statistics"""
+        print("\n=== Testing Admin Token Statistics ===")
+        
+        response = self.make_request("GET", "/admin/tokens/stats", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["total_generated", "total_used", "gym_tokens", "nutritionist_tokens", "usage_rate"]
+            
+            if all(field in data for field in required_fields):
+                self.log_test("Admin Token Stats", True, f"Token stats: Generated: {data['total_generated']}, Used: {data['total_used']}, Usage Rate: {data['usage_rate']}%")
+                return True
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("Admin Token Stats", False, f"Missing fields: {missing}")
+        else:
+            self.log_test("Admin Token Stats", False, f"Status: {response.status_code if response else 'No response'}")
+            
+        return False
+
+    def test_admin_tokens_list(self):
+        """Test GET /api/admin/tokens - List tokens with user info"""
+        print("\n=== Testing Admin Tokens List ===")
+        
+        response = self.make_request("GET", "/admin/tokens", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list):
+                self.log_test("Admin Tokens List", True, f"Retrieved {len(data)} tokens with user information")
+                if len(data) > 0:
+                    # Check if first token has required fields
+                    token = data[0]
+                    required_fields = ["id", "token_code", "user_name", "user_email", "token_type", "is_used"]
+                    if all(field in token for field in required_fields):
+                        print(f"   Sample token: {token['token_code'][:8]}... for user {token['user_name']}")
+                return True
+            else:
+                self.log_test("Admin Tokens List", False, "Response is not a list")
+        else:
+            self.log_test("Admin Tokens List", False, f"Status: {response.status_code if response else 'No response'}")
+            
+        return False
+
+    def test_admin_users_list(self):
+        """Test GET /api/admin/users - List users for financial control"""
+        print("\n=== Testing Admin Users List ===")
+        
+        response = self.make_request("GET", "/admin/users", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list):
+                self.log_test("Admin Users List", True, f"Retrieved {len(data)} users for financial control")
+                if len(data) > 0:
+                    # Check if first user has required fields
+                    user = data[0]
+                    required_fields = ["id", "full_name", "email", "plan_type", "payment_status"]
+                    if all(field in user for field in required_fields):
+                        self.test_user_id = user["id"]  # Store for blocking test
+                        print(f"   Sample user: {user['full_name']} ({user['email']}) - {user['plan_type']} plan")
+                return True
+            else:
+                self.log_test("Admin Users List", False, "Response is not a list")
+        else:
+            self.log_test("Admin Users List", False, f"Status: {response.status_code if response else 'No response'}")
+            
+        return False
+
+    def test_admin_user_block(self):
+        """Test PUT /api/admin/users/{user_id}/block - Block user"""
+        print("\n=== Testing Admin User Block ===")
+        
+        if not hasattr(self, 'test_user_id'):
+            self.log_test("Admin User Block", False, "No user ID available to block")
+            return False
+        
+        response = self.make_request("PUT", f"/admin/users/{self.test_user_id}/block", 
+                                   {}, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "success" in data and data["success"] and "message" in data:
+                self.log_test("Admin User Block", True, f"User blocked: {data['message']}")
+                return True
+            else:
+                self.log_test("Admin User Block", False, "Response missing success or message fields")
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Admin User Block", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            
+        return False
+
+    def test_admin_user_verify_payment(self):
+        """Test POST /api/admin/users/{user_id}/verify-payment - Verify payment"""
+        print("\n=== Testing Admin User Payment Verification ===")
+        
+        if not hasattr(self, 'test_user_id'):
+            self.log_test("Admin User Payment Verification", False, "No user ID available to verify payment")
+            return False
+        
+        response = self.make_request("POST", f"/admin/users/{self.test_user_id}/verify-payment", 
+                                   {}, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "success" in data and data["success"] and "message" in data:
+                self.log_test("Admin User Payment Verification", True, f"Payment verified: {data['message']}")
+                return True
+            else:
+                self.log_test("Admin User Payment Verification", False, "Response missing success or message fields")
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Admin User Payment Verification", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            
+        return False
         
     def run_all_tests(self):
         """Run all backend tests in sequence"""
