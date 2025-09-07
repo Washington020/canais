@@ -319,64 +319,116 @@ async def get_user_stats(current_user: User = Depends(get_current_user)):
 # Token routes
 @api_router.post("/tokens/generate")
 async def generate_token(
-    token_type: str,
-    gym_id: Optional[str] = None,
+    request: Request,
+    current_user = Depends(get_current_user),
+    token_type: str = "gym",
     validity_hours: int = 3,
-    current_user: User = Depends(get_current_user)
+    gym_id: Optional[str] = None,
+    access_type: str = "entry"
 ):
-    # Check if user is blocked due to payment issues
-    if current_user.is_blocked or current_user.payment_status != "active":
+    user_id = str(current_user["_id"])
+    
+    # Check if user is blocked
+    if current_user.get("is_blocked", False):
         raise HTTPException(
             status_code=403, 
-            detail="Conta bloqueada por pendências financeiras. Entre em contato com o suporte."
+            detail="Usuário bloqueado. Não é possível gerar tokens."
         )
     
-    if current_user.tokens_available <= 0:
-        raise HTTPException(status_code=400, detail="No tokens available")
+    # Use gym_id provided or default
+    target_gym_id = gym_id or "gym-default"
     
-    # Check subscription validity
-    if current_user.subscription_end:
-        # Ensure both datetimes are timezone-aware for comparison
-        subscription_end = current_user.subscription_end
-        if subscription_end.tzinfo is None:
-            subscription_end = subscription_end.replace(tzinfo=timezone.utc)
-        
-        if subscription_end < datetime.now(timezone.utc):
-            raise HTTPException(
-                status_code=403,
-                detail="Assinatura expirada. Renove sua assinatura para continuar gerando tokens."
-            )
-    
-    # Generate unique token code
-    token_code = secrets.token_urlsafe(16)
-    
-    # Create QR code
-    qr_data = f"fitpass:{token_code}:{current_user.id}:{token_type}"
-    qr_code_image = generate_qr_code(qr_data)
-    
-    # Create token usage record
-    token_usage = TokenUsage(
-        user_id=current_user.id,
-        token_code=token_code,
-        token_type=token_type,
-        qr_code=qr_code_image,
-        gym_id=gym_id,
+    # Generate advanced token with all security features
+    advanced_token = token_manager.generate_advanced_token(
+        user_id=user_id,
+        gym_id=target_gym_id,
+        access_type=access_type,
         validity_hours=validity_hours,
-        expires_at=datetime.now(timezone.utc) + timedelta(hours=validity_hours)
+        daily_limit=3,
+        monthly_limit=60
     )
     
-    await db.token_usage.insert_one(token_usage.dict())
+    # Get client IP for audit log
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    device_info = request.headers.get("user-agent", "unknown")
     
-    # Decrease available tokens
-    await db.users.update_one(
-        {"_id": ObjectId(current_user.id)},
-        {"$inc": {"tokens_available": -1}}
+    # Create audit log
+    audit_log = token_manager.create_audit_log(
+        action="generated",
+        token_id=advanced_token.token_id,
+        user_id=user_id,
+        gym_id=target_gym_id,
+        success=True,
+        device_info=device_info,
+        ip_address=client_ip
     )
+    
+    # Store token in database
+    token_doc = {
+        "token_id": advanced_token.token_id,
+        "token_code": advanced_token.token_code,
+        "hash_unique": advanced_token.hash_unique,
+        "user_id": ObjectId(user_id),
+        "gym_id": target_gym_id,
+        "token_type": token_type,
+        "access_type": access_type,
+        "issued_at": advanced_token.issued_at,
+        "expires_at": advanced_token.expires_at,
+        "status": advanced_token.status,
+        "usage_limits": advanced_token.usage_limits.dict(),
+        "security": advanced_token.security.dict(),
+        "metadata": advanced_token.metadata,
+        "validation_count": 0,
+        "is_used": False,
+        "created_at": advanced_token.issued_at
+    }
+    
+    # Store audit log
+    audit_doc = {
+        "timestamp": audit_log.timestamp,
+        "action": audit_log.action,
+        "token_id": audit_log.token_id,
+        "user_id": ObjectId(user_id),
+        "gym_id": target_gym_id,
+        "device_info": audit_log.device_info,
+        "ip_address": audit_log.ip_address,
+        "success": audit_log.success,
+        "failure_reason": audit_log.failure_reason
+    }
+    
+    # Insert both documents
+    await db.token_usage.insert_one(token_doc)
+    await db.token_audit_logs.insert_one(audit_doc)
+    
+    # Generate QR code with enhanced data
+    qr_data = {
+        "token_id": advanced_token.token_id,
+        "token_code": advanced_token.token_code,
+        "hash": advanced_token.hash_unique,
+        "expires_at": advanced_token.expires_at.isoformat(),
+        "access_type": access_type,
+        "signature": advanced_token.security.signature[:50] + "..."  # Truncated for QR
+    }
+    
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(str(qr_data))
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
     
     return {
-        "token_code": token_code,
-        "qr_code": qr_code_image,
-        "expires_at": token_usage.expires_at,
+        "token_id": advanced_token.token_id,
+        "token_code": advanced_token.token_code,
+        "hash_unique": advanced_token.hash_unique,
+        "qr_code": qr_code_base64,
+        "expires_at": advanced_token.expires_at,
+        "access_type": access_type,
+        "usage_limits": advanced_token.usage_limits.dict(),
+        "security_score": 100,  # Initial score
+        "metadata": advanced_token.metadata,
         "type": token_type
     }
 
