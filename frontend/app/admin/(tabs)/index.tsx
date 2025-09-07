@@ -77,35 +77,48 @@ export default function AdminDashboard() {
     loadDashboard();
   };
 
+
   const handleLogout = () => {
+    console.log('🔥 ADMIN LOGOUT CLICADO - FUNÇÃO EXECUTANDO');
+    
     Alert.alert(
       'Sair do Painel',
       'Tem certeza que deseja sair do painel administrativo?',
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Cancelar', 
+          style: 'cancel',
+          onPress: () => console.log('❌ Admin logout cancelado')
+        },
         {
-          text: 'Sair',
+          text: 'SAIR AGORA',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
+            console.log('🚀 EXECUTANDO ADMIN LOGOUT DEFINITIVO');
+            
             try {
-              console.log('🔄 Iniciando logout do admin...');
-              
-              // Limpar TODOS os dados do AsyncStorage
-              await AsyncStorage.clear();
-              
-              console.log('✅ AsyncStorage limpo');
-              
-              // Navegar para página inicial IMEDIATAMENTE
-              router.push('/');
-              
-              console.log('✅ Redirecionado para página inicial');
+              // Limpar storage imediatamente
+              AsyncStorage.clear().then(() => {
+                console.log('✅ Admin AsyncStorage limpo');
+                
+                // Navegar para home
+                router.push('/');
+                console.log('✅ Admin navegação para home executada');
+                
+              }).catch(error => {
+                console.error('❌ Erro ao limpar admin storage:', error);
+                router.push('/');
+              });
               
             } catch (error) {
-              console.error('❌ Erro no logout do admin:', error);
-              Alert.alert('Erro', 'Erro ao fazer logout. Tente novamente.');
+              console.error('❌ Erro no admin logout:', error);
+              router.push('/');
             }
           }
         }
+      ]
+    );
+  };
       ]
     );
   };
