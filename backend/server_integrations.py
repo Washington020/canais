@@ -6,8 +6,13 @@ from token_system import token_manager
 import jwt
 from datetime import datetime
 import logging
+import secrets
 
 logger = logging.getLogger(__name__)
+
+# Configurações
+SECRET_KEY = "your-secret-key-change-in-production"
+ALGORITHM = "HS256"
 
 # Inicializar serviços
 user_service = None
