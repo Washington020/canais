@@ -1077,7 +1077,7 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
   },
   testButton: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#FF0066', // COR ROSA PARA FORÇAR ATUALIZAÇÃO
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
