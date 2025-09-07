@@ -737,6 +737,7 @@ class FitPassTester:
         self.test_admin_gyms_list()
         self.test_admin_gym_register()
         self.test_admin_gym_status_update()
+        self.test_admin_gym_reset_password()
         self.test_admin_token_stats()
         self.test_admin_tokens_list()
         self.test_admin_users_list()
