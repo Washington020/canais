@@ -163,7 +163,7 @@ export default function ClientLogin() {
             <Text style={styles.demoTitle}>🎯 Credenciais de Demonstração</Text>
             <View style={styles.demoItem}>
               <Text style={styles.demoLabel}>Email:</Text>
-              <Text style={styles.demoValue}>cliente@fitpass.com</Text>
+              <Text style={styles.demoValue}>cliente@luxepass.com</Text>
             </View>
             <View style={styles.demoItem}>
               <Text style={styles.demoLabel}>Senha:</Text>
