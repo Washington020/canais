@@ -178,7 +178,7 @@ export default function GymLogin() {
               <Text style={styles.instructionTitle}>Como Obter suas Credenciais</Text>
             </View>
             <Text style={styles.instructionText}>
-              1. Acesse o <Text style={styles.highlightText}>App Administrador</Text> do Luxe Forma
+              1. Acesse o <Text style={styles.highlightText}>App Administrador</Text> do LuxePass
             </Text>
             <Text style={styles.instructionText}>
               2. Vá em <Text style={styles.highlightText}>Academias</Text> → <Text style={styles.highlightText}>Gerenciar</Text>
