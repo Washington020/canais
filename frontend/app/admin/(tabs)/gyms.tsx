@@ -33,6 +33,12 @@ interface Gym {
   type: string;
   status: 'pending' | 'analyzing' | 'approved' | 'rejected';
   created_at: string;
+  login?: string;
+  responsavel?: {
+    nome: string;
+    email: string;
+    telefone: string;
+  };
 }
 
 interface GymRegistrationForm {
