@@ -51,13 +51,17 @@ interface FinancialStats {
 
 export default function AdminFinancial() {
   const [users, setUsers] = useState<User[]>([]);
+  const [gymRevenues, setGymRevenues] = useState<GymRevenue[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<FinancialStats>({
     monthly_revenue: 0,
     overdue_payments: 0,
     active_subscriptions: 0,
-    blocked_users: 0
+    blocked_users: 0,
+    total_gym_commissions: 0,
+    total_tokens_used: 0,
+    avg_revenue_per_user: 0
   });
 
   const router = useRouter();
