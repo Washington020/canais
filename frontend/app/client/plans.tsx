@@ -40,10 +40,12 @@ export default function PlansScreen() {
 
   const loadPlans = async () => {
     try {
+      console.log('🚀 Carregando planos da URL:', `${API_URL}/api/integration/plans`);
       const response = await axios.get(`${API_URL}/api/integration/plans`);
+      console.log('✅ Planos recebidos:', response.data);
       setPlans(response.data);
     } catch (error) {
-      console.error('Erro ao carregar planos:', error);
+      console.error('❌ Erro ao carregar planos:', error);
       Alert.alert('Erro', 'Não foi possível carregar os planos. Tente novamente.');
     } finally {
       setLoading(false);
