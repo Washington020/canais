@@ -89,6 +89,7 @@ export default function GymsManagement() {
   const [showCredentials, setShowCredentials] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState<{username: string, password: string} | null>(null);
   const router = useRouter();
+  const loadingRef = useRef(false);
 
   const [form, setForm] = useState<GymForm>({
     name: '',
