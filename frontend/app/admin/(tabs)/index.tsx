@@ -759,9 +759,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   metricSubtext: {
-    color: '#64748B',
-    fontSize: 10,
-    fontWeight: '500',
+    color: '#94A3B8',
+    fontSize: 11,
+    marginTop: 2,
   },
   metricChange: {
     color: '#22C55E',
@@ -780,7 +780,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   seeAllText: {
-    color: '#F59E0B',
+    color: '#8B5CF6',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#8B5CF6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
