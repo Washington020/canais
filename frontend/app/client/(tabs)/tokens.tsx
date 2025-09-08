@@ -26,6 +26,8 @@ export default function ClientTokens() {
     tokens_used: 5,
     tokens_generated: 3
   });
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const router = useRouter();
 
   const handleLogout = useCallback(async () => {
