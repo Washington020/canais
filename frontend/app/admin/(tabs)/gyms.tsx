@@ -1432,6 +1432,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
+  saveButton: {
+    backgroundColor: '#22C55E',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 24,
+  },
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
