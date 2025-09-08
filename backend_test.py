@@ -198,6 +198,47 @@ class FitPassTester:
             
         return False
         
+    def test_token_generation_simple(self):
+        """Test NEW token generation endpoint with body parameters"""
+        print("\n=== Testing Token Generation Simple (NEW FORMAT) ===")
+        
+        if not self.auth_token:
+            self.log_test("Token Generation Simple", False, "No auth token available")
+            return False
+            
+        # Test the NEW endpoint POST /api/tokens/generate-simple with body parameters
+        token_data = {
+            "token_type": "gym",
+            "validity_hours": 3
+        }
+        
+        response = self.make_request("POST", "/tokens/generate-simple", token_data)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["success", "token_code", "token_type", "expires_at", "message"]
+            
+            if all(field in data for field in required_fields):
+                self.generated_token = data["token_code"]
+                self.log_test("Token Generation Simple", True, f"Token generated: {data['token_code'][:8]}... (NEW FORMAT)")
+                print(f"   Token Type: {data['token_type']}")
+                print(f"   Expires At: {data['expires_at']}")
+                print(f"   Message: {data['message']}")
+                return True
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("Token Generation Simple", False, f"Missing fields: {missing}")
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Token Generation Simple", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            
+        return False
+
     def test_token_generation(self):
         """Test token generation endpoint"""
         print("\n=== Testing Token Generation ===")
