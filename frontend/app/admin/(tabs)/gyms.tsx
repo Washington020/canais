@@ -1005,12 +1005,9 @@ export default function GymsManagement() {
                   <Text style={styles.instructionsTitle}>📋 Instruções:</Text>
                   <Text style={styles.instructionsText}>
                     1. Copie essas credenciais{'
-'}
-                    2. Envie para o email da academia{'
-'}
-                    3. A academia usa no Sistema Academia{'
-'}
-                    4. URL: {API_URL}/academia
+'}2. Envie para o email da academia{'
+'}3. A academia usa no Sistema Academia{'
+'}4. URL: {API_URL}/academia
                   </Text>
                 </View>
                 
