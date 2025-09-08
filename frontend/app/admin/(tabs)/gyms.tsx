@@ -614,6 +614,122 @@ export default function GymsManagement() {
             ))
           )}
         </View>
+        {/* Edit Modal */}
+        <Modal visible={showEditModal} animationType="slide" presentationStyle="pageSheet">
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalContainer}
+          >
+            <SafeAreaView style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Editar Academia</Text>
+                <TouchableOpacity 
+                  style={styles.closeButton}
+                  onPress={() => setShowEditModal(false)}
+                >
+                  <Ionicons name="close" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalContent}>
+                {selectedGym && (
+                  <>
+                    <View style={styles.editField}>
+                      <Text style={styles.editLabel}>Nome da Academia</Text>
+                      <TextInput 
+                        style={styles.editInput}
+                        value={selectedGym.name}
+                        onChangeText={(text) => setSelectedGym({...selectedGym, name: text})}
+                        placeholder="Nome da academia"
+                      />
+                    </View>
+
+                    <View style={styles.editField}>
+                      <Text style={styles.editLabel}>Email</Text>
+                      <TextInput 
+                        style={styles.editInput}
+                        value={selectedGym.email}
+                        onChangeText={(text) => setSelectedGym({...selectedGym, email: text})}
+                        placeholder="email@exemplo.com"
+                        keyboardType="email-address"
+                      />
+                    </View>
+
+                    <View style={styles.editField}>
+                      <Text style={styles.editLabel}>Telefone</Text>
+                      <TextInput 
+                        style={styles.editInput}
+                        value={selectedGym.phone}
+                        onChangeText={(text) => setSelectedGym({...selectedGym, phone: text})}
+                        placeholder="(11) 99999-9999"
+                        keyboardType="phone-pad"
+                      />
+                    </View>
+
+                    <TouchableOpacity 
+                      style={styles.saveButton}
+                      onPress={() => {
+                        Alert.alert('Sucesso', 'Dados atualizados com sucesso!');
+                        setShowEditModal(false);
+                        loadGyms();
+                      }}
+                    >
+                      <Text style={styles.saveButtonText}>Salvar Alterações</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </ScrollView>
+            </SafeAreaView>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Details Modal */}
+        <Modal visible={showDetailsModal} animationType="slide" presentationStyle="pageSheet">
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Detalhes da Academia</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowDetailsModal(false)}
+              >
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              {selectedGym && (
+                <View style={styles.detailsContainer}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Nome:</Text>
+                    <Text style={styles.detailValue}>{selectedGym.name}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Email:</Text>
+                    <Text style={styles.detailValue}>{selectedGym.email}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Telefone:</Text>
+                    <Text style={styles.detailValue}>{selectedGym.phone}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Status:</Text>
+                    <Text style={[styles.detailValue, {color: selectedGym.status === 'active' ? '#22C55E' : '#F59E0B'}]}>
+                      {selectedGym.status === 'active' ? 'Ativa' : selectedGym.status === 'pending' ? 'Pendente' : 'Inativa'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Capacidade:</Text>
+                    <Text style={styles.detailValue}>{selectedGym.capacity} pessoas</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Comissão:</Text>
+                    <Text style={styles.detailValue}>{selectedGym.commission_rate}%</Text>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
       </ScrollView>
 
       {/* Registration Modal */}
