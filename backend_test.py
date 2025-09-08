@@ -720,6 +720,133 @@ class FitPassTester:
             
         return False
         
+    def test_specific_problematic_endpoints(self):
+        """Test the specific problematic endpoints reported by user"""
+        print("\n" + "="*70)
+        print("🎯 TESTING SPECIFIC PROBLEMATIC ENDPOINTS")
+        print("="*70)
+        print("Testing the endpoints that user reported as problematic...")
+        
+        # Step 1: Test login with specific credentials
+        print("\n1️⃣ Testing POST /api/auth/login with cliente@fitpass.com/cliente123...")
+        login_data = {
+            "email": "cliente@fitpass.com",
+            "password": "cliente123"
+        }
+        
+        response = self.make_request("POST", "/auth/login", login_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "access_token" in data and "token_type" in data:
+                self.auth_token = data["access_token"]
+                self.log_test("1. Login Endpoint", True, "Successfully logged in with cliente@fitpass.com/cliente123")
+                print(f"   Access Token: {data['access_token'][:20]}...")
+                print(f"   Token Type: {data['token_type']}")
+            else:
+                self.log_test("1. Login Endpoint", False, "Response missing token fields")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("1. Login Endpoint", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 2: Test NEW token generation endpoint with body parameters
+        print("\n2️⃣ Testing POST /api/tokens/generate-simple with NEW body format...")
+        token_data = {
+            "token_type": "gym",
+            "validity_hours": 3
+        }
+        
+        response = self.make_request("POST", "/tokens/generate-simple", token_data)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["success", "token_code", "token_type", "expires_at", "message"]
+            
+            if all(field in data for field in required_fields):
+                self.generated_token = data["token_code"]
+                self.log_test("2. Token Generation Simple (NEW)", True, f"Token generated with NEW format: {data['token_code'][:8]}...")
+                print(f"   Success: {data['success']}")
+                print(f"   Token Code: {data['token_code']}")
+                print(f"   Token Type: {data['token_type']}")
+                print(f"   Expires At: {data['expires_at']}")
+                print(f"   Message: {data['message']}")
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("2. Token Generation Simple (NEW)", False, f"Missing fields: {missing}")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("2. Token Generation Simple (NEW)", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 3: Test gym registration endpoint
+        print("\n3️⃣ Testing POST /api/admin/gyms/register for gym registration...")
+        gym_data = {
+            "name": "Academia Teste Específica",
+            "cnpj": "88.777.666/0001-55",
+            "endereco": "Rua Específica, 999",
+            "numero": "999",
+            "bairro": "Bairro Teste",
+            "cidade": "São Paulo",
+            "estado": "SP",
+            "cep": "01999-888",
+            "email": "especifica@academiateste.com",
+            "telefone_principal": "(11) 99999-0000",
+            "tipo_academia": "Específica",
+            "responsavel_nome": "João Específico",
+            "responsavel_email": "joao@especifica.com",
+            "responsavel_telefone": "(11) 88888-0000"
+        }
+        
+        response = self.make_request("POST", "/admin/gyms/register", gym_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["success", "gym_id", "login", "password", "message"]
+            
+            if all(field in data for field in required_fields):
+                self.registered_gym_id = data["gym_id"]
+                self.log_test("3. Gym Registration", True, f"Gym registered successfully: {data['gym_id']}")
+                print(f"   Success: {data['success']}")
+                print(f"   Gym ID: {data['gym_id']}")
+                print(f"   Login: {data['login']}")
+                print(f"   Password: {data['password']}")
+                print(f"   Message: {data['message']}")
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("3. Gym Registration", False, f"Missing fields: {missing}")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("3. Gym Registration", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        print("\n✅ ALL SPECIFIC PROBLEMATIC ENDPOINTS TESTED SUCCESSFULLY!")
+        print("Summary of results:")
+        print("  ✓ POST /api/auth/login - Working correctly")
+        print("  ✓ POST /api/tokens/generate-simple - Working with NEW body format")
+        print("  ✓ POST /api/admin/gyms/register - Working correctly")
+        print("\nThe endpoints that were reported as problematic are now functioning properly!")
+        
+        return True
+
     def run_all_tests(self):
         """Run all backend tests in sequence"""
         print("🚀 Starting FitPass Brasil Backend API Tests")
