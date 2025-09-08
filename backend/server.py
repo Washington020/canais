@@ -867,9 +867,20 @@ async def register_gym(gym_data: dict):
     import random
     import string
     
-    # Generate unique login and password
-    login = f"gym_{gym_data['name'].lower().replace(' ', '_')[:10]}_{random.randint(1000, 9999)}"
-    password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    # Use custom password if provided, otherwise generate one
+    custom_password = gym_data.get("custom_password", "").strip()
+    
+    if custom_password:
+        # Use admin-provided password
+        password = custom_password
+        login = gym_data.get("custom_login", "").strip()
+        if not login:
+            # Generate login if not provided
+            login = f"gym_{gym_data['name'].lower().replace(' ', '_')[:10]}_{random.randint(1000, 9999)}"
+    else:
+        # Generate automatic credentials (fallback)
+        login = f"gym_{gym_data['name'].lower().replace(' ', '_')[:10]}_{random.randint(1000, 9999)}"
+        password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
     
     # Hash the password
     from passlib.context import CryptContext
