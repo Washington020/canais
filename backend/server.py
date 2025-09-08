@@ -1005,20 +1005,24 @@ async def gym_authenticate(credentials: dict):
     if not login or not password:
         raise HTTPException(status_code=400, detail="Login e senha são obrigatórios")
     
-    # Find gym by login
-    gym = await db.gyms.find_one({"login": login})
+    # Find gym by login_credentials.username (estrutura correta)
+    gym = await db.gyms.find_one({"login_credentials.username": login})
     
     if not gym:
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
     
-    # Verify password
+    # Verify password usando login_credentials.password_hash
     from passlib.context import CryptContext
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
-    if not pwd_context.verify(password, gym["hashed_password"]):
+    stored_password_hash = gym.get("login_credentials", {}).get("password_hash")
+    if not stored_password_hash:
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
     
-    if gym["status"] != "approved":
+    if not pwd_context.verify(password, stored_password_hash):
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
+    
+    if gym["status"] not in ["approved", "active"]:
         raise HTTPException(status_code=403, detail="Academia não aprovada para uso")
     
     # Generate token for gym session
@@ -1030,7 +1034,7 @@ async def gym_authenticate(credentials: dict):
         "gym_info": {
             "id": str(gym["_id"]),
             "name": gym["name"],
-            "type": gym["type"],
+            "type": gym.get("tipo_academia", "Completa"),
             "status": gym["status"]
         }
     }
