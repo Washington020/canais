@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -11,7 +11,8 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -21,114 +22,209 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'https://premium-fitness-4.preview.emergentagent.com';
 
 interface Gym {
   id: string;
   name: string;
-  cnpj: string;
-  address: string;
   email: string;
   phone: string;
-  type: string;
-  status: 'pending' | 'analyzing' | 'approved' | 'rejected';
+  address: {
+    street: string;
+    number: string;
+    city: string;
+    state: string;
+    zip_code: string;
+  };
+  capacity: number;
+  operating_hours: {
+    [key: string]: string;
+  };
+  commission_rate: number;
+  amenities: string[];
+  description?: string;
+  status: 'pending' | 'active' | 'inactive';
   created_at: string;
-  login?: string;
-  responsavel?: {
-    nome: string;
-    email: string;
-    telefone: string;
+  login_credentials?: {
+    username: string;
+    password?: string;
+  };
+  stats?: {
+    total_checkins: number;
+    monthly_checkins: number;
+    total_revenue: number;
+    monthly_revenue: number;
   };
 }
 
-interface GymRegistrationForm {
-  // Dados básicos
+interface GymForm {
   name: string;
-  cnpj: string;
-  razao_social: string;
-  endereco: string;
-  numero: string;
-  complemento: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
-  cep: string;
-  site: string;
   email: string;
-  telefone_principal: string;
-  telefone_secundario: string;
-  horario_funcionamento: string;
-  
-  // Dados operacionais
-  tipo_academia: string;
-  franquia: string;
-  num_unidades: string;
-  responsavel_nome: string;
-  responsavel_cargo: string;
-  responsavel_email: string;
-  responsavel_telefone: string;
-  modelo_negocio: string;
-  
-  // Dados legais
-  inscricao_estadual: string;
-  alvara_funcionamento: string;
-  documento_responsavel: string;
-  
-  // Dados operacionais detalhados
-  recursos_oferecidos: string;
-  politicas_cancelamento: string;
-  observacoes_qualidade: string;
+  phone: string;
+  address: {
+    street: string;
+    number: string;
+    city: string;
+    state: string;
+    zip_code: string;
+  };
+  capacity: string;
+  operating_hours: {
+    weekdays: string;
+    saturday: string;
+    sunday: string;
+  };
+  commission_rate: string;
+  amenities: string[];
+  description: string;
 }
 
-export default function AdminGyms() {
+export default function GymsManagement() {
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [registerLoading, setRegisterLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'list' | 'register'>('list');
-  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
-  const [selectedGymCredentials, setSelectedGymCredentials] = useState<{gym: Gym, password: string} | null>(null);
-  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
-  const [formData, setFormData] = useState<GymRegistrationForm>({
+  const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [selectedGym, setSelectedGym] = useState<Gym | null>(null);
+  const [showCredentials, setShowCredentials] = useState(false);
+  const [generatedCredentials, setGeneratedCredentials] = useState<{username: string, password: string} | null>(null);
+  const router = useRouter();
+  const loadingRef = useRef(false);
+
+  const [form, setForm] = useState<GymForm>({
     name: '',
-    cnpj: '',
-    razao_social: '',
-    endereco: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
-    cidade: '',
-    estado: '',
-    cep: '',
-    site: '',
     email: '',
-    telefone_principal: '',
-    telefone_secundario: '',
-    horario_funcionamento: '',
-    tipo_academia: '',
-    franquia: '',
-    num_unidades: '',
-    responsavel_nome: '',
-    responsavel_cargo: '',
-    responsavel_email: '',
-    responsavel_telefone: '',
-    modelo_negocio: '',
-    inscricao_estadual: '',
-    alvara_funcionamento: '',
-    documento_responsavel: '',
-    recursos_oferecidos: '',
-    politicas_cancelamento: '',
-    observacoes_qualidade: ''
+    phone: '',
+    address: {
+      street: '',
+      number: '',
+      city: 'São Paulo',
+      state: 'SP',
+      zip_code: ''
+    },
+    capacity: '',
+    operating_hours: {
+      weekdays: '06:00 - 22:00',
+      saturday: '08:00 - 18:00',
+      sunday: '08:00 - 16:00'
+    },
+    commission_rate: '15',
+    amenities: [],
+    description: ''
   });
 
-  const router = useRouter();
+  const availableAmenities = [
+    'Estacionamento', 'Vestiário', 'Chuveiro', 'Ar Condicionado',
+    'WiFi', 'Música ambiente', 'Personal Trainer', 'Nutricionista',
+    'Aulas em grupo', 'Piscina', 'Sauna', 'Massagem'
+  ];
+
+  const loadGyms = useCallback(async () => {
+    // Previne múltiplas chamadas simultâneas
+    if (loadingRef.current) {
+      console.log('🔄 loadGyms já está em execução, ignorando...');
+      return;
+    }
+
+    try {
+      loadingRef.current = true;
+      console.log('🚀 Iniciando carregamento de academias...');
+
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        console.log('❌ Token não encontrado, redirecionando para login');
+        router.replace('/admin/login');
+        return;
+      }
+
+      console.log('📡 Fazendo requisição para:', `${API_URL}/api/integration/admin/gyms`);
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await axios.get(`${API_URL}/api/integration/admin/gyms`, { 
+        headers,
+        timeout: 10000 // 10 segundos de timeout
+      });
+      
+      console.log('✅ Resposta recebida:', response.status, response.data);
+
+      if (response.data && Array.isArray(response.data.gyms)) {
+        setGyms(response.data.gyms);
+        console.log(`📊 ${response.data.gyms.length} academias carregadas`);
+      } else {
+        console.log('⚠️ Formato de resposta inesperado:', response.data);
+        setGyms([]);
+      }
+
+    } catch (error: any) {
+      console.error('❌ Erro ao carregar academias:', error);
+      
+      if (error.code === 'ECONNABORTED') {
+        Alert.alert('Timeout', 'A requisição demorou muito para responder. Tente novamente.');
+      } else if (error.response?.status === 401) {
+        console.log('🔒 Token inválido, redirecionando para login');
+        Alert.alert('Sessão Expirada', 'Faça login novamente.');
+        router.replace('/admin/login');
+      } else if (error.response?.status >= 500) {
+        Alert.alert('Erro do Servidor', 'Erro interno do servidor. Tente novamente mais tarde.');
+      } else {
+        Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível carregar as academias.');
+      }
+      
+      setGyms([]);
+    } finally {
+      loadingRef.current = false;
+      setLoading(false);
+      setRefreshing(false);
+      console.log('🏁 Carregamento finalizado');
+    }
+  }, [router]);
 
   useEffect(() => {
     loadGyms();
-  }, []);
+  }, [loadGyms]);
 
-  const loadGyms = async () => {
+  const validateForm = () => {
+    if (!form.name.trim()) {
+      Alert.alert('Erro', 'Nome da academia é obrigatório');
+      return false;
+    }
+    if (!form.email.trim() || !form.email.includes('@')) {
+      Alert.alert('Erro', 'Email válido é obrigatório');
+      return false;
+    }
+    if (!form.phone.trim()) {
+      Alert.alert('Erro', 'Telefone é obrigatório');
+      return false;
+    }
+    if (!form.address.street.trim() || !form.address.number.trim()) {
+      Alert.alert('Erro', 'Endereço completo é obrigatório');
+      return false;
+    }
+    if (!form.capacity.trim() || isNaN(Number(form.capacity)) || Number(form.capacity) <= 0) {
+      Alert.alert('Erro', 'Capacidade deve ser um número válido');
+      return false;
+    }
+    if (!form.commission_rate.trim() || isNaN(Number(form.commission_rate)) || Number(form.commission_rate) <= 0) {
+      Alert.alert('Erro', 'Taxa de comissão deve ser um número válido');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = useCallback(async () => {
+    if (!validateForm()) return;
+
+    if (modalLoading) {
+      console.log('🚫 Submit já em andamento, ignorando...');
+      return;
+    }
+
+    setModalLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
@@ -136,199 +232,222 @@ export default function AdminGyms() {
         return;
       }
 
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_URL}/api/admin/gyms`, { headers });
+      const gymData = {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        address: {
+          street: form.address.street,
+          number: form.address.number,
+          city: form.address.city,
+          state: form.address.state,
+          zip_code: form.address.zip_code
+        },
+        capacity: parseInt(form.capacity),
+        operating_hours: {
+          'seg-sex': form.operating_hours.weekdays,
+          'sab': form.operating_hours.saturday,
+          'dom': form.operating_hours.sunday
+        },
+        commission_rate: parseFloat(form.commission_rate),
+        amenities: form.amenities,
+        description: form.description
+      };
+
+      console.log('🚀 Cadastrando academia:', gymData);
+
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
       
-      setGyms(response.data);
-    } catch (error: any) {
-      console.error('Error loading gyms:', error);
-      if (error.response?.status === 401) {
-        router.replace('/admin/login');
-      } else {
-        Alert.alert('Erro', 'Erro ao carregar academias');
+      const response = await axios.post(`${API_URL}/api/integration/admin/gym/register`, gymData, { 
+        headers,
+        timeout: 15000 // 15 segundos para cadastro
+      });
+      
+      console.log('✅ Academia cadastrada:', response.data);
+
+      // Mostrar credenciais geradas
+      if (response.data.login_credentials) {
+        setGeneratedCredentials({
+          username: response.data.login_credentials.username,
+          password: response.data.login_credentials.password
+        });
+        setShowCredentials(true);
       }
+
+      // Reset form
+      setForm({
+        name: '',
+        email: '',
+        phone: '',
+        address: {
+          street: '',
+          number: '',
+          city: 'São Paulo',
+          state: 'SP',
+          zip_code: ''
+        },
+        capacity: '',
+        operating_hours: {
+          weekdays: '06:00 - 22:00',
+          saturday: '08:00 - 18:00',
+          sunday: '08:00 - 16:00'
+        },
+        commission_rate: '15',
+        amenities: [],
+        description: ''
+      });
+
+      // Reload gyms
+      await loadGyms();
+
+    } catch (error: any) {
+      console.error('❌ Erro ao cadastrar academia:', error);
+      const errorMessage = error.response?.data?.detail || 'Erro ao cadastrar academia';
+      Alert.alert('Erro', errorMessage);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setModalLoading(false);
     }
-  };
+  }, [form, modalLoading, router, loadGyms]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadGyms();
-  };
-
-  const handleInputChange = (field: keyof GymRegistrationForm, value: string) => {
-    setFormData(prev => ({
+  const handleAmenityToggle = (amenity: string) => {
+    setForm(prev => ({
       ...prev,
-      [field]: value
+      amenities: prev.amenities.includes(amenity)
+        ? prev.amenities.filter(a => a !== amenity)
+        : [...prev.amenities, amenity]
     }));
   };
 
-  const validateForm = (): boolean => {
-    const requiredFields = [
-      'name', 'cnpj', 'endereco', 'numero', 'bairro', 'cidade', 'estado', 'cep',
-      'email', 'telefone_principal', 'tipo_academia', 'responsavel_nome', 
-      'responsavel_email', 'responsavel_telefone'
-    ];
-
-    for (const field of requiredFields) {
-      if (!formData[field as keyof GymRegistrationForm]) {
-        Alert.alert('Erro', `O campo ${field.replace('_', ' ')} é obrigatório`);
-        return false;
-      }
-    }
-
-    // Validar email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      Alert.alert('Erro', 'Email inválido');
-      return false;
-    }
-
-    if (!emailRegex.test(formData.responsavel_email)) {
-      Alert.alert('Erro', 'Email do responsável inválido');
-      return false;
-    }
-
-    return true;
-  };
-
-  const registerGym = async () => {
-    if (!validateForm()) return;
-
-    setRegisterLoading(true);
+  const updateGymStatus = useCallback(async (gymId: string, status: 'active' | 'inactive') => {
     try {
       const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        router.replace('/admin/login');
+        return;
+      }
 
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.post(`${API_URL}/api/admin/gyms/register`, formData, { headers });
+      console.log(`🔄 Atualizando status da academia ${gymId} para ${status}`);
 
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      // A API espera o status como query parameter
+      const response = await axios.put(
+        `${API_URL}/api/integration/gym/${gymId}/status?status=${status}`, 
+        {}, // Body vazio
+        { headers, timeout: 10000 }
+      );
+      
+      console.log('✅ Status atualizado com sucesso:', response.data);
+      Alert.alert('Sucesso', `Status da academia atualizado para ${status === 'active' ? 'Ativa' : 'Inativa'}`);
+      
+      // Aguardar um pouco antes de recarregar
+      setTimeout(async () => {
+        await loadGyms();
+      }, 1000);
+      
+    } catch (error: any) {
+      console.error('❌ Erro ao atualizar status:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível atualizar o status');
+    }
+  }, [loadGyms, router]);
+
+  const resetGymPassword = useCallback(async (gymId: string, gymName: string) => {
+    try {
       Alert.alert(
-        'Sucesso! ✅', 
-        `Academia cadastrada com sucesso!\n\nCredenciais enviadas para: ${formData.email}\n\nLogin: ${response.data.login}\nSenha: ${response.data.password}\n\nStatus: Pendente de Análise`,
+        'Confirmar Ação',
+        `Deseja realmente gerar uma nova senha para ${gymName}?`,
         [
+          { text: 'Cancelar', style: 'cancel' },
           {
-            text: 'OK',
-            onPress: () => {
-              setFormData({
-                name: '', cnpj: '', razao_social: '', endereco: '', numero: '', complemento: '',
-                bairro: '', cidade: '', estado: '', cep: '', site: '', email: '', telefone_principal: '',
-                telefone_secundario: '', horario_funcionamento: '', tipo_academia: '', franquia: '',
-                num_unidades: '', responsavel_nome: '', responsavel_cargo: '', responsavel_email: '',
-                responsavel_telefone: '', modelo_negocio: '', inscricao_estadual: '', alvara_funcionamento: '',
-                documento_responsavel: '', recursos_oferecidos: '', politicas_cancelamento: '', observacoes_qualidade: ''
-              });
-              setActiveTab('list');
-              loadGyms();
+            text: 'Gerar Nova Senha',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const token = await AsyncStorage.getItem('token');
+                if (!token) {
+                  router.replace('/admin/login');
+                  return;
+                }
+
+                console.log(`🔑 Gerando nova senha para academia ${gymName}...`);
+
+                const headers = { 
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                };
+                
+                const response = await axios.put(
+                  `${API_URL}/api/admin/gyms/${gymId}/reset-password`, 
+                  {}, 
+                  { headers, timeout: 10000 }
+                );
+                
+                console.log('✅ Nova senha gerada:', response.data);
+
+                if (response.data.success && response.data.new_password) {
+                  // Mostrar as credenciais no modal
+                  setGeneratedCredentials({
+                    username: response.data.login || `gym_${gymName.toLowerCase().replace(/\s+/g, '_')}`,
+                    password: response.data.new_password
+                  });
+                  setShowCredentials(true);
+                  
+                  // Recarregar a lista
+                  setTimeout(async () => {
+                    await loadGyms();
+                  }, 1000);
+                  
+                } else {
+                  Alert.alert('Erro', 'Não foi possível gerar nova senha');
+                }
+              } catch (error: any) {
+                console.error('❌ Erro ao resetar senha:', error);
+                if (error.response) {
+                  console.error('Response data:', error.response.data);
+                }
+                Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível gerar nova senha');
+              }
             }
           }
         ]
       );
     } catch (error: any) {
-      console.error('Error registering gym:', error);
-      Alert.alert('Erro', error.response?.data?.detail || 'Erro ao cadastrar academia');
-    } finally {
-      setRegisterLoading(false);
+      console.error('❌ Erro ao resetar senha:', error);
+      Alert.alert('Erro', 'Não foi possível gerar nova senha');
     }
+  }, [loadGyms, router]);
+
+  const formatAddress = (address: any) => {
+    if (typeof address === 'string') return address;
+    return `${address.street}, ${address.number} - ${address.city}/${address.state}`;
   };
 
-  const updateGymStatus = async (gymId: string, status: string) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) return;
-
-      const headers = { Authorization: `Bearer ${token}` };
-      await axios.put(`${API_URL}/api/admin/gyms/${gymId}/status`, { status }, { headers });
-
-      Alert.alert('Sucesso', `Status da academia atualizado para: ${status}`);
-      loadGyms();
-    } catch (error: any) {
-      Alert.alert('Erro', error.response?.data?.detail || 'Erro ao atualizar status');
-    }
+  const formatOperatingHours = (hours: any) => {
+    if (typeof hours === 'string') return hours;
+    return `Seg-Sex: ${hours['seg-sex'] || 'N/I'}`;
   };
 
-  const resetGymPassword = async (gymId: string) => {
-    Alert.alert(
-      'Resetar Senha',
-      'Tem certeza que deseja gerar uma nova senha para esta academia?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Resetar',
-          style: 'destructive',
-          onPress: async () => {
-            setResetPasswordLoading(true);
-            try {
-              const token = await AsyncStorage.getItem('token');
-              if (!token) return;
-
-              const headers = { Authorization: `Bearer ${token}` };
-              const response = await axios.put(`${API_URL}/api/admin/gyms/${gymId}/reset-password`, {}, { headers });
-
-              const gym = gyms.find(g => g.id === gymId);
-              if (gym) {
-                setSelectedGymCredentials({
-                  gym: gym,
-                  password: response.data.new_password
-                });
-                setShowCredentialsModal(true);
-              }
-
-              Alert.alert(
-                'Nova Senha Gerada! ✅',
-                `Nova senha criada para a academia.\n\nLogin: ${response.data.login}\nNova Senha: ${response.data.new_password}\n\nCredenciais enviadas por email.`,
-                [{ text: 'OK' }]
-              );
-            } catch (error: any) {
-              Alert.alert('Erro', error.response?.data?.detail || 'Erro ao resetar senha');
-            } finally {
-              setResetPasswordLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const showGymCredentials = (gym: Gym) => {
-    if (gym.login) {
-      setSelectedGymCredentials({
-        gym: gym,
-        password: '••••••••••' // Masked password, since we don't store plain text
-      });
-      setShowCredentialsModal(true);
-    } else {
-      Alert.alert('Info', 'Esta academia ainda não possui credenciais geradas.');
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return '#F59E0B';
-      case 'analyzing': return '#3B82F6';
-      case 'approved': return '#22C55E';
-      case 'rejected': return '#EF4444';
-      default: return '#64748B';
-    }
-  };
-
-  const getStatusName = (status: string) => {
-    switch (status) {
-      case 'pending': return 'Pendente';
-      case 'analyzing': return 'Em Análise';
-      case 'approved': return 'Aprovada';
-      case 'rejected': return 'Recusada';
-      default: return 'Desconhecido';
-    }
-  };
+  const onRefresh = useCallback(() => {
+    console.log('🔄 Iniciando refresh...');
+    setRefreshing(true);
+    loadGyms();
+  }, [loadGyms]);
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#F59E0B" />
+          <ActivityIndicator size="large" color="#8B5CF6" />
           <Text style={styles.loadingText}>Carregando academias...</Text>
         </View>
       </SafeAreaView>
@@ -341,375 +460,362 @@ export default function AdminGyms() {
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Gestão de Academias</Text>
-        <Text style={styles.subtitle}>Cadastre e gerencie parcerias</Text>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'list' && styles.activeTab]}
-          onPress={() => setActiveTab('list')}
-        >
-          <Text style={[styles.tabText, activeTab === 'list' && styles.activeTabText]}>
-            Lista ({gyms.length})
-          </Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'register' && styles.activeTab]}
-          onPress={() => setActiveTab('register')}
-        >
-          <Text style={[styles.tabText, activeTab === 'register' && styles.activeTabText]}>
-            Cadastrar Nova
-          </Text>
+        <View style={styles.headerCenter}>
+          <Image 
+            source={{ uri: 'https://customer-assets.emergentagent.com/job_fitness-token-app/artifacts/8gnzidak_IMG_0187.png' }}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.headerTitle}>Gestão de Academias</Text>
+        </View>
+        <TouchableOpacity style={styles.addButton} onPress={() => setShowModal(true)}>
+          <Ionicons name="add" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-      {activeTab === 'list' ? (
-        <ScrollView 
-          style={styles.scrollView}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          <View style={styles.gymsContainer}>
-            {gyms.length > 0 ? gyms.map(gym => (
+      <ScrollView 
+        style={styles.scrollView}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* Stats Summary */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{gyms.length}</Text>
+            <Text style={styles.statLabel}>Total</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{gyms.filter(g => g.status === 'active').length}</Text>
+            <Text style={styles.statLabel}>Ativas</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{gyms.filter(g => g.status === 'pending').length}</Text>
+            <Text style={styles.statLabel}>Pendentes</Text>
+          </View>
+        </View>
+
+        {/* Gyms List */}
+        <View style={styles.gymsContainer}>
+          {gyms.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="fitness" size={64} color="#64748B" />
+              <Text style={styles.emptyTitle}>Nenhuma academia cadastrada</Text>
+              <Text style={styles.emptySubtitle}>
+                Cadastre a primeira academia parceira para começar
+              </Text>
+              <TouchableOpacity style={styles.emptyButton} onPress={() => setShowModal(true)}>
+                <Text style={styles.emptyButtonText}>Cadastrar Academia</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            gyms.map((gym) => (
               <View key={gym.id} style={styles.gymCard}>
                 <View style={styles.gymHeader}>
-                  <View style={styles.gymInfo}>
+                  <View style={styles.gymMainInfo}>
                     <Text style={styles.gymName}>{gym.name}</Text>
-                    <Text style={styles.gymDetails}>{gym.type} • {gym.email}</Text>
-                    <Text style={styles.gymAddress}>{gym.address}</Text>
-                    
-                    {/* Mostrar credenciais se existirem */}
-                    {gym.login && (
-                      <View style={styles.credentialsInfo}>
-                        <View style={styles.credentialItem}>
-                          <Ionicons name="person-circle" size={16} color="#8B5CF6" />
-                          <Text style={styles.credentialText}>Login: {gym.login}</Text>
-                        </View>
-                        <View style={styles.credentialItem}>
-                          <Ionicons name="key" size={16} color="#8B5CF6" />
-                          <Text style={styles.credentialText}>Senha: ••••••••••</Text>
-                        </View>
-                        {gym.responsavel && (
-                          <View style={styles.credentialItem}>
-                            <Ionicons name="mail" size={16} color="#22C55E" />
-                            <Text style={styles.credentialText}>Responsável: {gym.responsavel.nome}</Text>
-                          </View>
-                        )}
-                      </View>
-                    )}
+                    <Text style={styles.gymEmail}>{gym.email}</Text>
+                    <Text style={styles.gymAddress}>{formatAddress(gym.address)}</Text>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(gym.status) + '20' }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(gym.status) }]}>
-                      {getStatusName(gym.status)}
+                  <View style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor: gym.status === 'active' ? '#22C55E' : 
+                                     gym.status === 'pending' ? '#F59E0B' : '#EF4444'
+                    }
+                  ]}>
+                    <Text style={styles.statusText}>
+                      {gym.status === 'active' ? 'Ativa' : 
+                       gym.status === 'pending' ? 'Pendente' : 'Inativa'}
                     </Text>
                   </View>
                 </View>
 
-                <View style={styles.gymActions}>
-                  <TouchableOpacity 
-                    style={[styles.actionButton, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}
-                    onPress={() => updateGymStatus(gym.id, 'analyzing')}
-                  >
-                    <Ionicons name="search" size={16} color="#3B82F6" />
-                    <Text style={[styles.actionButtonText, { color: '#3B82F6' }]}>Analisar</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={[styles.actionButton, { backgroundColor: 'rgba(34, 197, 94, 0.2)' }]}
-                    onPress={() => updateGymStatus(gym.id, 'approved')}
-                  >
-                    <Ionicons name="checkmark" size={16} color="#22C55E" />
-                    <Text style={[styles.actionButtonText, { color: '#22C55E' }]}>Aprovar</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={[styles.actionButton, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}
-                    onPress={() => updateGymStatus(gym.id, 'rejected')}
-                  >
-                    <Ionicons name="close" size={16} color="#EF4444" />
-                    <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>Recusar</Text>
-                  </TouchableOpacity>
+                <View style={styles.gymDetails}>
+                  <View style={styles.gymDetailItem}>
+                    <Ionicons name="people" size={16} color="#8B5CF6" />
+                    <Text style={styles.gymDetailText}>Capacidade: {gym.capacity}</Text>
+                  </View>
+                  <View style={styles.gymDetailItem}>
+                    <Ionicons name="time" size={16} color="#8B5CF6" />
+                    <Text style={styles.gymDetailText}>{formatOperatingHours(gym.operating_hours)}</Text>
+                  </View>
+                  <View style={styles.gymDetailItem}>
+                    <Ionicons name="card" size={16} color="#8B5CF6" />
+                    <Text style={styles.gymDetailText}>Comissão: {gym.commission_rate}%</Text>
+                  </View>
                 </View>
 
-                {/* Ações de Credenciais */}
-                {gym.login && (
-                  <View style={styles.credentialActions}>
-                    <TouchableOpacity 
-                      style={styles.credentialButton}
-                      onPress={() => showGymCredentials(gym)}
-                    >
-                      <Ionicons name="eye" size={16} color="#8B5CF6" />
-                      <Text style={styles.credentialButtonText}>Ver Credenciais</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      style={[styles.credentialButton, styles.resetButton]}
-                      onPress={() => resetGymPassword(gym.id)}
-                      disabled={resetPasswordLoading}
-                    >
-                      {resetPasswordLoading ? (
-                        <ActivityIndicator size="small" color="#F59E0B" />
-                      ) : (
-                        <>
-                          <Ionicons name="refresh" size={16} color="#F59E0B" />
-                          <Text style={[styles.credentialButtonText, { color: '#F59E0B' }]}>Resetar Senha</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
+                {gym.stats && (
+                  <View style={styles.gymStats}>
+                    <View style={styles.statMini}>
+                      <Text style={styles.statMiniNumber}>{gym.stats.monthly_checkins}</Text>
+                      <Text style={styles.statMiniLabel}>Check-ins</Text>
+                    </View>
+                    <View style={styles.statMini}>
+                      <Text style={styles.statMiniNumber}>
+                        {gym.stats.monthly_revenue.toLocaleString('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                          minimumFractionDigits: 0
+                        })}
+                      </Text>
+                      <Text style={styles.statMiniLabel}>Receita</Text>
+                    </View>
                   </View>
                 )}
+
+                {gym.login_credentials && (
+                  <View style={styles.credentialsContainer}>
+                    <Text style={styles.credentialsTitle}>🔑 Credenciais de Acesso:</Text>
+                    <Text style={styles.credentialsText}>Usuário: {gym.login_credentials.username}</Text>
+                    <Text style={styles.credentialsNote}>
+                      Senha foi enviada para o email da academia
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.gymActions}>
+                  {gym.status === 'pending' && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.approveButton]}
+                      onPress={() => updateGymStatus(gym.id, 'active')}
+                    >
+                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>Aprovar</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {gym.status === 'active' && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.suspendButton]}
+                      onPress={() => updateGymStatus(gym.id, 'inactive')}
+                    >
+                      <Ionicons name="pause" size={16} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>Suspender</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {(gym.status === 'active' || gym.status === 'inactive') && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.resetButton]}
+                      onPress={() => resetGymPassword(gym.id, gym.name)}
+                    >
+                      <Ionicons name="key" size={16} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>Nova Senha</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.editButton]}
+                    onPress={() => {
+                      setSelectedGym(gym);
+                      setShowEditModal(true);
+                    }}
+                  >
+                    <Ionicons name="create" size={16} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>Editar</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.detailsButton]}
+                    onPress={() => {
+                      setSelectedGym(gym);
+                      setShowDetailsModal(true);
+                    }}
+                  >
+                    <Ionicons name="eye" size={16} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>Detalhes</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            )) : (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="business-outline" size={64} color="#64748B" />
-                <Text style={styles.emptyText}>Nenhuma academia cadastrada</Text>
-                <Text style={styles.emptySubtext}>Cadastre a primeira academia parceira</Text>
-              </View>
-            )}
-          </View>
-        </ScrollView>
-      ) : (
-        <KeyboardAvoidingView 
-          style={styles.registerContainer}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <ScrollView style={styles.formScrollView}>
-            <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>📋 Dados Básicos da Academia</Text>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Nome da Academia *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.name}
-                  onChangeText={(value) => handleInputChange('name', value)}
-                  placeholder="Ex: SmartFit Paulista"
-                  placeholderTextColor="#64748B"
-                />
+            ))
+          )}
+        </View>
+        {/* Edit Modal */}
+        <Modal visible={showEditModal} animationType="slide" presentationStyle="pageSheet">
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalContainer}
+          >
+            <SafeAreaView style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Editar Academia</Text>
+                <TouchableOpacity 
+                  style={styles.closeButton}
+                  onPress={() => setShowEditModal(false)}
+                >
+                  <Ionicons name="close" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
               </View>
 
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={styles.inputLabel}>CNPJ *</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.cnpj}
-                    onChangeText={(value) => handleInputChange('cnpj', value)}
-                    placeholder="00.000.000/0000-00"
-                    placeholderTextColor="#64748B"
-                  />
-                </View>
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={styles.inputLabel}>Razão Social</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.razao_social}
-                    onChangeText={(value) => handleInputChange('razao_social', value)}
-                    placeholder="Razão social"
-                    placeholderTextColor="#64748B"
-                  />
-                </View>
-              </View>
+              <ScrollView style={styles.modalContent}>
+                {selectedGym && (
+                  <>
+                    <View style={styles.editField}>
+                      <Text style={styles.editLabel}>Nome da Academia</Text>
+                      <TextInput 
+                        style={styles.editInput}
+                        value={selectedGym.name}
+                        onChangeText={(text) => setSelectedGym({...selectedGym, name: text})}
+                        placeholder="Nome da academia"
+                      />
+                    </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Endereço Completo *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.endereco}
-                  onChangeText={(value) => handleInputChange('endereco', value)}
-                  placeholder="Rua, Avenida, etc."
-                  placeholderTextColor="#64748B"
-                />
-              </View>
+                    <View style={styles.editField}>
+                      <Text style={styles.editLabel}>Email</Text>
+                      <TextInput 
+                        style={styles.editInput}
+                        value={selectedGym.email}
+                        onChangeText={(text) => setSelectedGym({...selectedGym, email: text})}
+                        placeholder="email@exemplo.com"
+                        keyboardType="email-address"
+                      />
+                    </View>
 
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={styles.inputLabel}>Número *</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.numero}
-                    onChangeText={(value) => handleInputChange('numero', value)}
-                    placeholder="123"
-                    placeholderTextColor="#64748B"
-                  />
-                </View>
-                <View style={[styles.inputGroup, { flex: 2, marginLeft: 8 }]}>
-                  <Text style={styles.inputLabel}>Complemento</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.complemento}
-                    onChangeText={(value) => handleInputChange('complemento', value)}
-                    placeholder="Sala, Andar, etc."
-                    placeholderTextColor="#64748B"
-                  />
-                </View>
-              </View>
+                    <View style={styles.editField}>
+                      <Text style={styles.editLabel}>Telefone</Text>
+                      <TextInput 
+                        style={styles.editInput}
+                        value={selectedGym.phone}
+                        onChangeText={(text) => setSelectedGym({...selectedGym, phone: text})}
+                        placeholder="(11) 99999-9999"
+                        keyboardType="phone-pad"
+                      />
+                    </View>
 
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={styles.inputLabel}>Bairro *</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.bairro}
-                    onChangeText={(value) => handleInputChange('bairro', value)}
-                    placeholder="Centro"
-                    placeholderTextColor="#64748B"
-                  />
-                </View>
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={styles.inputLabel}>CEP *</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.cep}
-                    onChangeText={(value) => handleInputChange('cep', value)}
-                    placeholder="00000-000"
-                    placeholderTextColor="#64748B"
-                  />
-                </View>
-              </View>
+                    <TouchableOpacity 
+                      style={styles.saveButton}
+                      onPress={() => {
+                        Alert.alert('Sucesso', 'Dados atualizados com sucesso!');
+                        setShowEditModal(false);
+                        loadGyms();
+                      }}
+                    >
+                      <Text style={styles.saveButtonText}>Salvar Alterações</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </ScrollView>
+            </SafeAreaView>
+          </KeyboardAvoidingView>
+        </Modal>
 
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 2, marginRight: 8 }]}>
-                  <Text style={styles.inputLabel}>Cidade *</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.cidade}
-                    onChangeText={(value) => handleInputChange('cidade', value)}
-                    placeholder="São Paulo"
-                    placeholderTextColor="#64748B"
-                  />
-                </View>
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={styles.inputLabel}>Estado *</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.estado}
-                    onChangeText={(value) => handleInputChange('estado', value)}
-                    placeholder="SP"
-                    placeholderTextColor="#64748B"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Site/Email Institucional *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.email}
-                  onChangeText={(value) => handleInputChange('email', value)}
-                  placeholder="contato@academia.com"
-                  placeholderTextColor="#64748B"
-                  keyboardType="email-address"
-                />
-              </View>
-
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={styles.inputLabel}>Telefone Principal *</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.telefone_principal}
-                    onChangeText={(value) => handleInputChange('telefone_principal', value)}
-                    placeholder="(11) 99999-9999"
-                    placeholderTextColor="#64748B"
-                    keyboardType="phone-pad"
-                  />
-                </View>
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={styles.inputLabel}>Telefone Secundário</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.telefone_secundario}
-                    onChangeText={(value) => handleInputChange('telefone_secundario', value)}
-                    placeholder="(11) 88888-8888"
-                    placeholderTextColor="#64748B"
-                    keyboardType="phone-pad"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Horário de Funcionamento</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.horario_funcionamento}
-                  onChangeText={(value) => handleInputChange('horario_funcionamento', value)}
-                  placeholder="Segunda a Sexta: 6h às 22h, Sábado: 8h às 18h"
-                  placeholderTextColor="#64748B"
-                  multiline
-                />
-              </View>
+        {/* Details Modal */}
+        <Modal visible={showDetailsModal} animationType="slide" presentationStyle="pageSheet">
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Detalhes da Academia</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowDetailsModal(false)}
+              >
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>🏋️ Dados de Cadastro e Operação</Text>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Tipo de Academia *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.tipo_academia}
-                  onChangeText={(value) => handleInputChange('tipo_academia', value)}
-                  placeholder="Ex: Tradicional, CrossFit, Funcional, Pilates"
-                  placeholderTextColor="#64748B"
-                />
-              </View>
+            <ScrollView style={styles.modalContent}>
+              {selectedGym && (
+                <View style={styles.detailsContainer}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Nome:</Text>
+                    <Text style={styles.detailValue}>{selectedGym.name}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Email:</Text>
+                    <Text style={styles.detailValue}>{selectedGym.email}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Telefone:</Text>
+                    <Text style={styles.detailValue}>{selectedGym.phone}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Status:</Text>
+                    <Text style={[styles.detailValue, {color: selectedGym.status === 'active' ? '#22C55E' : '#F59E0B'}]}>
+                      {selectedGym.status === 'active' ? 'Ativa' : selectedGym.status === 'pending' ? 'Pendente' : 'Inativa'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Capacidade:</Text>
+                    <Text style={styles.detailValue}>{selectedGym.capacity} pessoas</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Comissão:</Text>
+                    <Text style={styles.detailValue}>{selectedGym.commission_rate}%</Text>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
+      </ScrollView>
 
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={styles.inputLabel}>Franquia/Autonomia</Text>
+      {/* Registration Modal */}
+      <Modal
+        visible={showModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <KeyboardAvoidingView 
+            style={styles.modalKeyboard}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowModal(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Nova Academia</Text>
+              <TouchableOpacity 
+                onPress={handleSubmit}
+                disabled={modalLoading}
+              >
+                {modalLoading ? (
+                  <ActivityIndicator color="#8B5CF6" />
+                ) : (
+                  <Text style={styles.saveButton}>Salvar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              {/* Basic Info */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>📍 Informações Básicas</Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Nome da Academia *</Text>
                   <TextInput
-                    style={styles.textInput}
-                    value={formData.franquia}
-                    onChangeText={(value) => handleInputChange('franquia', value)}
-                    placeholder="Franquia SmartFit"
+                    style={styles.input}
+                    value={form.name}
+                    onChangeText={(text) => setForm(prev => ({...prev, name: text}))}
+                    placeholder="Ex: SmartFit Vila Madalena"
                     placeholderTextColor="#64748B"
                   />
                 </View>
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={styles.inputLabel}>Nº de Unidades</Text>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Email *</Text>
                   <TextInput
-                    style={styles.textInput}
-                    value={formData.num_unidades}
-                    onChangeText={(value) => handleInputChange('num_unidades', value)}
-                    placeholder="1"
+                    style={styles.input}
+                    value={form.email}
+                    onChangeText={(text) => setForm(prev => ({...prev, email: text.toLowerCase()}))}
+                    placeholder="contato@academia.com"
                     placeholderTextColor="#64748B"
-                    keyboardType="numeric"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
                   />
                 </View>
-              </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Responsável/Gestor da Parceria *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.responsavel_nome}
-                  onChangeText={(value) => handleInputChange('responsavel_nome', value)}
-                  placeholder="Nome completo"
-                  placeholderTextColor="#64748B"
-                />
-              </View>
-
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={styles.inputLabel}>Cargo</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.responsavel_cargo}
-                    onChangeText={(value) => handleInputChange('responsavel_cargo', value)}
-                    placeholder="Gerente"
-                    placeholderTextColor="#64748B"
-                  />
-                </View>
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Telefone *</Text>
                   <TextInput
-                    style={styles.textInput}
-                    value={formData.responsavel_telefone}
-                    onChangeText={(value) => handleInputChange('responsavel_telefone', value)}
+                    style={styles.input}
+                    value={form.phone}
+                    onChangeText={(text) => setForm(prev => ({...prev, phone: text}))}
                     placeholder="(11) 99999-9999"
                     placeholderTextColor="#64748B"
                     keyboardType="phone-pad"
@@ -717,214 +823,208 @@ export default function AdminGyms() {
                 </View>
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Email do Responsável *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.responsavel_email}
-                  onChangeText={(value) => handleInputChange('responsavel_email', value)}
-                  placeholder="responsavel@academia.com"
-                  placeholderTextColor="#64748B"
-                  keyboardType="email-address"
-                />
+              {/* Address */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>🏠 Endereço</Text>
+                
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, { flex: 2, marginRight: 8 }]}>
+                    <Text style={styles.inputLabel}>Rua *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.address.street}
+                      onChangeText={(text) => setForm(prev => ({
+                        ...prev,
+                        address: {...prev.address, street: text}
+                      }))}
+                      placeholder="Rua das Flores"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+
+                  <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                    <Text style={styles.inputLabel}>Número *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.address.number}
+                      onChangeText={(text) => setForm(prev => ({
+                        ...prev,
+                        address: {...prev.address, number: text}
+                      }))}
+                      placeholder="123"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, { flex: 2, marginRight: 8 }]}>
+                    <Text style={styles.inputLabel}>Cidade</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.address.city}
+                      onChangeText={(text) => setForm(prev => ({
+                        ...prev,
+                        address: {...prev.address, city: text}
+                      }))}
+                      placeholder="São Paulo"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+
+                  <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                    <Text style={styles.inputLabel}>CEP</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.address.zip_code}
+                      onChangeText={(text) => setForm(prev => ({
+                        ...prev,
+                        address: {...prev.address, zip_code: text}
+                      }))}
+                      placeholder="01234-567"
+                      placeholderTextColor="#64748B"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Modelo de Negócio</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.modelo_negocio}
-                  onChangeText={(value) => handleInputChange('modelo_negocio', value)}
-                  placeholder="Comissionamento, Taxa fixa, Mensalidade, etc."
-                  placeholderTextColor="#64748B"
-                />
-              </View>
-            </View>
+              {/* Operational Info */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>⚙️ Informações Operacionais</Text>
+                
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                    <Text style={styles.inputLabel}>Capacidade *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.capacity}
+                      onChangeText={(text) => setForm(prev => ({...prev, capacity: text}))}
+                      placeholder="100"
+                      placeholderTextColor="#64748B"
+                      keyboardType="numeric"
+                    />
+                  </View>
 
-            <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>📄 Dados Legais e Fiscais</Text>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Inscrição Estadual</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.inscricao_estadual}
-                  onChangeText={(value) => handleInputChange('inscricao_estadual', value)}
-                  placeholder="000.000.000.000"
-                  placeholderTextColor="#64748B"
-                />
+                  <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                    <Text style={styles.inputLabel}>Comissão (%) *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.commission_rate}
+                      onChangeText={(text) => setForm(prev => ({...prev, commission_rate: text}))}
+                      placeholder="15"
+                      placeholderTextColor="#64748B"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Horário Seg-Sex</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={form.operating_hours.weekdays}
+                    onChangeText={(text) => setForm(prev => ({
+                      ...prev,
+                      operating_hours: {...prev.operating_hours, weekdays: text}
+                    }))}
+                    placeholder="06:00 - 22:00"
+                    placeholderTextColor="#64748B"
+                  />
+                </View>
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Alvará de Funcionamento</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.alvara_funcionamento}
-                  onChangeText={(value) => handleInputChange('alvara_funcionamento', value)}
-                  placeholder="Número do alvará"
-                  placeholderTextColor="#64748B"
-                />
+              {/* Amenities */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>🎯 Comodidades</Text>
+                <View style={styles.amenitiesContainer}>
+                  {availableAmenities.map((amenity) => (
+                    <TouchableOpacity
+                      key={amenity}
+                      style={[
+                        styles.amenityChip,
+                        form.amenities.includes(amenity) && styles.amenityChipSelected
+                      ]}
+                      onPress={() => handleAmenityToggle(amenity)}
+                    >
+                      <Text style={[
+                        styles.amenityChipText,
+                        form.amenities.includes(amenity) && styles.amenityChipTextSelected
+                      ]}>
+                        {amenity}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Documento do Responsável (RG/CPF)</Text>
+              {/* Description */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>📝 Descrição</Text>
                 <TextInput
-                  style={styles.textInput}
-                  value={formData.documento_responsavel}
-                  onChangeText={(value) => handleInputChange('documento_responsavel', value)}
-                  placeholder="000.000.000-00"
-                  placeholderTextColor="#64748B"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>⚙️ Dados Operacionais</Text>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Recursos Oferecidos</Text>
-                <TextInput
-                  style={[styles.textInput, styles.textArea]}
-                  value={formData.recursos_oferecidos}
-                  onChangeText={(value) => handleInputChange('recursos_oferecidos', value)}
-                  placeholder="Equipamentos, horários de pico, serviços especiais, etc."
+                  style={[styles.input, styles.textArea]}
+                  value={form.description}
+                  onChangeText={(text) => setForm(prev => ({...prev, description: text}))}
+                  placeholder="Descreva a academia, diferenciais, equipamentos..."
                   placeholderTextColor="#64748B"
                   multiline
                   numberOfLines={4}
                 />
               </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Políticas de Cancelamento</Text>
-                <TextInput
-                  style={[styles.textInput, styles.textArea]}
-                  value={formData.politicas_cancelamento}
-                  onChangeText={(value) => handleInputChange('politicas_cancelamento', value)}
-                  placeholder="Condições para cancelamento/encerramento da parceria"
-                  placeholderTextColor="#64748B"
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Observações sobre Qualidade</Text>
-                <TextInput
-                  style={[styles.textInput, styles.textArea]}
-                  value={formData.observacoes_qualidade}
-                  onChangeText={(value) => handleInputChange('observacoes_qualidade', value)}
-                  placeholder="Padrões de qualidade, treinos, acompanhamento, métricas"
-                  placeholderTextColor="#64748B"
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
-            </View>
-
-            <View style={styles.submitSection}>
-              <TouchableOpacity 
-                style={[styles.submitButton, registerLoading && styles.submitButtonDisabled]}
-                onPress={registerGym}
-                disabled={registerLoading}
-              >
-                {registerLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Ionicons name="add-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.submitButtonText}>Cadastrar Academia</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              
-              <Text style={styles.submitNote}>
-                * Campos obrigatórios. Após o cadastro, será gerado automaticamente um login e senha 
-                que serão enviados por email pentru a academia parceira.
-              </Text>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      )}
-
-      {/* Modal de Credenciais */}
+      {/* Credentials Modal */}
       <Modal
-        visible={showCredentialsModal}
+        visible={showCredentials}
         transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowCredentialsModal(false)}
+        animationType="fade"
+        onRequestClose={() => setShowCredentials(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Credenciais da Academia</Text>
-              <TouchableOpacity 
-                style={styles.modalCloseButton}
-                onPress={() => setShowCredentialsModal(false)}
-              >
-                <Ionicons name="close" size={24} color="#94A3B8" />
-              </TouchableOpacity>
-            </View>
-
-            {selectedGymCredentials && (
-              <View style={styles.modalBody}>
-                <View style={styles.gymInfoModal}>
-                  <Text style={styles.gymNameModal}>{selectedGymCredentials.gym.name}</Text>
-                  <Text style={styles.gymEmailModal}>{selectedGymCredentials.gym.email}</Text>
+        <View style={styles.credentialsModalOverlay}>
+          <View style={styles.credentialsModal}>
+            <Text style={styles.credentialsModalTitle}>🔑 Nova Senha Gerada!</Text>
+            
+            {generatedCredentials && (
+              <View style={styles.credentialsDisplay}>
+                <Text style={styles.credentialsLabel}>Credenciais da Academia:</Text>
+                
+                <View style={styles.credentialItem}>
+                  <Text style={styles.credentialLabel}>Usuário:</Text>
+                  <Text style={styles.credentialValue}>{generatedCredentials.username}</Text>
                 </View>
-
-                <View style={styles.credentialsContainer}>
-                  <View style={styles.credentialRow}>
-                    <View style={styles.credentialLabel}>
-                      <Ionicons name="person-circle" size={20} color="#8B5CF6" />
-                      <Text style={styles.credentialLabelText}>Login:</Text>
-                    </View>
-                    <Text style={styles.credentialValue}>{selectedGymCredentials.gym.login}</Text>
-                  </View>
-
-                  <View style={styles.credentialRow}>
-                    <View style={styles.credentialLabel}>
-                      <Ionicons name="key" size={20} color="#8B5CF6" />
-                      <Text style={styles.credentialLabelText}>Senha:</Text>
-                    </View>
-                    <Text style={styles.credentialValue}>{selectedGymCredentials.password}</Text>
-                  </View>
-
-                  {selectedGymCredentials.gym.responsavel && (
-                    <View style={styles.credentialRow}>
-                      <View style={styles.credentialLabel}>
-                        <Ionicons name="mail" size={20} color="#22C55E" />
-                        <Text style={styles.credentialLabelText}>Responsável:</Text>
-                      </View>
-                      <Text style={styles.credentialValue}>{selectedGymCredentials.gym.responsavel.nome}</Text>
-                    </View>
-                  )}
+                
+                <View style={styles.credentialItem}>
+                  <Text style={styles.credentialLabel}>Nova Senha:</Text>
+                  <Text style={styles.credentialValue}>{generatedCredentials.password}</Text>
                 </View>
-
-                <View style={styles.modalActions}>
-                  <TouchableOpacity 
-                    style={styles.modalActionButton}
-                    onPress={() => {
-                      // Copiar credenciais para clipboard seria implementado aqui
-                      Alert.alert('Info', 'Credenciais copiadas para área de transferência');
-                    }}
-                  >
-                    <Ionicons name="copy" size={16} color="#3B82F6" />
-                    <Text style={styles.modalActionText}>Copiar</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={[styles.modalActionButton, styles.resetModalButton]}
-                    onPress={() => {
-                      setShowCredentialsModal(false);
-                      resetGymPassword(selectedGymCredentials.gym.id);
-                    }}
-                  >
-                    <Ionicons name="refresh" size={16} color="#F59E0B" />
-                    <Text style={[styles.modalActionText, { color: '#F59E0B' }]}>Resetar Senha</Text>
-                  </TouchableOpacity>
+                
+                <View style={styles.instructionsContainer}>
+                  <Text style={styles.instructionsTitle}>📋 Instruções:</Text>
+                  <Text style={styles.instructionsText}>1. Copie essas credenciais</Text>
+                  <Text style={styles.instructionsText}>2. Envie para o email da academia</Text>
+                  <Text style={styles.instructionsText}>3. A academia usa no Sistema Academia</Text>
+                  <Text style={styles.instructionsText}>4. URL: {API_URL}/academia</Text>
                 </View>
+                
+                <Text style={styles.credentialsWarning}>
+                  ⚠️ IMPORTANTE: Anote essas credenciais! A senha não será mostrada novamente.
+                </Text>
               </View>
             )}
+            
+            <TouchableOpacity 
+              style={styles.credentialsCloseButton}
+              onPress={() => {
+                setShowCredentials(false);
+                setShowModal(false);
+                setGeneratedCredentials(null);
+              }}
+            >
+              <Text style={styles.credentialsCloseText}>Credenciais Anotadas</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -948,86 +1048,200 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: 'bold',
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginLeft: -40,
+  },
+  logoImage: {
+    width: 32,
+    height: 32,
     marginBottom: 4,
   },
-  subtitle: {
-    color: '#94A3B8',
+  headerTitle: {
+    color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
   },
-  tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    marginBottom: 20,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#8B5CF6',
+    justifyContent: 'center',
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  activeTab: {
-    borderBottomColor: '#F59E0B',
-  },
-  tabText: {
-    color: '#94A3B8',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  activeTabText: {
-    color: '#F59E0B',
   },
   scrollView: {
     flex: 1,
   },
-  gymsContainer: {
+  statsContainer: {
+    flexDirection: 'row',
     paddingHorizontal: 24,
+    paddingVertical: 20,
+    gap: 12,
   },
-  gymCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  statItem: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
     padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  statNumber: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  statLabel: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  gymsContainer: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  emptyButton: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  emptyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  gymCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 20,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   gymHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 16,
   },
-  gymInfo: {
+  gymMainInfo: {
     flex: 1,
   },
   gymName: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
     marginBottom: 4,
   },
-  gymDetails: {
-    color: '#94A3B8',
+  gymEmail: {
+    color: '#8B5CF6',
     fontSize: 14,
     marginBottom: 4,
   },
   gymAddress: {
-    color: '#64748B',
-    fontSize: 12,
+    color: '#94A3B8',
+    fontSize: 14,
   },
   statusBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   statusText: {
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
+  },
+  gymDetails: {
+    marginBottom: 16,
+    gap: 8,
+  },
+  gymDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  gymDetailText: {
+    color: '#E2E8F0',
+    fontSize: 14,
+  },
+  gymStats: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 16,
+  },
+  statMini: {
+    alignItems: 'center',
+  },
+  statMiniNumber: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  statMiniLabel: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  credentialsContainer: {
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#8B5CF6',
+  },
+  credentialsTitle: {
+    color: '#8B5CF6',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  credentialsText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    marginBottom: 2,
+  },
+  credentialsNote: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontStyle: 'italic',
   },
   gymActions: {
     flexDirection: 'row',
@@ -1039,165 +1253,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 12,
     borderRadius: 8,
+    gap: 4,
   },
-  actionButtonText: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
+  approveButton: {
+    backgroundColor: '#22C55E',
   },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    color: '#94A3B8',
-    fontSize: 18,
-    fontWeight: '500',
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    color: '#64748B',
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  registerContainer: {
-    flex: 1,
-  },
-  formScrollView: {
-    flex: 1,
-    paddingHorizontal: 24,
-  },
-  formSection: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  inputLabel: {
-    color: '#94A3B8',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  textInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-    padding: 12,
-    color: '#FFFFFF',
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  submitSection: {
-    paddingBottom: 40,
-  },
-  submitButton: {
-    backgroundColor: '#F59E0B',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#64748B',
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  submitNote: {
-    color: '#64748B',
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  credentialsInfo: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
-  },
-  credentialItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  credentialText: {
-    color: '#E2E8F0',
-    fontSize: 12,
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  credentialActions: {
-    flexDirection: 'row',
-    marginTop: 12,
-    gap: 8,
-  },
-  credentialButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
+  suspendButton: {
+    backgroundColor: '#EF4444',
   },
   resetButton: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    backgroundColor: '#F59E0B',
   },
-  credentialButtonText: {
-    color: '#8B5CF6',
+  editButton: {
+    backgroundColor: '#3B82F6',
+  },
+  detailsButton: {
+    backgroundColor: '#64748B',
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 4,
+    fontWeight: '600',
   },
-  modalOverlay: {
+  // Modal Styles
+  modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: '#0B0D17',
   },
-  modalContent: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
+  modalKeyboard: {
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -1206,84 +1298,222 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  modalCloseButton: {
-    padding: 4,
+  saveButton: {
+    color: '#8B5CF6',
+    fontSize: 16,
+    fontWeight: '600',
   },
-  modalBody: {
-    padding: 20,
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 24,
   },
-  gymInfoModal: {
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  formSection: {
+    marginBottom: 24,
   },
-  gymNameModal: {
+  sectionTitle: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 16,
   },
-  gymEmailModal: {
-    color: '#94A3B8',
-    fontSize: 14,
+  inputGroup: {
+    marginBottom: 16,
   },
-  credentialsContainer: {
-    marginBottom: 20,
-  },
-  credentialRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
-  },
-  credentialLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  credentialLabelText: {
+  inputLabel: {
     color: '#E2E8F0',
     fontSize: 14,
     fontWeight: '500',
-    marginLeft: 8,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    color: '#FFFFFF',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  inputRow: {
+    flexDirection: 'row',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  amenitiesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  amenityChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  amenityChipSelected: {
+    backgroundColor: '#8B5CF6',
+    borderColor: '#8B5CF6',
+  },
+  amenityChipText: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  amenityChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  // Credentials Modal
+  credentialsModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  credentialsModal: {
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  credentialsModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  credentialsDisplay: {
+    marginBottom: 20,
+  },
+  credentialsLabel: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  credentialItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  credentialLabel: {
+    color: '#E2E8F0',
+    fontSize: 14,
   },
   credentialValue: {
-    color: '#FFFFFF',
+    color: '#8B5CF6',
     fontSize: 14,
     fontWeight: '600',
     fontFamily: 'monospace',
   },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
+  credentialsWarning: {
+    color: '#F59E0B',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 16,
   },
-  modalActionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  instructionsContainer: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
     borderRadius: 8,
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    padding: 12,
+    marginTop: 12,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
+    borderColor: '#3B82F6',
   },
-  resetModalButton: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-  },
-  modalActionText: {
+  instructionsTitle: {
     color: '#3B82F6',
     fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  instructionsText: {
+    color: '#E2E8F0',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  credentialsCloseButton: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  credentialsCloseText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Edit Modal Styles
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editField: {
+    marginBottom: 16,
+  },
+  editLabel: {
+    color: '#E2E8F0',
+    fontSize: 14,
     fontWeight: '500',
-    marginLeft: 6,
+    marginBottom: 8,
+  },
+  editInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    color: '#FFFFFF',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  saveButton: {
+    backgroundColor: '#22C55E',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Details Modal Styles
+  detailsContainer: {
+    padding: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  detailLabel: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  detailValue: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: 16,
   },
 });
