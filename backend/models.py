@@ -24,6 +24,11 @@ class GymStatus(str, Enum):
     INACTIVE = "inactive"
     PENDING = "pending"
 
+# Token Models
+class TokenGenerationRequest(BaseModel):
+    token_type: str = Field(default="gym", description="Tipo do token: academia ou nutricionista")
+    validity_hours: int = Field(default=4, ge=1, le=24, description="Validade em horas (1-24)")
+
 # User Models
 class UserRegistration(BaseModel):
     full_name: str = Field(..., min_length=3, max_length=100)
