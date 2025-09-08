@@ -1314,16 +1314,16 @@ async def generate_simple_token(
         
         # Gerar token simples
         token_manager = TokenSystemManager()
-        simple_code = token_manager.generate_simple_token_code(token_type)
+        simple_code = token_manager.generate_simple_token_code(request.token_type)
         
         # Criar dados do token
         token_data = {
             "token_id": str(uuid.uuid4()),
             "token_code": simple_code,
             "user_id": user_id,
-            "token_type": token_type,
+            "token_type": request.token_type,
             "created_at": datetime.now(timezone.utc),
-            "expires_at": datetime.now(timezone.utc) + timedelta(hours=24),
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=request.validity_hours),
             "status": "active",
             "created_by_checkin": False,
             "usage_count": 0,
@@ -1336,9 +1336,9 @@ async def generate_simple_token(
         return {
             "success": True,
             "token_code": simple_code,
-            "token_type": token_type,
+            "token_type": request.token_type,
             "expires_at": token_data["expires_at"],
-            "message": f"Token {token_type} gerado com sucesso!"
+            "message": f"Token {request.token_type} gerado com sucesso!"
         }
         
     except Exception as e:
