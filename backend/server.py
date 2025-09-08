@@ -478,7 +478,14 @@ async def validate_simple_token(token_code: str, request: Request, gym_id: str):
             raise HTTPException(status_code=404, detail="Token não encontrado")
         
         # Check if token is expired
-        if token_doc["expires_at"] < datetime.now(timezone.utc):
+        current_time = datetime.now(timezone.utc)
+        token_expires = token_doc["expires_at"]
+        
+        # Ensure both datetimes are timezone-aware
+        if token_expires.tzinfo is None:
+            token_expires = token_expires.replace(tzinfo=timezone.utc)
+            
+        if token_expires < current_time:
             raise HTTPException(status_code=400, detail="Token expirado")
         
         # Check if token is already used
