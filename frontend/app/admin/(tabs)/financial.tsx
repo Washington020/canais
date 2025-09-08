@@ -81,12 +81,15 @@ export default function AdminFinancial() {
       const headers = { Authorization: `Bearer ${token}` };
       
       // Load dashboard stats
-      const statsResponse = await axios.get(`${API_URL}/api/admin/dashboard`, { headers });
       setStats({
         monthly_revenue: statsResponse.data.monthly_revenue,
         overdue_payments: statsResponse.data.overdue_payments,
         active_subscriptions: statsResponse.data.active_subscriptions,
-        blocked_users: statsResponse.data.blocked_users
+        blocked_users: statsResponse.data.blocked_users,
+        total_gym_commissions: statsResponse.data.total_gym_commissions || 0,
+        total_tokens_used: statsResponse.data.total_tokens_used || 0,
+        avg_revenue_per_user: statsResponse.data.avg_revenue_per_user || 0
+      });
       });
 
       // Load users for financial management
