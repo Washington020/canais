@@ -652,6 +652,67 @@ export default function GymsManagement() {
                   </View>
                 )}
 
+                <View style={styles.gymActions}>
+                  {gym.status === 'pending' && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.approveButton]}
+                      onPress={() => updateGymStatus(gym._id, 'active')}
+                    >
+                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>Aprovar</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {gym.status === 'active' && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.suspendButton]}
+                      onPress={() => updateGymStatus(gym._id, 'inactive')}
+                    >
+                      <Ionicons name="pause" size={16} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>Suspender</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Nova Senha - Sempre Visível */}
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.resetButton]}
+                    onPress={() => resetGymPassword(gym._id, gym.name)}
+                  >
+                    <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>Nova Senha</Text>
+                  </TouchableOpacity>
+
+                  {/* Definir Senha - Controle Manual */}
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.customPasswordButton]}
+                    onPress={() => openPasswordModal(gym)}
+                  >
+                    <Ionicons name="key" size={16} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>Definir Senha</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.editButton]}
+                    onPress={() => {
+                      setSelectedGym(gym);
+                      setShowEditModal(true);
+                    }}
+                  >
+                    <Ionicons name="create" size={16} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>Editar</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.detailsButton]}
+                    onPress={() => {
+                      setSelectedGym(gym);
+                      setShowDetailsModal(true);
+                    }}
+                  >
+                    <Ionicons name="eye" size={16} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>Detalhes</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))
           )}
