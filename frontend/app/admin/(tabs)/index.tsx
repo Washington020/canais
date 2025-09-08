@@ -788,11 +788,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   userCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   userAvatar: {
     width: 40,
@@ -830,7 +832,7 @@ const styles = StyleSheet.create({
   planBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 8,
   },
   planBadgeText: {
     color: '#FFFFFF',
@@ -838,8 +840,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   userDate: {
-    color: '#64748B',
-    fontSize: 10,
+    color: '#94A3B8',
+    fontSize: 12,
   },
   userRevenue: {
     alignItems: 'flex-end',
@@ -850,16 +852,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   userRevenueLabel: {
-    color: '#64748B',
-    fontSize: 10,
+    color: '#94A3B8',
+    fontSize: 12,
   },
   gymsList: {
     gap: 12,
   },
   gymCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   gymHeader: {
     flexDirection: 'row',
@@ -887,7 +891,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 8,
     alignSelf: 'flex-start',
   },
   statusText: {
@@ -897,9 +901,10 @@ const styles = StyleSheet.create({
   },
   gymStats: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 16,
   },
   gymStat: {
+    flex: 1,
     alignItems: 'center',
   },
   gymStatNumber: {
@@ -910,22 +915,25 @@ const styles = StyleSheet.create({
   gymStatLabel: {
     color: '#94A3B8',
     fontSize: 12,
+    marginTop: 2,
   },
   tokensList: {
     gap: 8,
   },
   tokenCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   tokenIcon: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -941,14 +949,15 @@ const styles = StyleSheet.create({
   tokenType: {
     color: '#94A3B8',
     fontSize: 12,
+    marginTop: 2,
   },
   tokenStatus: {
     alignItems: 'flex-end',
   },
   tokenStatusBadge: {
     paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingVertical: 1,
+    borderRadius: 6,
     marginBottom: 2,
   },
   tokenStatusText: {
@@ -957,8 +966,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tokenTime: {
-    color: '#64748B',
-    fontSize: 10,
+    color: '#94A3B8',
+    fontSize: 11,
   },
   chartContainer: {
     paddingHorizontal: 24,
