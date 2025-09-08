@@ -106,16 +106,16 @@ export default function Index() {
           {/* Features */}
           <View style={styles.features}>
             <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>🎯</Text>
-              <Text style={styles.featureText}>Treinos Personalizados</Text>
+              <Text style={styles.featureIcon}>🔐</Text>
+              <Text style={styles.featureText}>Sistema Seguro</Text>
             </View>
             <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>🏃</Text>
-              <Text style={styles.featureText}>+500 Academias</Text>
+              <Text style={styles.featureIcon}>📊</Text>
+              <Text style={styles.featureText}>Relatórios Completos</Text>
             </View>
             <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>🥗</Text>
-              <Text style={styles.featureText}>Nutrição IA</Text>
+              <Text style={styles.featureIcon}>🔄</Text>
+              <Text style={styles.featureText}>Sincronização Total</Text>
             </View>
           </View>
         </View>
