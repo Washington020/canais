@@ -90,6 +90,10 @@ export default function GymsManagement() {
   const [selectedGym, setSelectedGym] = useState<Gym | null>(null);
   const [showCredentials, setShowCredentials] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState<{username: string, password: string} | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [selectedGymForPassword, setSelectedGymForPassword] = useState<Gym | null>(null);
+  const [customPassword, setCustomPassword] = useState('');
+  const [customLogin, setCustomLogin] = useState('');
   const router = useRouter();
   const loadingRef = useRef(false);
 
