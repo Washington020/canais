@@ -166,6 +166,21 @@ export default function ClientTokens() {
         </TouchableOpacity>
       </View>
 
+      {/* Success/Error Messages */}
+      {successMessage !== '' && (
+        <View style={styles.successMessage}>
+          <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+          <Text style={styles.successText}>{successMessage}</Text>
+        </View>
+      )}
+      
+      {errorMessage !== '' && (
+        <View style={styles.errorMessage}>
+          <Ionicons name="close-circle" size={20} color="#FF4444" />
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        </View>
+      )}
+
       <ScrollView style={styles.content}>
         {/* Stats */}
         <View style={styles.statsContainer}>
