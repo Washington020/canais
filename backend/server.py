@@ -972,12 +972,12 @@ async def reset_gym_password(gym_id: str):
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     hashed_password = pwd_context.hash(new_password)
     
-    # Update gym password using MongoDB _id
+    # Update gym password using MongoDB _id - salvar na estrutura correta
     result = await db.gyms.update_one(
         {"_id": ObjectId(gym_id)},
         {
             "$set": {
-                "hashed_password": hashed_password,
+                "login_credentials.password_hash": hashed_password,
                 "password_reset_at": datetime.now(timezone.utc)
             }
         }
