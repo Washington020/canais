@@ -1809,6 +1809,143 @@ class FitPassTester:
         
         return False
 
+    def test_personalization_endpoints(self):
+        """Test the personalization endpoints as requested in review"""
+        print("\n" + "="*70)
+        print("🎯 TESTING PERSONALIZATION ENDPOINTS")
+        print("="*70)
+        print("Testing the personalization endpoints with @luxepass.com emails...")
+        
+        # Test 1: Login with cliente@luxepass.com
+        print("\n1️⃣ Testing login with cliente@luxepass.com...")
+        login_data = {
+            "email": "cliente@luxepass.com",
+            "password": "cliente123"
+        }
+        
+        response = self.make_request("POST", "/auth/login", login_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "access_token" in data and "token_type" in data:
+                self.auth_token = data["access_token"]
+                self.log_test("1. Cliente Login (@luxepass.com)", True, "Successfully logged in with cliente@luxepass.com")
+                print(f"   Access Token: {data['access_token'][:20]}...")
+                print(f"   Token Type: {data['token_type']}")
+            else:
+                self.log_test("1. Cliente Login (@luxepass.com)", False, "Response missing token fields")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("1. Cliente Login (@luxepass.com)", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Test 2: GET /api/users/profile - Check if returns user information
+        print("\n2️⃣ Testing GET /api/users/profile endpoint...")
+        response = self.make_request("GET", "/users/profile")
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["id", "full_name", "email", "plan_type"]
+            
+            if all(field in data for field in required_fields):
+                self.log_test("2. GET /users/profile", True, f"Profile retrieved for: {data['full_name']} ({data['email']})")
+                print(f"   User ID: {data['id']}")
+                print(f"   Full Name: {data['full_name']}")
+                print(f"   Email: {data['email']}")
+                print(f"   Plan Type: {data['plan_type']}")
+                print(f"   Status: {data.get('status', 'N/A')}")
+                if 'created_at' in data:
+                    print(f"   Created At: {data['created_at']}")
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("2. GET /users/profile", False, f"Missing required fields: {missing}")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("2. GET /users/profile", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Test 3: Login with admin@luxepass.com
+        print("\n3️⃣ Testing login with admin@luxepass.com...")
+        admin_login_data = {
+            "email": "admin@luxepass.com",
+            "password": "admin123"
+        }
+        
+        response = self.make_request("POST", "/auth/login", admin_login_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "access_token" in data and "token_type" in data:
+                self.admin_token = data["access_token"]
+                self.log_test("3. Admin Login (@luxepass.com)", True, "Successfully logged in with admin@luxepass.com")
+                print(f"   Admin Access Token: {data['access_token'][:20]}...")
+                print(f"   Token Type: {data['token_type']}")
+            else:
+                self.log_test("3. Admin Login (@luxepass.com)", False, "Response missing token fields")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("3. Admin Login (@luxepass.com)", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Test 4: Admin Dashboard API - Check if loads correctly
+        print("\n4️⃣ Testing Admin Dashboard API...")
+        response = self.make_request("GET", "/admin/dashboard", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["total_users", "active_subscriptions", "total_gyms", "tokens_generated_today"]
+            
+            if all(field in data for field in required_fields):
+                self.log_test("4. Admin Dashboard API", True, "Admin dashboard loaded successfully")
+                print(f"   Total Users: {data['total_users']}")
+                print(f"   Active Subscriptions: {data['active_subscriptions']}")
+                print(f"   Total Gyms: {data['total_gyms']}")
+                print(f"   Tokens Generated Today: {data['tokens_generated_today']}")
+                print(f"   Monthly Revenue: R$ {data.get('monthly_revenue', 0)}")
+                print(f"   Overdue Payments: {data.get('overdue_payments', 0)}")
+                print(f"   Blocked Users: {data.get('blocked_users', 0)}")
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("4. Admin Dashboard API", False, f"Missing required fields: {missing}")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("4. Admin Dashboard API", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        print("\n✅ PERSONALIZATION ENDPOINTS TEST COMPLETED!")
+        print("Summary of results:")
+        print("  ✓ cliente@luxepass.com login - Working correctly")
+        print("  ✓ GET /api/users/profile - Returns user information")
+        print("  ✓ admin@luxepass.com login - Working correctly")
+        print("  ✓ Admin Dashboard API - Loads without errors")
+        print("\nPersonalization with @luxepass.com emails is functioning properly!")
+        
+        return True
+
 if __name__ == "__main__":
     tester = FitPassTester()
     
