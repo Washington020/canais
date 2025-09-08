@@ -370,6 +370,39 @@ async def get_user_profile(current_user: User = Depends(get_current_user)):
         logger.error(f"Erro ao buscar perfil do usuário: {e}")
         raise HTTPException(status_code=500, detail="Erro ao buscar perfil")
 
+@api_router.get("/users/tokens")
+async def get_user_tokens(current_user: User = Depends(get_current_user)):
+    """Buscar tokens do usuário logado"""
+    try:
+        user_id = str(current_user.id)
+        
+        # Buscar tokens do usuário ordenados por data de criação (mais recentes primeiro)
+        tokens = await db.tokens.find(
+            {"user_id": user_id}
+        ).sort("created_at", -1).limit(20).to_list(20)
+        
+        # Formatar tokens para o frontend
+        formatted_tokens = []
+        for token in tokens:
+            formatted_tokens.append({
+                "id": str(token["_id"]),
+                "code": token["token_code"],
+                "type": token["token_type"],
+                "status": token["status"],
+                "created_at": token["created_at"].isoformat() if token["created_at"] else None,
+                "expires_at": token["expires_at"].isoformat() if token["expires_at"] else None,
+                "used_at": token.get("used_at").isoformat() if token.get("used_at") else None,
+                "used_at_gym": token.get("used_at_gym"),
+                "usage_count": token.get("usage_count", 0),
+                "max_usage": token.get("max_usage", 1)
+            })
+        
+        return formatted_tokens
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar tokens do usuário: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar tokens")
+
 @api_router.put("/admin/users/{user_id}/update-profile")
 async def update_user_profile(user_id: str, full_name: str, email: str):
     """Admin endpoint to update user profile"""
