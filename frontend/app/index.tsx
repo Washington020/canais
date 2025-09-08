@@ -62,23 +62,13 @@ export default function Index() {
             <Text style={styles.tagline}>Seu passaporte para o fitness</Text>
           </View>
 
-          {/* App Selection */}
+          {/* App Selection - ADMIN CENTRAL */}
           <View style={styles.appSelection}>
-            <Text style={styles.selectionTitle}>Escolha seu acesso:</Text>
+            <Text style={styles.selectionTitle}>Central Administrativa</Text>
+            <Text style={styles.selectionSubtitle}>
+              Acesso completo para administração do sistema LuxePass
+            </Text>
             
-            <TouchableOpacity 
-              style={[styles.appButton, styles.clientButton]}
-              onPress={() => router.push('/client/plans')}
-            >
-              <View style={styles.buttonIcon}>
-                <Text style={styles.buttonIconText}>📱</Text>
-              </View>
-              <View style={styles.buttonContent}>
-                <Text style={styles.buttonTitle}>App Cliente</Text>
-                <Text style={styles.buttonSubtitle}>Ver Planos</Text>
-              </View>
-            </TouchableOpacity>
-
             <TouchableOpacity 
               style={[styles.appButton, styles.adminButton]}
               onPress={() => router.push('/admin/login')}
@@ -87,23 +77,30 @@ export default function Index() {
                 <Text style={styles.buttonIconText}>⚙️</Text>
               </View>
               <View style={styles.buttonContent}>
-                <Text style={styles.buttonTitle}>App Administrador</Text>
-                <Text style={styles.buttonSubtitle}>Gerencie usuários, academias e financeiro</Text>
+                <Text style={styles.buttonTitle}>Painel Administrativo</Text>
+                <Text style={styles.buttonSubtitle}>Gerencie usuários, academias, tokens e financeiro</Text>
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.appButton, styles.gymButton]}
-              onPress={() => router.push('/gym')}
-            >
-              <View style={styles.buttonIcon}>
-                <Text style={styles.buttonIconText}>🏋️</Text>
-              </View>
-              <View style={styles.buttonContent}>
-                <Text style={styles.buttonTitle}>Sistema Academia</Text>
-                <Text style={styles.buttonSubtitle}>Validação de tokens e check-in</Text>
-              </View>
-            </TouchableOpacity>
+            <View style={styles.quickAccess}>
+              <Text style={styles.quickAccessTitle}>🔗 Links Rápidos:</Text>
+              
+              <TouchableOpacity 
+                style={styles.quickLink}
+                onPress={() => router.push('/cliente')}
+              >
+                <Text style={styles.quickLinkIcon}>📱</Text>
+                <Text style={styles.quickLinkText}>Ver App Cliente</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.quickLink}
+                onPress={() => router.push('/academia')}
+              >
+                <Text style={styles.quickLinkIcon}>🏋️</Text>
+                <Text style={styles.quickLinkText}>Ver Sistema Academia</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Features */}
