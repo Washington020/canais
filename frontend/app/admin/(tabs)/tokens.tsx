@@ -210,7 +210,7 @@ export default function AdminTokens() {
                     <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
                   </View>
                   <Text style={styles.statValue}>{stats.total_used}</Text>
-                  <Text style={styles.statLabel}>Tokens Utilizados</Text>
+                  <Text style={styles.statLabel}>Tokens Usados</Text>
                 </View>
 
                 <View style={styles.statCard}>
