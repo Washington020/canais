@@ -1,125 +1,95 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from 'expo-status-status';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function Index() {
-  const [isLoading, setIsLoading] = useState(true);
+export default function MainSelector() {
   const router = useRouter();
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (token) {
-        // User is logged in, redirect to appropriate app
-        const userType = await AsyncStorage.getItem('userType');
-        if (userType === 'admin') {
-          router.replace('/admin');
-        } else {
-          router.replace('/client');
-        }
-      }
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8B5CF6" />
-        <Text style={styles.loadingText}>Carregando Luxe Forma...</Text>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <View style={styles.content}>
-          {/* Logo and Brand */}
-          <View style={styles.logoContainer}>
-            <View style={styles.logo}>
-              <Image 
-                source={{ uri: 'https://customer-assets.emergentagent.com/job_fitness-token-app/artifacts/8gnzidak_IMG_0187.png' }}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-            <Text style={styles.brandName}>LuxePass</Text>
-            <Text style={styles.tagline}>Seu passaporte para o fitness</Text>
+      
+      <View style={styles.content}>
+        {/* Logo and Brand */}
+        <View style={styles.logoContainer}>
+          <View style={styles.logo}>
+            <Image 
+              source={{ uri: 'https://customer-assets.emergentagent.com/job_fitness-token-app/artifacts/8gnzidak_IMG_0187.png' }}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
+          <Text style={styles.brandName}>LuxePass</Text>
+          <Text style={styles.tagline}>Central Administrativa</Text>
+        </View>
 
-          {/* App Selection - ADMIN CENTRAL */}
-          <View style={styles.appSelection}>
-            <Text style={styles.selectionTitle}>Central Administrativa</Text>
-            <Text style={styles.selectionSubtitle}>
-              Acesso completo para administração do sistema LuxePass
-            </Text>
+        {/* App Selection - ADMIN CENTRAL */}
+        <View style={styles.appSelection}>
+          <Text style={styles.selectionTitle}>Painel de Controle</Text>
+          <Text style={styles.selectionSubtitle}>
+            Acesso completo para administração do sistema LuxePass
+          </Text>
+          
+          <TouchableOpacity 
+            style={[styles.appButton, styles.adminButton]}
+            onPress={() => router.push('/admin/login')}
+          >
+            <View style={styles.buttonIcon}>
+              <Text style={styles.buttonIconText}>⚙️</Text>
+            </View>
+            <View style={styles.buttonContent}>
+              <Text style={styles.buttonTitle}>Entrar no Admin</Text>
+              <Text style={styles.buttonSubtitle}>Gerencie usuários, academias, tokens e financeiro</Text>
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.quickAccess}>
+            <Text style={styles.quickAccessTitle}>🔗 Acesso Direto aos Apps:</Text>
             
             <TouchableOpacity 
-              style={[styles.appButton, styles.adminButton]}
-              onPress={() => router.push('/admin/login')}
+              style={styles.quickLink}
+              onPress={() => router.push('/client/(tabs)')}
             >
-              <View style={styles.buttonIcon}>
-                <Text style={styles.buttonIconText}>⚙️</Text>
-              </View>
-              <View style={styles.buttonContent}>
-                <Text style={styles.buttonTitle}>Painel Administrativo</Text>
-                <Text style={styles.buttonSubtitle}>Gerencie usuários, academias, tokens e financeiro</Text>
-              </View>
+              <Text style={styles.quickLinkIcon}>📱</Text>
+              <Text style={styles.quickLinkText}>App Cliente Direto</Text>
             </TouchableOpacity>
 
-            <View style={styles.quickAccess}>
-              <Text style={styles.quickAccessTitle}>🔗 Links Rápidos:</Text>
-              
-              <TouchableOpacity 
-                style={styles.quickLink}
-                onPress={() => router.push('/cliente')}
-              >
-                <Text style={styles.quickLinkIcon}>📱</Text>
-                <Text style={styles.quickLinkText}>Ver App Cliente</Text>
-              </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.quickLink}
+              onPress={() => router.push('/gym/validation')}
+            >
+              <Text style={styles.quickLinkIcon}>🏋️</Text>
+              <Text style={styles.quickLinkText}>Sistema Academia Direto</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={styles.quickLink}
-                onPress={() => router.push('/academia')}
-              >
-                <Text style={styles.quickLinkIcon}>🏋️</Text>
-                <Text style={styles.quickLinkText}>Ver Sistema Academia</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Features */}
-          <View style={styles.features}>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>🔐</Text>
-              <Text style={styles.featureText}>Sistema Seguro</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>📊</Text>
-              <Text style={styles.featureText}>Relatórios Completos</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>🔄</Text>
-              <Text style={styles.featureText}>Sincronização Total</Text>
-            </View>
+            <TouchableOpacity 
+              style={styles.quickLink}
+              onPress={() => router.push('/client/plans')}
+            >
+              <Text style={styles.quickLinkIcon}>🎯</Text>
+              <Text style={styles.quickLinkText}>Planos Cliente</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+
+        {/* Features */}
+        <View style={styles.features}>
+          <View style={styles.featureItem}>
+            <Text style={styles.featureIcon}>🔐</Text>
+            <Text style={styles.featureText}>Sistema Seguro</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Text style={styles.featureIcon}>📊</Text>
+            <Text style={styles.featureText}>Relatórios Completos</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Text style={styles.featureIcon}>🔄</Text>
+            <Text style={styles.featureText}>Sincronização Total</Text>
+          </View>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -128,20 +98,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0B0D17',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#0B0D17',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginTop: 16,
-  },
-  keyboardView: {
-    flex: 1,
   },
   content: {
     flex: 1,
@@ -165,9 +121,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#8B5CF6',
   },
-  logoText: {
-    fontSize: 40,
-  },
   logoImage: {
     width: 60,
     height: 60,
@@ -180,8 +133,9 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 16,
-    color: '#94A3B8',
+    color: '#8B5CF6',
     textAlign: 'center',
+    fontWeight: '600',
   },
   appSelection: {
     flex: 1,
@@ -189,30 +143,29 @@ const styles = StyleSheet.create({
   },
   selectionTitle: {
     fontSize: 24,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 12,
+  },
+  selectionSubtitle: {
+    fontSize: 16,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginBottom: 40,
+    lineHeight: 24,
   },
   appButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
     borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  clientButton: {
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-    borderColor: '#8B5CF6',
+    marginBottom: 24,
+    borderWidth: 2,
   },
   adminButton: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderColor: '#F59E0B',
-  },
-  gymButton: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderColor: '#22C55E',
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderColor: '#8B5CF6',
   },
   buttonIcon: {
     width: 50,
@@ -239,50 +192,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
   },
-  selectionSubtitle: {
-    fontSize: 16,
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 22,
-  },
   quickAccess: {
-    marginTop: 32,
-    padding: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
     borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   quickAccessTitle: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 16,
-    textAlign: 'center',
+    marginBottom: 12,
   },
   quickLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginVertical: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 8,
-    marginBottom: 8,
   },
   quickLinkIcon: {
-    fontSize: 18,
+    fontSize: 16,
     marginRight: 12,
   },
   quickLinkText: {
+    color: '#E2E8F0',
     fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '500',
   },
   features: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 40,
   },
   featureItem: {
     alignItems: 'center',

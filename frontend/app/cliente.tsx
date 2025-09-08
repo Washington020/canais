@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -8,26 +8,43 @@ import { Ionicons } from '@expo/vector-icons';
 export default function ClienteApp() {
   const router = useRouter();
 
+  const handleExit = () => {
+    Alert.alert(
+      'Sair do App Cliente',
+      'Deseja realmente sair?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: () => router.replace('/')
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
       <View style={styles.content}>
-        {/* Header with Back Button */}
+        {/* Header with Exit Button */}
         <View style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton} 
-            onPress={() => router.push('/')}
+            onPress={() => router.back()}
           >
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity 
-            style={styles.closeButton} 
-            onPress={() => router.push('/')}
+            style={styles.exitButton} 
+            onPress={handleExit}
           >
             <Ionicons name="close" size={24} color="#FFFFFF" />
+            <Text style={styles.exitText}>SAIR</Text>
           </TouchableOpacity>
         </View>
+
         {/* Logo and Brand */}
         <View style={styles.logoContainer}>
           <View style={styles.logo}>
@@ -45,7 +62,7 @@ export default function ClienteApp() {
         <View style={styles.accessSection}>
           <Text style={styles.welcomeTitle}>Bem-vindo, Cliente!</Text>
           <Text style={styles.welcomeSubtitle}>
-            Escolha seus planos, faça login ou comece sua jornada fitness
+            Escolha como deseja começar sua jornada fitness
           </Text>
           
           <TouchableOpacity 
@@ -72,6 +89,27 @@ export default function ClienteApp() {
               <Text style={styles.buttonTitle}>Fazer Login</Text>
               <Text style={styles.buttonSubtitle}>Já sou cliente LuxePass</Text>
             </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.accessButton, styles.directButton]}
+            onPress={() => router.push('/client/(tabs)')}
+          >
+            <View style={styles.buttonIcon}>
+              <Text style={styles.buttonIconText}>🚀</Text>
+            </View>
+            <View style={styles.buttonContent}>
+              <Text style={styles.buttonTitle}>Acesso Direto</Text>
+              <Text style={styles.buttonSubtitle}>Ir direto para o app (demo)</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Exit Button */}
+        <View style={styles.exitSection}>
+          <TouchableOpacity style={styles.exitFullButton} onPress={handleExit}>
+            <Ionicons name="log-out" size={20} color="#FFFFFF" />
+            <Text style={styles.exitFullText}>Sair do App Cliente</Text>
           </TouchableOpacity>
         </View>
 
@@ -120,13 +158,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  closeButton: {
-    width: 44,
-    height: 44,
-    backgroundColor: 'rgba(255, 0, 0, 0.1)',
-    borderRadius: 22,
-    justifyContent: 'center',
+  exitButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 68, 68, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FF4444',
+  },
+  exitText: {
+    color: '#FF4444',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 4,
   },
   logoContainer: {
     alignItems: 'center',
@@ -192,6 +238,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(34, 197, 94, 0.1)',
     borderColor: '#22C55E',
   },
+  directButton: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderColor: '#F59E0B',
+  },
   buttonIcon: {
     width: 50,
     height: 50,
@@ -217,10 +267,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
   },
+  exitSection: {
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 20,
+  },
+  exitFullButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF4444',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+  },
+  exitFullText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   features: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 40,
   },
   featureItem: {
     alignItems: 'center',
