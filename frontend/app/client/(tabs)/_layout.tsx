@@ -1,47 +1,66 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function TabLayout() {
+export default function ClientTabsLayout() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Verificar autenticação obrigatória
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (!token) {
+          console.log('❌ Token não encontrado, redirecionando para login');
+          router.replace('/client/login');
+          return;
+        }
+        console.log('✅ Token encontrado, usuário autenticado');
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        router.replace('/client/login');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
         tabBarActiveTintColor: '#8B5CF6',
         tabBarInactiveTintColor: '#64748B',
         tabBarStyle: {
-          backgroundColor: '#1E293B',
+          backgroundColor: '#0B0D17',
           borderTopColor: 'rgba(255, 255, 255, 0.1)',
-          height: 80,
-          paddingBottom: 12,
+          height: 65,
+          paddingBottom: 8,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: '600',
-          marginTop: 4,
         },
-        tabBarIconStyle: {
-          marginBottom: 2,
-        },
+        headerShown: false,
+        tabBarShowLabel: true,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Home',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="workouts"
+        name="tokens"
         options={{
-          title: 'Treinos',
+          title: 'Tokens',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="fitness" size={size} color={color} />
+            <Ionicons name="qr-code" size={size} color={color} />
           ),
         }}
       />
@@ -55,20 +74,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="nutrition"
+        name="workouts"
         options={{
-          title: 'Nutrição',
+          title: 'Treinos',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="restaurant" size={size} color={color} />
+            <Ionicons name="fitness" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="tokens"
+        name="nutrition"
         options={{
-          title: 'Tokens',
+          title: 'Nutrição',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="qr-code" size={size} color={color} />
+            <Ionicons name="nutrition" size={size} color={color} />
           ),
         }}
       />

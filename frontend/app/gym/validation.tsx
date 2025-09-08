@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -16,12 +16,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'https://luxeforma-app.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
 
 export default function TokenValidation() {
   const [tokenCode, setTokenCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [gymInfo, setGymInfo] = useState<any>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
   const handleLogout = useCallback(async () => {
@@ -56,6 +57,7 @@ export default function TokenValidation() {
     try {
       const gymToken = await AsyncStorage.getItem('gymToken');
       if (!gymToken) {
+        Alert.alert('Erro', 'Você não está autenticado. Faça login primeiro.');
         router.replace('/gym/login');
         return;
       }
@@ -63,44 +65,92 @@ export default function TokenValidation() {
       const gymData = await AsyncStorage.getItem('gymInfo');
       const gym = gymData ? JSON.parse(gymData) : null;
 
-      const headers = { Authorization: `Bearer ${gymToken}` };
+      if (!gym?.id) {
+        Alert.alert('Erro', 'Informações da academia não encontradas');
+        router.replace('/gym/login');
+        return;
+      }
+
+      console.log('🔍 Validando token:', tokenCode);
+      console.log('🏋️ Academia ID:', gym.id);
+
+      const headers = { 
+        'Authorization': `Bearer ${gymToken}`,
+        'Content-Type': 'application/json'
+      };
+      
       const response = await axios.post(
-        `${API_URL}/api/tokens/validate/${tokenCode}?gym_id=${gym?.id}`,
+        `${API_URL}/api/tokens/validate/${tokenCode}?gym_id=${gym.id}`,
         {},
-        { headers }
+        { headers, timeout: 10000 }
       );
+
+      console.log('✅ Token válido:', response.data);
 
       Alert.alert(
         'Token Válido! ✅',
-        `Cliente: ${response.data.user.full_name}\nCheck-in realizado com sucesso!`,
+        `Cliente: ${response.data.user.full_name}\nCheck-in realizado com sucesso!\n\nToken usado em: ${gym.name}`,
         [{ text: 'OK', onPress: () => setTokenCode('') }]
       );
 
     } catch (error: any) {
-      console.error('Erro na validação:', error);
-      Alert.alert(
-        'Token Inválido ❌',
-        error.response?.data?.detail || 'Token não encontrado ou expirado'
-      );
+      console.error('❌ Erro na validação:', error);
+      
+      if (error.response?.status === 401) {
+        Alert.alert('Sessão Expirada', 'Faça login novamente');
+        router.replace('/gym/login');
+      } else if (error.response?.status === 404) {
+        Alert.alert('Token Inválido ❌', 'Token não encontrado ou já foi usado');
+      } else if (error.response?.status === 400) {
+        Alert.alert('Token Inválido ❌', 'Token expirado ou já utilizado');
+      } else {
+        Alert.alert(
+          'Erro na Validação ❌',
+          error.response?.data?.detail || 'Não foi possível validar o token'
+        );
+      }
     } finally {
       setLoading(false);
     }
   }, [tokenCode, router]);
 
-  const loadGymInfo = useCallback(async () => {
+  const checkAuthentication = useCallback(async () => {
     try {
+      const gymToken = await AsyncStorage.getItem('gymToken');
       const gymData = await AsyncStorage.getItem('gymInfo');
+      
+      if (!gymToken) {
+        console.log('❌ Academia não autenticada, redirecionando para login');
+        router.replace('/gym/login');
+        return;
+      }
+
       if (gymData) {
         setGymInfo(JSON.parse(gymData));
       }
+      
+      setIsAuthenticated(true);
+      console.log('✅ Academia autenticada');
     } catch (error) {
-      console.error('Erro ao carregar info da academia:', error);
+      console.error('Erro ao verificar autenticação:', error);
+      router.replace('/gym/login');
     }
-  }, []);
+  }, [router]);
 
-  React.useEffect(() => {
-    loadGymInfo();
-  }, [loadGymInfo]);
+  useEffect(() => {
+    checkAuthentication();
+  }, [checkAuthentication]);
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#22C55E" />
+          <Text style={styles.loadingText}>Verificando autenticação...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -127,7 +177,7 @@ export default function TokenValidation() {
           <View style={styles.gymInfoCard}>
             <Ionicons name="business" size={24} color="#22C55E" />
             <Text style={styles.gymName}>{gymInfo.name}</Text>
-            <Text style={styles.gymStatus}>Academia Ativa</Text>
+            <Text style={styles.gymStatus}>✅ Academia Autenticada</Text>
           </View>
         )}
 
@@ -170,7 +220,18 @@ export default function TokenValidation() {
             1. Cliente mostra o código do token{'\n'}
             2. Digite o código no campo acima{'\n'}
             3. Clique em "Validar Token"{'\n'}
-            4. Sistema confirma se é válido
+            4. Sistema confirma se é válido e registra check-in
+          </Text>
+        </View>
+
+        {/* Security Info */}
+        <View style={styles.securityCard}>
+          <Text style={styles.securityTitle}>🔒 Sistema Seguro:</Text>
+          <Text style={styles.securityText}>
+            • Você está logado como: {gymInfo?.name}{'\n'}
+            • Tokens são únicos e de uso único{'\n'}
+            • Cada validação é registrada no sistema{'\n'}
+            • Todas as ações são auditadas
           </Text>
         </View>
 
@@ -190,6 +251,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0B0D17',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    marginTop: 16,
+    fontSize: 16,
   },
   header: {
     flexDirection: 'row',
@@ -300,7 +371,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(59, 130, 246, 0.1)',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.3)',
   },
@@ -315,8 +386,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  securityCard: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  securityTitle: {
+    color: '#22C55E',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  securityText: {
+    color: '#E2E8F0',
+    fontSize: 14,
+    lineHeight: 20,
+  },
   logoutSection: {
-    paddingVertical: 24,
+    paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
