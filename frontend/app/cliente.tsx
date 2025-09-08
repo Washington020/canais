@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ClienteApp() {
   const router = useRouter();
@@ -12,6 +13,21 @@ export default function ClienteApp() {
       <StatusBar style="light" />
       
       <View style={styles.content}>
+        {/* Header with Back Button */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => router.push('/')}
+          >
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.closeButton} 
+            onPress={() => router.push('/')}
+          >
+            <Ionicons name="close" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
         {/* Logo and Brand */}
         <View style={styles.logoContainer}>
           <View style={styles.logo}>
