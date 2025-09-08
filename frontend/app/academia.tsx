@@ -58,11 +58,11 @@ export default function AcademiaSystem() {
           <Text style={styles.tagline}>Sistema Academia</Text>
         </View>
 
-        {/* Academy Access */}
+        {/* Academy Access - SOMENTE LOGIN OBRIGATÓRIO */}
         <View style={styles.accessSection}>
           <Text style={styles.welcomeTitle}>Academia Parceira</Text>
           <Text style={styles.welcomeSubtitle}>
-            Sistema exclusivo para validação de tokens e check-in de clientes
+            Sistema exclusivo para validação de tokens. LOGIN OBRIGATÓRIO para todas as funcionalidades.
           </Text>
           
           <TouchableOpacity 
@@ -73,7 +73,7 @@ export default function AcademiaSystem() {
               <Text style={styles.buttonIconText}>🔑</Text>
             </View>
             <View style={styles.buttonContent}>
-              <Text style={styles.buttonTitle}>Login Obrigatório</Text>
+              <Text style={styles.buttonTitle}>Login Obrigatório da Academia</Text>
               <Text style={styles.buttonSubtitle}>Entre com credenciais fornecidas pelo admin</Text>
             </View>
           </TouchableOpacity>
@@ -89,12 +89,13 @@ export default function AcademiaSystem() {
           </View>
 
           <View style={styles.warningCard}>
-            <Text style={styles.warningTitle}>⚠️ IMPORTANTE:</Text>
+            <Text style={styles.warningTitle}>⚠️ IMPORTANTE - LOGIN OBRIGATÓRIO:</Text>
             <Text style={styles.warningText}>
               • LOGIN É OBRIGATÓRIO para usar o sistema{'\n'}
               • Sem login, não é possível validar tokens{'\n'}
               • Credenciais são geradas pelo administrador{'\n'}
-              • Cada academia tem login único e seguro
+              • Cada academia tem login único e seguro{'\n'}
+              • Sistema não permite acesso sem autenticação
             </Text>
           </View>
         </View>
@@ -110,16 +111,16 @@ export default function AcademiaSystem() {
         {/* Features */}
         <View style={styles.features}>
           <View style={styles.featureItem}>
+            <Text style={styles.featureIcon}>🔐</Text>
+            <Text style={styles.featureText}>Login Obrigatório</Text>
+          </View>
+          <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>✅</Text>
-            <Text style={styles.featureText}>Validação de Tokens</Text>
+            <Text style={styles.featureText}>Validação Segura</Text>
           </View>
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>📊</Text>
-            <Text style={styles.featureText}>Relatórios de Uso</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>🔒</Text>
-            <Text style={styles.featureText}>Sistema Seguro</Text>
+            <Text style={styles.featureText}>Relatórios Completos</Text>
           </View>
         </View>
       </View>

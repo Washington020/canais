@@ -45,32 +45,40 @@ export default function MainSelector() {
             </View>
           </TouchableOpacity>
 
-          <View style={styles.quickAccess}>
-            <Text style={styles.quickAccessTitle}>🔗 Acesso Direto aos Apps:</Text>
+          <View style={styles.appsAccess}>
+            <Text style={styles.appsAccessTitle}>🔗 Acesso aos Apps (LOGIN OBRIGATÓRIO):</Text>
             
             <TouchableOpacity 
-              style={styles.quickLink}
-              onPress={() => router.push('/client/(tabs)')}
+              style={styles.appLink}
+              onPress={() => router.push('/cliente')}
             >
-              <Text style={styles.quickLinkIcon}>📱</Text>
-              <Text style={styles.quickLinkText}>App Cliente Direto</Text>
+              <Text style={styles.appLinkIcon}>📱</Text>
+              <View style={styles.appLinkContent}>
+                <Text style={styles.appLinkText}>App Cliente</Text>
+                <Text style={styles.appLinkSubtext}>Login obrigatório para clientes</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.quickLink}
-              onPress={() => router.push('/gym/validation')}
+              style={styles.appLink}
+              onPress={() => router.push('/academia')}
             >
-              <Text style={styles.quickLinkIcon}>🏋️</Text>
-              <Text style={styles.quickLinkText}>Sistema Academia Direto</Text>
+              <Text style={styles.appLinkIcon}>🏋️</Text>
+              <View style={styles.appLinkContent}>
+                <Text style={styles.appLinkText}>Sistema Academia</Text>
+                <Text style={styles.appLinkSubtext}>Login obrigatório para academias</Text>
+              </View>
             </TouchableOpacity>
+          </View>
 
-            <TouchableOpacity 
-              style={styles.quickLink}
-              onPress={() => router.push('/client/plans')}
-            >
-              <Text style={styles.quickLinkIcon}>🎯</Text>
-              <Text style={styles.quickLinkText}>Planos Cliente</Text>
-            </TouchableOpacity>
+          <View style={styles.securityInfo}>
+            <Text style={styles.securityTitle}>🔐 Sistema Seguro:</Text>
+            <Text style={styles.securityText}>
+              • Todos os apps exigem login obrigatório{'\n'}
+              • Não há acesso direto sem autenticação{'\n'}
+              • Credenciais são gerenciadas pelo admin{'\n'}
+              • Sistema 100% seguro e auditado
+            </Text>
           </View>
         </View>
 
@@ -78,15 +86,15 @@ export default function MainSelector() {
         <View style={styles.features}>
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>🔐</Text>
-            <Text style={styles.featureText}>Sistema Seguro</Text>
+            <Text style={styles.featureText}>Login Obrigatório</Text>
           </View>
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>📊</Text>
-            <Text style={styles.featureText}>Relatórios Completos</Text>
+            <Text style={styles.featureText}>Controle Total</Text>
           </View>
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>🔄</Text>
-            <Text style={styles.featureText}>Sincronização Total</Text>
+            <Text style={styles.featureText}>Sistema Seguro</Text>
           </View>
         </View>
       </View>
@@ -192,35 +200,65 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
   },
-  quickAccess: {
+  appsAccess: {
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  quickAccessTitle: {
+  appsAccessTitle: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
   },
-  quickLink: {
+  appLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 12,
     marginVertical: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  quickLinkIcon: {
+  appLinkIcon: {
     fontSize: 16,
     marginRight: 12,
   },
-  quickLinkText: {
+  appLinkContent: {
+    flex: 1,
+  },
+  appLinkText: {
     color: '#E2E8F0',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  appLinkSubtext: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  securityInfo: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  securityTitle: {
+    color: '#22C55E',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  securityText: {
+    color: '#E2E8F0',
+    fontSize: 14,
+    lineHeight: 20,
   },
   features: {
     flexDirection: 'row',

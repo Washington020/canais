@@ -58,11 +58,11 @@ export default function ClienteApp() {
           <Text style={styles.tagline}>Seu passaporte para o fitness</Text>
         </View>
 
-        {/* Client Access */}
+        {/* Client Access - SOMENTE LOGIN OBRIGATÓRIO */}
         <View style={styles.accessSection}>
           <Text style={styles.welcomeTitle}>Bem-vindo, Cliente!</Text>
           <Text style={styles.welcomeSubtitle}>
-            Escolha como deseja começar sua jornada fitness
+            Para acessar o app, você precisa fazer login ou se cadastrar
           </Text>
           
           <TouchableOpacity 
@@ -73,8 +73,8 @@ export default function ClienteApp() {
               <Text style={styles.buttonIconText}>🎯</Text>
             </View>
             <View style={styles.buttonContent}>
-              <Text style={styles.buttonTitle}>Ver Planos</Text>
-              <Text style={styles.buttonSubtitle}>Escolha o plano ideal para você</Text>
+              <Text style={styles.buttonTitle}>Ver Planos e Cadastrar</Text>
+              <Text style={styles.buttonSubtitle}>Escolha um plano e crie sua conta</Text>
             </View>
           </TouchableOpacity>
 
@@ -86,23 +86,20 @@ export default function ClienteApp() {
               <Text style={styles.buttonIconText}>🔑</Text>
             </View>
             <View style={styles.buttonContent}>
-              <Text style={styles.buttonTitle}>Fazer Login</Text>
-              <Text style={styles.buttonSubtitle}>Já sou cliente LuxePass</Text>
+              <Text style={styles.buttonTitle}>Fazer Login Obrigatório</Text>
+              <Text style={styles.buttonSubtitle}>Entre com email e senha</Text>
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.accessButton, styles.directButton]}
-            onPress={() => router.push('/client/(tabs)')}
-          >
-            <View style={styles.buttonIcon}>
-              <Text style={styles.buttonIconText}>🚀</Text>
-            </View>
-            <View style={styles.buttonContent}>
-              <Text style={styles.buttonTitle}>Acesso Direto</Text>
-              <Text style={styles.buttonSubtitle}>Ir direto para o app (demo)</Text>
-            </View>
-          </TouchableOpacity>
+          <View style={styles.warningCard}>
+            <Text style={styles.warningTitle}>⚠️ LOGIN OBRIGATÓRIO:</Text>
+            <Text style={styles.warningText}>
+              • Não é possível usar o app sem fazer login{'\n'}
+              • Todos os recursos exigem autenticação{'\n'}
+              • Sua conta garante segurança e personalização{'\n'}
+              • Dados sincronizados em todos os dispositivos
+            </Text>
+          </View>
         </View>
 
         {/* Exit Button */}
@@ -116,16 +113,16 @@ export default function ClienteApp() {
         {/* Features */}
         <View style={styles.features}>
           <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>🏋️</Text>
-            <Text style={styles.featureText}>+500 Academias</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>🥗</Text>
-            <Text style={styles.featureText}>Nutrição Personalizada</Text>
+            <Text style={styles.featureIcon}>🔒</Text>
+            <Text style={styles.featureText}>Login Seguro</Text>
           </View>
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>📱</Text>
-            <Text style={styles.featureText}>App Exclusivo</Text>
+            <Text style={styles.featureText}>App Personalizado</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Text style={styles.featureIcon}>🏋️</Text>
+            <Text style={styles.featureText}>Tokens Únicos</Text>
           </View>
         </View>
       </View>
@@ -238,10 +235,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(34, 197, 94, 0.1)',
     borderColor: '#22C55E',
   },
-  directButton: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderColor: '#F59E0B',
-  },
   buttonIcon: {
     width: 50,
     height: 50,
@@ -266,6 +259,25 @@ const styles = StyleSheet.create({
   buttonSubtitle: {
     fontSize: 14,
     color: '#94A3B8',
+  },
+  warningCard: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  warningTitle: {
+    color: '#F59E0B',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  warningText: {
+    color: '#FEF3C7',
+    fontSize: 14,
+    lineHeight: 20,
   },
   exitSection: {
     paddingVertical: 20,
