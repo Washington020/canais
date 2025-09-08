@@ -90,7 +90,6 @@ export default function AdminFinancial() {
         total_tokens_used: statsResponse.data.total_tokens_used || 0,
         avg_revenue_per_user: statsResponse.data.avg_revenue_per_user || 0
       });
-      });
 
       // Load users for financial management
       const usersResponse = await axios.get(`${API_URL}/api/admin/users`, { headers });
