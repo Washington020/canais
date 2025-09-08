@@ -1305,7 +1305,7 @@ async def get_checkin_history(current_user: User = Depends(get_current_user)):
 
 @api_router.post("/tokens/generate-simple")
 async def generate_simple_token(
-    token_type: str = "gym", 
+    request: TokenGenerationRequest,
     current_user: User = Depends(get_current_user)
 ):
     """Gera token simples manual (sem check-in)"""
