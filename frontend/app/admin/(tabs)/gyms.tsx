@@ -434,7 +434,8 @@ export default function GymsManagement() {
 
   const formatOperatingHours = (hours: any) => {
     if (typeof hours === 'string') return hours;
-    return `Seg-Sex: ${hours['seg-sex'] || 'N/I'}`;
+    if (!hours || typeof hours !== 'object') return 'Horários não informados';
+    return `Seg-Sex: ${hours['seg-sex'] || hours.weekdays || 'N/I'}`;
   };
 
   const onRefresh = useCallback(() => {
