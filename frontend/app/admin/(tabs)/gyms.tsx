@@ -1112,6 +1112,78 @@ export default function GymsManagement() {
           </View>
         </View>
       </Modal>
+
+      {/* Custom Password Modal */}
+      <Modal
+        visible={showPasswordModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPasswordModal(false)}
+      >
+        <View style={styles.credentialsModalOverlay}>
+          <View style={styles.credentialsModal}>
+            <Text style={styles.credentialsModalTitle}>🔑 Definir Senha Manual</Text>
+            
+            {selectedGymForPassword && (
+              <>
+                <Text style={styles.gymNameInModal}>{selectedGymForPassword.name}</Text>
+                
+                <View style={styles.passwordForm}>
+                  <Text style={styles.formLabel}>Login da Academia:</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={customLogin}
+                    onChangeText={setCustomLogin}
+                    placeholder="Ex: gym_minha_academia"
+                    placeholderTextColor="#64748B"
+                  />
+                  
+                  <Text style={styles.formLabel}>Nova Senha:</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={customPassword}
+                    onChangeText={setCustomPassword}
+                    placeholder="Digite a senha (mín. 6 caracteres)"
+                    placeholderTextColor="#64748B"
+                    secureTextEntry={false}
+                    autoCapitalize="none"
+                  />
+                  
+                  <View style={styles.passwordTips}>
+                    <Text style={styles.tipTitle}>💡 Dicas para senha segura:</Text>
+                    <Text style={styles.tipText}>• Use pelo menos 8 caracteres</Text>
+                    <Text style={styles.tipText}>• Combine letras, números e símbolos</Text>
+                    <Text style={styles.tipText}>• Evite sequências simples (123, abc)</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={styles.cancelModalButton}
+                    onPress={() => {
+                      setShowPasswordModal(false);
+                      setCustomPassword('');
+                      setCustomLogin('');
+                      setSelectedGymForPassword(null);
+                    }}
+                  >
+                    <Text style={styles.cancelModalButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.confirmModalButton, !customPassword.trim() && styles.confirmModalButtonDisabled]}
+                    onPress={setCustomGymPassword}
+                    disabled={!customPassword.trim()}
+                  >
+                    <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                    <Text style={styles.confirmModalButtonText}>Definir Senha</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
