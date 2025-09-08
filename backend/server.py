@@ -351,6 +351,25 @@ async def get_user_stats(current_user: User = Depends(get_current_user)):
         "gyms_visited": gyms_visited
     }
 
+# User profile routes
+@api_router.get("/users/profile")
+async def get_user_profile(current_user: User = Depends(get_current_user)):
+    """Get current user profile information"""
+    try:
+        return {
+            "id": str(current_user.id),
+            "full_name": current_user.full_name,
+            "email": current_user.email,
+            "phone": getattr(current_user, 'phone', ''),
+            "plan_type": current_user.plan_type,
+            "status": getattr(current_user, 'status', 'active'),
+            "created_at": getattr(current_user, 'created_at', None),
+            "subscription_expires": getattr(current_user, 'subscription_expires', None)
+        }
+    except Exception as e:
+        logger.error(f"Erro ao buscar perfil do usuário: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar perfil")
+
 # Token routes
 @api_router.post("/tokens/generate")
 async def generate_token(
