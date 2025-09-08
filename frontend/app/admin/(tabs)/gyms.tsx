@@ -123,28 +123,68 @@ export default function GymsManagement() {
     loadGyms();
   }, []);
 
-  const loadGyms = async () => {
+  const loadGyms = useCallback(async () => {
+    // Previne múltiplas chamadas simultâneas
+    if (loadingRef.current) {
+      console.log('🔄 loadGyms já está em execução, ignorando...');
+      return;
+    }
+
     try {
+      loadingRef.current = true;
+      console.log('🚀 Iniciando carregamento de academias...');
+
       const token = await AsyncStorage.getItem('token');
       if (!token) {
+        console.log('❌ Token não encontrado, redirecionando para login');
         router.replace('/admin/login');
         return;
       }
 
-      console.log('📡 Carregando academias...');
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_URL}/api/integration/admin/gyms`, { headers });
+      console.log('📡 Fazendo requisição para:', `${API_URL}/api/integration/admin/gyms`);
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
       
-      console.log('✅ Academias carregadas:', response.data);
-      setGyms(response.data.gyms || []);
+      const response = await axios.get(`${API_URL}/api/integration/admin/gyms`, { 
+        headers,
+        timeout: 10000 // 10 segundos de timeout
+      });
+      
+      console.log('✅ Resposta recebida:', response.status, response.data);
+
+      if (response.data && Array.isArray(response.data.gyms)) {
+        setGyms(response.data.gyms);
+        console.log(`📊 ${response.data.gyms.length} academias carregadas`);
+      } else {
+        console.log('⚠️ Formato de resposta inesperado:', response.data);
+        setGyms([]);
+      }
+
     } catch (error: any) {
       console.error('❌ Erro ao carregar academias:', error);
-      Alert.alert('Erro', 'Não foi possível carregar as academias.');
+      
+      if (error.code === 'ECONNABORTED') {
+        Alert.alert('Timeout', 'A requisição demorou muito para responder. Tente novamente.');
+      } else if (error.response?.status === 401) {
+        console.log('🔒 Token inválido, redirecionando para login');
+        Alert.alert('Sessão Expirada', 'Faça login novamente.');
+        router.replace('/admin/login');
+      } else if (error.response?.status >= 500) {
+        Alert.alert('Erro do Servidor', 'Erro interno do servidor. Tente novamente mais tarde.');
+      } else {
+        Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível carregar as academias.');
+      }
+      
+      setGyms([]);
     } finally {
+      loadingRef.current = false;
       setLoading(false);
       setRefreshing(false);
+      console.log('🏁 Carregamento finalizado');
     }
-  };
+  }, [router]);
 
   const validateForm = () => {
     if (!form.name.trim()) {
