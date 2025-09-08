@@ -475,7 +475,7 @@ async def validate_token(token_code: str, request: Request, gym_id: str):
         device_info = request.headers.get("user-agent", "unknown")
         
         # Find token in database
-        token_doc = await db.token_usage.find_one({"token_code": token_code})
+        token_doc = await db.tokens.find_one({"token_code": token_code})
         
         if not token_doc:
             # Log failed validation attempt
