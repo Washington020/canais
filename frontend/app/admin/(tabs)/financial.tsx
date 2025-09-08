@@ -95,6 +95,19 @@ export default function AdminFinancial() {
       // Load users for financial management
       const usersResponse = await axios.get(`${API_URL}/api/admin/users`, { headers });
       setUsers(usersResponse.data);
+
+      // Load gym revenues  
+      const gymsResponse = await axios.get(`${API_URL}/api/integration/admin/gyms`, { headers });
+      const gymsWithRevenue = gymsResponse.data.gyms.map((gym: any) => ({
+        id: gym.id,
+        name: gym.name,
+        monthly_checkins: gym.stats?.monthly_checkins || 0,
+        monthly_revenue: gym.stats?.monthly_revenue || 0,
+        commission_rate: gym.commission_rate || 15,
+        commission_earned: (gym.stats?.monthly_revenue || 0) * (gym.commission_rate || 15) / 100,
+        status: gym.status
+      }));
+      setGymRevenues(gymsWithRevenue);
       
     } catch (error: any) {
       console.error('Error loading financial data:', error);
