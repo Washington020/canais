@@ -334,10 +334,10 @@ export default function GymsManagement() {
         'Content-Type': 'application/json'
       };
       
-      // A API espera um objeto JSON com o campo status
+      // A API espera o status como query parameter
       const response = await axios.put(
-        `${API_URL}/api/integration/gym/${gymId}/status`, 
-        status, // Enviar apenas a string diretamente
+        `${API_URL}/api/integration/gym/${gymId}/status?status=${status}`, 
+        {}, // Body vazio
         { headers, timeout: 10000 }
       );
       
