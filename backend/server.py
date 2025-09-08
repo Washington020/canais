@@ -370,6 +370,23 @@ async def get_user_profile(current_user: User = Depends(get_current_user)):
         logger.error(f"Erro ao buscar perfil do usuário: {e}")
         raise HTTPException(status_code=500, detail="Erro ao buscar perfil")
 
+@api_router.put("/admin/users/{user_id}/update-email")
+async def update_user_email(user_id: str, new_email: str):
+    """Admin endpoint to update user email"""
+    try:
+        result = await db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {"email": new_email}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        return {"success": True, "message": f"Email atualizado para {new_email}"}
+    except Exception as e:
+        logger.error(f"Erro ao atualizar email: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao atualizar email")
+
 # Token routes
 @api_router.post("/tokens/generate")
 async def generate_token(
