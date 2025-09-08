@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -8,26 +8,43 @@ import { Ionicons } from '@expo/vector-icons';
 export default function AcademiaSystem() {  
   const router = useRouter();
 
+  const handleExit = () => {
+    Alert.alert(
+      'Sair do Sistema Academia',
+      'Deseja realmente sair?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: () => router.replace('/')
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
       <View style={styles.content}>
-        {/* Header with Back Button */}
+        {/* Header with Exit Button */}
         <View style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton} 
-            onPress={() => router.push('/')}
+            onPress={() => router.back()}
           >
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity 
-            style={styles.closeButton} 
-            onPress={() => router.push('/')}
+            style={styles.exitButton} 
+            onPress={handleExit}
           >
             <Ionicons name="close" size={24} color="#FFFFFF" />
+            <Text style={styles.exitText}>SAIR</Text>
           </TouchableOpacity>
         </View>
+
         {/* Logo and Brand */}
         <View style={styles.logoContainer}>
           <View style={styles.logo}>
@@ -56,8 +73,21 @@ export default function AcademiaSystem() {
               <Text style={styles.buttonIconText}>🔑</Text>
             </View>
             <View style={styles.buttonContent}>
-              <Text style={styles.buttonTitle}>Acesso do Parceiro</Text>
+              <Text style={styles.buttonTitle}>Login Academia</Text>
               <Text style={styles.buttonSubtitle}>Login com credenciais fornecidas pelo admin</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.accessButton, styles.directButton]}
+            onPress={() => router.push('/gym/validation')}
+          >
+            <View style={styles.buttonIcon}>
+              <Text style={styles.buttonIconText}>🚀</Text>
+            </View>
+            <View style={styles.buttonContent}>
+              <Text style={styles.buttonTitle}>Acesso Direto</Text>
+              <Text style={styles.buttonSubtitle}>Ir direto para validação (demo)</Text>
             </View>
           </TouchableOpacity>
 
@@ -66,9 +96,18 @@ export default function AcademiaSystem() {
             <Text style={styles.infoText}>
               • Entre em contato com o administrador do LuxePass{'\n'}
               • Receba suas credenciais de acesso por email{'\n'}
-              • Use o sistema para validar tokens dos clientes
+              • Use o sistema para validar tokens dos clientes{'\n'}
+              • Administrador: admin@luxepass.com
             </Text>
           </View>
+        </View>
+
+        {/* Exit Button */}
+        <View style={styles.exitSection}>
+          <TouchableOpacity style={styles.exitFullButton} onPress={handleExit}>
+            <Ionicons name="log-out" size={20} color="#FFFFFF" />
+            <Text style={styles.exitFullText}>Sair do Sistema Academia</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Features */}
@@ -116,13 +155,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  closeButton: {
-    width: 44,
-    height: 44,
-    backgroundColor: 'rgba(255, 0, 0, 0.1)',
-    borderRadius: 22,
-    justifyContent: 'center',
+  exitButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 68, 68, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FF4444',
+  },
+  exitText: {
+    color: '#FF4444',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 4,
   },
   logoContainer: {
     alignItems: 'center',
@@ -178,12 +225,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderRadius: 16,
-    marginBottom: 24,
+    marginBottom: 16,
     borderWidth: 2,
   },
   loginButton: {
     backgroundColor: 'rgba(34, 197, 94, 0.1)',
     borderColor: '#22C55E',
+  },
+  directButton: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderColor: '#F59E0B',
   },
   buttonIcon: {
     width: 50,
@@ -214,6 +265,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(34, 197, 94, 0.1)',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: 'rgba(34, 197, 94, 0.3)',
   },
@@ -228,10 +280,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  exitSection: {
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 20,
+  },
+  exitFullButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF4444',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+  },
+  exitFullText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   features: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 40,
   },
   featureItem: {
     alignItems: 'center',

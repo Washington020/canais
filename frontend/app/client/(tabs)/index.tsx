@@ -6,7 +6,8 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -22,10 +23,12 @@ export default function ClientDashboard() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState({
-    tokens_available: 0,
-    tokens_used: 0,
-    gyms_visited: 0
+    tokens_available: 50,
+    tokens_used: 5,
+    gyms_visited: 3
   });
+  const [showWorkoutModal, setShowWorkoutModal] = useState(false);
+  const [currentWorkout, setCurrentWorkout] = useState<any>(null);
   const router = useRouter();
 
   const handleLogout = useCallback(async () => {
@@ -68,51 +71,80 @@ export default function ClientDashboard() {
   }, []);
 
   const generateSpecificWorkout = useCallback((type: string) => {
-    const workouts = {
-      cardio: [
-        '🏃 Corrida na esteira: 20 minutos',
-        '🚴 Bike ergométrica: 15 minutos',
-        '🏋️ Burpees: 3 séries de 10',
-        '🤸 Jumping jacks: 3 séries de 15'
-      ],
-      musculacao: [
-        '💪 Supino reto: 3 séries de 12',
-        '🦵 Agachamento: 3 séries de 15',
-        '🏋️ Deadlift: 3 séries de 10',
-        '💪 Rosca bíceps: 3 séries de 12'
-      ],
-      funcional: [
-        '🤸 Prancha: 3 séries de 30s',
-        '🦵 Afundo: 3 séries de 12 cada perna',
-        '💪 Flexão: 3 séries de 10',
-        '🏋️ Mountain climber: 3 séries de 20'
-      ]
+    const workoutTemplates = {
+      cardio: {
+        name: 'Treino Cardio Intenso',
+        duration: '30-45 minutos',
+        exercises: [
+          { name: 'Aquecimento na esteira', sets: '1x', reps: '5 min', rest: '30s' },
+          { name: 'Corrida intervalada', sets: '5x', reps: '2 min', rest: '1 min' },
+          { name: 'Bike ergométrica', sets: '1x', reps: '10 min', rest: '2 min' },
+          { name: 'Burpees', sets: '3x', reps: '10 rep', rest: '45s' },
+          { name: 'Jumping jacks', sets: '3x', reps: '15 rep', rest: '30s' },
+          { name: 'Mountain climber', sets: '3x', reps: '20 rep', rest: '45s' },
+          { name: 'Alongamento', sets: '1x', reps: '5 min', rest: '-' }
+        ]
+      },
+      musculacao: {
+        name: 'Treino de Musculação',
+        duration: '45-60 minutos',
+        exercises: [
+          { name: 'Aquecimento articular', sets: '1x', reps: '5 min', rest: '30s' },
+          { name: 'Supino reto', sets: '3x', reps: '12 rep', rest: '90s' },
+          { name: 'Agachamento livre', sets: '3x', reps: '15 rep', rest: '2 min' },
+          { name: 'Deadlift', sets: '3x', reps: '10 rep', rest: '2 min' },
+          { name: 'Rosca bíceps', sets: '3x', reps: '12 rep', rest: '60s' },
+          { name: 'Tríceps pulley', sets: '3x', reps: '12 rep', rest: '60s' },
+          { name: 'Desenvolvimento', sets: '3x', reps: '10 rep', rest: '90s' },
+          { name: 'Prancha abdominal', sets: '3x', reps: '30s', rest: '45s' }
+        ]
+      },
+      funcional: {
+        name: 'Treino Funcional',
+        duration: '35-50 minutos',
+        exercises: [
+          { name: 'Mobilidade articular', sets: '1x', reps: '5 min', rest: '30s' },
+          { name: 'Agachamento com salto', sets: '3x', reps: '12 rep', rest: '60s' },
+          { name: 'Prancha dinâmica', sets: '3x', reps: '30s', rest: '45s' },
+          { name: 'Afundo alternado', sets: '3x', reps: '12 rep', rest: '60s' },
+          { name: 'Flexão de braço', sets: '3x', reps: '10 rep', rest: '60s' },
+          { name: 'Kettlebell swing', sets: '3x', reps: '15 rep', rest: '90s' },
+          { name: 'Box jump', sets: '3x', reps: '8 rep', rest: '90s' },
+          { name: 'Relaxamento', sets: '1x', reps: '5 min', rest: '-' }
+        ]
+      }
     };
 
-    const selectedWorkout = workouts[type as keyof typeof workouts];
-    Alert.alert(
-      `Treino ${type.charAt(0).toUpperCase() + type.slice(1)}`,
-      selectedWorkout.join('\n'),
-      [{ text: 'Entendi', style: 'default' }]
-    );
+    const workout = workoutTemplates[type as keyof typeof workoutTemplates];
+    setCurrentWorkout(workout);
+    setShowWorkoutModal(true);
   }, []);
 
   const loadUserData = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        router.replace('/client/login');
+        // Se não tem token, usar dados demo
+        setUser({ full_name: 'Cliente Demo' });
+        setLoading(false);
         return;
       }
 
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_URL}/api/users/profile`, { headers });
-      setUser(response.data);
+      try {
+        const response = await axios.get(`${API_URL}/api/users/profile`, { headers });
+        setUser(response.data);
 
-      const statsResponse = await axios.get(`${API_URL}/api/users/stats`, { headers });
-      setStats(statsResponse.data);
+        const statsResponse = await axios.get(`${API_URL}/api/users/stats`, { headers });
+        setStats(statsResponse.data);
+      } catch (apiError) {
+        // Se API falha, usar dados demo
+        console.log('Usando dados demo');
+        setUser({ full_name: 'Cliente Demo' });
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      setUser({ full_name: 'Cliente Demo' });
     } finally {
       setLoading(false);
     }
@@ -187,12 +219,12 @@ export default function ClientDashboard() {
             onPress={generateWorkout}
           >
             <Ionicons name="fitness" size={20} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Gerar Treino</Text>
+            <Text style={styles.actionButtonText}>Gerar Treino Personalizado</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={[styles.actionButton, styles.tokensButton]}
-            onPress={() => router.push('/client/(tabs)/tokens')}
+            onPress={() => router.push('/(tabs)/tokens')}
           >
             <Ionicons name="qr-code" size={20} color="#FFFFFF" />
             <Text style={styles.actionButtonText}>Meus Tokens</Text>
@@ -200,10 +232,10 @@ export default function ClientDashboard() {
 
           <TouchableOpacity 
             style={[styles.actionButton, styles.gymsButton]}
-            onPress={() => router.push('/client/(tabs)/gyms')}
+            onPress={() => router.push('/(tabs)/gyms')}
           >
             <Ionicons name="location" size={20} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Academias</Text>
+            <Text style={styles.actionButtonText}>Academias Parceiras</Text>
           </TouchableOpacity>
         </View>
 
@@ -215,6 +247,57 @@ export default function ClientDashboard() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Workout Modal */}
+      <Modal
+        visible={showWorkoutModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowWorkoutModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>🏋️ {currentWorkout?.name}</Text>
+            <TouchableOpacity 
+              style={styles.closeModalButton}
+              onPress={() => setShowWorkoutModal(false)}
+            >
+              <Ionicons name="close" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.workoutInfo}>
+              <Text style={styles.workoutDuration}>⏱️ Duração: {currentWorkout?.duration}</Text>
+            </View>
+
+            {currentWorkout?.exercises.map((exercise: any, index: number) => (
+              <View key={index} style={styles.exerciseCard}>
+                <View style={styles.exerciseHeader}>
+                  <Text style={styles.exerciseNumber}>{index + 1}</Text>
+                  <Text style={styles.exerciseName}>{exercise.name}</Text>
+                </View>
+                <View style={styles.exerciseDetails}>
+                  <Text style={styles.exerciseDetail}>Séries: {exercise.sets}</Text>
+                  <Text style={styles.exerciseDetail}>Repetições: {exercise.reps}</Text>
+                  <Text style={styles.exerciseDetail}>Descanso: {exercise.rest}</Text>
+                </View>
+              </View>
+            ))}
+
+            <View style={styles.workoutTips}>
+              <Text style={styles.tipsTitle}>💡 Dicas Importantes:</Text>
+              <Text style={styles.tipsText}>
+                • Mantenha sempre boa hidratação{'\n'}
+                • Respeite os tempos de descanso{'\n'}
+                • Ajuste a carga conforme sua capacidade{'\n'}
+                • Pare se sentir dor ou desconforto{'\n'}
+                • Consulte um profissional se necessário
+              </Text>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -361,5 +444,102 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#0B0D17',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  closeModalButton: {
+    width: 44,
+    height: 44,
+    backgroundColor: 'rgba(255, 68, 68, 0.1)',
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  workoutInfo: {
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+  },
+  workoutDuration: {
+    color: '#8B5CF6',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  exerciseCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  exerciseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  exerciseNumber: {
+    color: '#8B5CF6',
+    fontSize: 18,
+    fontWeight: 'bold',
+    width: 30,
+  },
+  exerciseName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+  },
+  exerciseDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginLeft: 30,
+  },
+  exerciseDetail: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  workoutTips: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  tipsTitle: {
+    color: '#22C55E',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  tipsText: {
+    color: '#E2E8F0',
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
