@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,6 +48,28 @@ export default function ClientTokens() {
       ]
     );
   }, [router]);
+
+  const copyTokenCode = useCallback(async (tokenCode: string) => {
+    try {
+      await Clipboard.setStringAsync(tokenCode);
+      setSuccessMessage('Código copiado para a área de transferência!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      setErrorMessage('Erro ao copiar código');
+      setTimeout(() => setErrorMessage(''), 3000);
+    }
+  }, []);
+
+  const showTokenDetails = useCallback((token: any) => {
+    Alert.alert(
+      'Detalhes do Token',
+      `Código: ${token.code}\nTipo: ${token.type === 'academia' ? 'Academia' : 'Nutricionista'}\nStatus: ${token.status === 'active' ? 'Ativo' : 'Usado'}\nExpira: ${new Date(token.expires_at).toLocaleDateString('pt-BR')}`,
+      [
+        { text: 'Copiar Código', onPress: () => copyTokenCode(token.code) },
+        { text: 'Fechar', style: 'cancel' }
+      ]
+    );
+  }, [copyTokenCode]);
 
   const generateToken = useCallback(async (type: 'academia' | 'nutricionista') => {
     setLoading(true);
@@ -234,7 +257,7 @@ export default function ClientTokens() {
 
         {/* Recent Tokens */}
         <View style={styles.tokensSection}>
-          <Text style={styles.sectionTitle}>Tokens Recentes</Text>
+          <Text style={styles.sectionTitle}>Meus Tokens Ativos</Text>
           
           {tokens.length === 0 ? (
             <View style={styles.emptyState}>
@@ -244,24 +267,104 @@ export default function ClientTokens() {
             </View>
           ) : (
             tokens.map((token, index) => (
-              <View key={index} style={styles.tokenCard}>
+              <View key={token.id || index} style={styles.tokenCard}>
                 <View style={styles.tokenHeader}>
-                  <Ionicons 
-                    name={token.type === 'academia' ? 'fitness' : 'nutrition'} 
-                    size={20} 
-                    color={token.type === 'academia' ? '#8B5CF6' : '#22C55E'} 
-                  />
-                  <Text style={styles.tokenType}>
-                    {token.type === 'academia' ? 'Academia' : 'Nutricionista'}
-                  </Text>
-                  <Text style={styles.tokenStatus}>
-                    {token.status === 'active' ? '✅ Ativo' : '❌ Usado'}
-                  </Text>
+                  <View style={styles.tokenTypeContainer}>
+                    <Ionicons 
+                      name={token.type === 'academia' ? 'fitness' : 'nutrition'} 
+                      size={20} 
+                      color={token.type === 'academia' ? '#8B5CF6' : '#22C55E'} 
+                    />
+                    <Text style={styles.tokenType}>
+                      {token.type === 'academia' ? 'Academia' : 'Nutricionista'}
+                    </Text>
+                  </View>
+                  <View style={[
+                    styles.tokenStatusBadge,
+                    { backgroundColor: token.status === 'active' ? '#22C55E' : '#EF4444' }
+                  ]}>
+                    <Text style={styles.tokenStatusText}>
+                      {token.status === 'active' ? 'ATIVO' : 'USADO'}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={styles.tokenCode}>{token.code}</Text>
-                <Text style={styles.tokenExpiry}>
-                  Expira: {new Date(token.expires_at).toLocaleDateString('pt-BR')}
-                </Text>
+
+                {/* Token Code Display */}
+                <View style={styles.tokenCodeContainer}>
+                  <Text style={styles.tokenCodeLabel}>Código do Token:</Text>
+                  <View style={styles.tokenCodeDisplay}>
+                    <Text style={styles.tokenCode}>{token.code}</Text>
+                    <TouchableOpacity style={styles.copyButton} onPress={() => copyTokenCode(token.code)}>
+                      <Ionicons name="copy-outline" size={16} color="#8B5CF6" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Token Info */}
+                <View style={styles.tokenInfo}>
+                  <View style={styles.tokenInfoRow}>
+                    <Ionicons name="time-outline" size={16} color="#94A3B8" />
+                    <Text style={styles.tokenInfoText}>
+                      Criado: {new Date(token.created_at).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </Text>
+                  </View>
+                  <View style={styles.tokenInfoRow}>
+                    <Ionicons name="calendar-outline" size={16} color="#94A3B8" />
+                    <Text style={styles.tokenInfoText}>
+                      Expira: {new Date(token.expires_at).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </Text>
+                  </View>
+                  {token.used_at && (
+                    <View style={styles.tokenInfoRow}>
+                      <Ionicons name="checkmark-circle-outline" size={16} color="#22C55E" />
+                      <Text style={styles.tokenInfoText}>
+                        Usado: {new Date(token.used_at).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Check-in Button */}
+                {token.status === 'active' && (
+                  <TouchableOpacity 
+                    style={styles.checkinButton}
+                    onPress={() => showTokenDetails(token)}
+                  >
+                    <Ionicons name="qr-code" size={20} color="#FFFFFF" />
+                    <Text style={styles.checkinButtonText}>Ver QR Code</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Usage Info */}
+                <View style={styles.usageInfo}>
+                  <Text style={styles.usageText}>
+                    Usos: {token.usage_count}/{token.max_usage}
+                  </Text>
+                  <View style={styles.usageBar}>
+                    <View 
+                      style={[
+                        styles.usageProgress,
+                        { width: `${(token.usage_count / token.max_usage) * 100}%` }
+                      ]}
+                    />
+                  </View>
+                </View>
               </View>
             ))
           )}
@@ -408,29 +511,104 @@ const styles = StyleSheet.create({
   tokenHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  tokenTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   tokenType: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
-    flex: 1,
   },
-  tokenStatus: {
+  tokenStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tokenStatusText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  tokenCodeContainer: {
+    marginBottom: 12,
+  },
+  tokenCodeLabel: {
     color: '#94A3B8',
     fontSize: 12,
+    marginBottom: 4,
+  },
+  tokenCodeDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
   },
   tokenCode: {
     color: '#8B5CF6',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 4,
     fontFamily: 'monospace',
+    flex: 1,
   },
-  tokenExpiry: {
-    color: '#64748B',
+  copyButton: {
+    padding: 4,
+  },
+  tokenInfo: {
+    marginBottom: 12,
+  },
+  tokenInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  tokenInfoText: {
+    color: '#94A3B8',
     fontSize: 12,
+    marginLeft: 8,
+  },
+  checkinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8B5CF6',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  checkinButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  usageInfo: {
+    marginTop: 8,
+  },
+  usageText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  usageBar: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  usageProgress: {
+    height: '100%',
+    backgroundColor: '#8B5CF6',
+    borderRadius: 2,
   },
   logoutSection: {
     paddingVertical: 24,
