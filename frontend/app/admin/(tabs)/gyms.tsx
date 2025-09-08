@@ -321,7 +321,7 @@ export default function GymsManagement() {
     }));
   };
 
-  const updateGymStatus = useCallback(async (gymId: string, status: 'active' | 'inactive') => {
+  const updateGymStatus = useCallback(async (gymId: string, status: 'active' | 'inactive' | 'approved') => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
@@ -336,15 +336,15 @@ export default function GymsManagement() {
         'Content-Type': 'application/json'
       };
       
-      // A API espera o status como query parameter
+      // Usar o endpoint correto com MongoDB ID e status no body
       const response = await axios.put(
-        `${API_URL}/api/integration/gym/${gymId}/status?status=${status}`, 
-        {}, // Body vazio
+        `${API_URL}/api/admin/gyms/${gymId}/status`, 
+        { status: status === 'active' ? 'approved' : status }, // Mapear active -> approved
         { headers, timeout: 10000 }
       );
       
       console.log('✅ Status atualizado com sucesso:', response.data);
-      Alert.alert('Sucesso', `Status da academia atualizado para ${status === 'active' ? 'Ativa' : 'Inativa'}`);
+      Alert.alert('Sucesso', `Academia ${status === 'active' ? 'aprovada' : status === 'inactive' ? 'suspensa' : 'ativada'} com sucesso!`);
       
       // Aguardar um pouco antes de recarregar
       setTimeout(async () => {
