@@ -121,7 +121,7 @@ export default function GymsManagement() {
 
   useEffect(() => {
     loadGyms();
-  }, []);
+  }, [loadGyms]);
 
   const loadGyms = useCallback(async () => {
     // Previne múltiplas chamadas simultâneas
