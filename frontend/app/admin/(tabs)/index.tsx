@@ -21,12 +21,43 @@ const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.ext
 
 interface AdminStats {
   total_users: number;
-  active_subscriptions: number;
-  overdue_payments: number;
-  blocked_users: number;
+  active_subscriptions?: number;
+  active_users?: number;
+  overdue_payments?: number;
+  blocked_users?: number;
   total_gyms: number;
-  tokens_generated_today: number;
+  active_gyms?: number;
+  tokens_generated_today?: number;
+  tokens_generated_month?: number;
   monthly_revenue: number;
+  checkins_month?: number;
+  conversion_rate?: number;
+  recent_users?: Array<{
+    id: string;
+    full_name: string;
+    email: string;
+    plan_type: string;
+    status: string;
+    created_at: string;
+    subscription: {
+      monthly_amount: number;
+      status: string;
+    };
+  }>;
+  recent_gyms?: Array<{
+    id: string;
+    name: string;
+    status: string;
+    monthly_checkins: number;
+    monthly_revenue: number;
+  }>;
+  recent_tokens?: Array<{
+    token_code: string;
+    token_type: string;
+    created_at: string;
+    user_id: string;
+    status: string;
+  }>;
 }
 
 export default function AdminDashboard() {
