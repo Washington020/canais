@@ -518,6 +518,10 @@ async def validate_simple_token(token_code: str, request: Request, gym_id: str):
         # Get user info for response
         user_doc = await db.users.find_one({"_id": ObjectId(token_doc["user_id"])})
         
+        if not user_doc:
+            logger.error(f"Usuário não encontrado para token: {token_doc['user_id']}")
+            raise HTTPException(status_code=500, detail="Dados do usuário não encontrados")
+        
         return {
             "valid": True,
             "message": "Token validado com sucesso!",
