@@ -581,7 +581,7 @@ export default function GymsManagement() {
                   {gym.status === 'pending' && (
                     <TouchableOpacity 
                       style={[styles.actionButton, styles.approveButton]}
-                      onPress={() => updateGymStatus(gym.id, 'active')}
+                      onPress={() => updateGymStatus(gym._id, 'active')}
                     >
                       <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                       <Text style={styles.actionButtonText}>Aprovar</Text>
