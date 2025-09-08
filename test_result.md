@@ -378,6 +378,42 @@ backend:
           agent: "testing"
           comment: "✅ SPECIFIC CREDENTIALS TEST COMPLETED: Successfully tested POST /api/gym/auth with exact credentials requested (gym_academia_teste_2039/sm7zK4QN). Created gym 'Academia Teste 2039 - Credenciais Específicas' with these specific credentials. CONFIRMED: Response structure is 100% correct for frontend - returns {access_token, token_type, gym_info: {id, name, type, status}}. Frontend CAN access response.gym_info.name successfully. Verified complete response structure: access_token (167 chars JWT), gym_info.name='Academia Teste 2039 - Credenciais Específicas', all required fields present and populated. Backend is working correctly - if frontend still fails, issue is in frontend code, network/CORS, or different credentials being used."
 
+  - task: "User Profile Personalization API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ GET /api/users/profile endpoint working correctly. Successfully returns complete user profile information including ID (68bdbb116c32d4196b7812d5), full name (Cliente Premium), email (cliente@luxepass.com), plan type (premium), status (active), and creation date. Personalization with user names from database is operational."
+
+  - task: "Luxepass Email Login System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Login system with @luxepass.com emails working correctly. Both cliente@luxepass.com/cliente123 and admin@luxepass.com/admin123 credentials authenticate successfully and return proper JWT tokens. Email domain migration to @luxepass.com is functional."
+
+  - task: "Admin Dashboard Personalization API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ GET /api/admin/dashboard endpoint working correctly. Successfully loads admin dashboard with all statistics: Total Users (4), Active Subscriptions (4), Total Gyms (3), Tokens Generated Today (1), Monthly Revenue (R$ 15000), Overdue Payments (2), Blocked Users (1). Admin interface personalization is operational."
+
 frontend:
   # Frontend testing not performed as per instructions
 
