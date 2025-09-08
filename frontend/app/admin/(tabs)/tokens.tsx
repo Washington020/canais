@@ -194,7 +194,7 @@ export default function AdminTokens() {
       >
         {activeTab === 'stats' ? (
           <>
-            {/* Token Statistics */}
+            {/* Enhanced Stats */}
             <View style={styles.statsContainer}>
               <View style={styles.statsGrid}>
                 <View style={styles.statCard}>
