@@ -214,13 +214,21 @@ export default function GymsManagement() {
     return true;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
+
+    if (modalLoading) {
+      console.log('🚫 Submit já em andamento, ignorando...');
+      return;
+    }
 
     setModalLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        router.replace('/admin/login');
+        return;
+      }
 
       const gymData = {
         name: form.name,
@@ -246,17 +254,26 @@ export default function GymsManagement() {
 
       console.log('🚀 Cadastrando academia:', gymData);
 
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.post(`${API_URL}/api/integration/admin/gym/register`, gymData, { headers });
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await axios.post(`${API_URL}/api/integration/admin/gym/register`, gymData, { 
+        headers,
+        timeout: 15000 // 15 segundos para cadastro
+      });
       
       console.log('✅ Academia cadastrada:', response.data);
 
       // Mostrar credenciais geradas
-      setGeneratedCredentials({
-        username: response.data.login_credentials.username,
-        password: response.data.login_credentials.password
-      });
-      setShowCredentials(true);
+      if (response.data.login_credentials) {
+        setGeneratedCredentials({
+          username: response.data.login_credentials.username,
+          password: response.data.login_credentials.password
+        });
+        setShowCredentials(true);
+      }
 
       // Reset form
       setForm({
@@ -291,7 +308,7 @@ export default function GymsManagement() {
     } finally {
       setModalLoading(false);
     }
-  };
+  }, [form, modalLoading, router, loadGyms]);
 
   const handleAmenityToggle = (amenity: string) => {
     setForm(prev => ({
