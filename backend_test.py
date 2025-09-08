@@ -1949,19 +1949,20 @@ class FitPassTester:
 if __name__ == "__main__":
     tester = FitPassTester()
     
-    print("🎯 RUNNING SPECIFIC ENDPOINT TESTS AS REQUESTED")
-    print("Testing the problematic endpoints reported by user:")
-    print("1. POST /api/tokens/generate-simple (NEW format with body)")
-    print("2. POST /api/admin/gyms/register (gym registration)")
-    print("3. POST /api/auth/login (login verification)")
+    print("🎯 RUNNING PERSONALIZATION ENDPOINTS TEST AS REQUESTED")
+    print("Testing the personalization endpoints with @luxepass.com emails:")
+    print("1. Login with cliente@luxepass.com")
+    print("2. GET /api/users/profile - Verify user information")
+    print("3. Login with admin@luxepass.com")
+    print("4. Admin Dashboard API - Verify loading")
     print("="*70)
     
-    # Run the specific test for problematic endpoints
-    success = tester.test_specific_problematic_endpoints()
+    # Run the personalization endpoints test
+    success = tester.test_personalization_endpoints()
     
     # Summary
     print("\n" + "="*70)
-    print("📊 SPECIFIC ENDPOINT TEST SUMMARY")
+    print("📊 PERSONALIZATION ENDPOINTS TEST SUMMARY")
     print("="*70)
     
     passed = sum(1 for result in tester.test_results if result["success"])
@@ -1980,16 +1981,14 @@ if __name__ == "__main__":
             print(f"   Details: {result['details']}")
     
     if success:
-        print("\n🎉 ALL SPECIFIC TESTS PASSED!")
-        print("The endpoints that were reported as problematic are now working correctly:")
-        print("  ✓ POST /api/auth/login - Authentication working")
-        print("  ✓ POST /api/tokens/generate-simple - Token generation with NEW body format working")
-        print("  ✓ POST /api/admin/gyms/register - Gym registration working")
-        print("\n💡 CONCLUSION: The backend endpoints are functioning properly.")
-        print("If the frontend is still having issues, the problem is likely in:")
-        print("  - Frontend code implementation")
-        print("  - Network/CORS configuration")
-        print("  - Different credentials being used in frontend")
+        print("\n🎉 ALL PERSONALIZATION TESTS PASSED!")
+        print("The personalization endpoints are working correctly:")
+        print("  ✓ cliente@luxepass.com login - Working")
+        print("  ✓ GET /api/users/profile - Returns user information")
+        print("  ✓ admin@luxepass.com login - Working")
+        print("  ✓ Admin Dashboard API - Loading without errors")
+        print("\n💡 CONCLUSION: The personalization backend is functioning properly.")
+        print("Interface personalization with user names from database is operational.")
     else:
         print("\n❌ SOME TESTS FAILED!")
         print("Check the detailed output above for specific issues.")
