@@ -842,12 +842,12 @@ async def reset_gym_password(gym_id: str):
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     hashed_password = pwd_context.hash(new_password)
     
-    # Update gym password using the id field, not _id
+    # Update gym password using MongoDB _id
     result = await db.gyms.update_one(
-        {"id": gym_id},
+        {"_id": ObjectId(gym_id)},
         {
             "$set": {
-                "login_credentials.password_hash": hashed_password,
+                "hashed_password": hashed_password,
                 "password_reset_at": datetime.now(timezone.utc)
             }
         }
@@ -857,7 +857,7 @@ async def reset_gym_password(gym_id: str):
         raise HTTPException(status_code=404, detail="Academia não encontrada")
     
     # Get gym info
-    gym = await db.gyms.find_one({"id": gym_id})
+    gym = await db.gyms.find_one({"_id": ObjectId(gym_id)})
     
     return {
         "success": True,
