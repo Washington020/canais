@@ -555,6 +555,16 @@ export default function GymsManagement() {
                     </TouchableOpacity>
                   )}
 
+                  {(gym.status === 'active' || gym.status === 'inactive') && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.resetButton]}
+                      onPress={() => resetGymPassword(gym.id, gym.name)}
+                    >
+                      <Ionicons name="key" size={16} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>Nova Senha</Text>
+                    </TouchableOpacity>
+                  )}
+
                   <TouchableOpacity 
                     style={[styles.actionButton, styles.detailsButton]}
                     onPress={() => setSelectedGym(gym)}
