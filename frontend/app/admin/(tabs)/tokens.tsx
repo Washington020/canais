@@ -241,6 +241,37 @@ export default function AdminTokens() {
               </View>
             </View>
 
+            {/* Intercommunication Status */}
+            <View style={styles.intercommunicationSection}>
+              <Text style={styles.sectionTitle}>🔄 Status de Intercomunicação</Text>
+              
+              <View style={styles.systemStatus}>
+                <View style={styles.statusItem}>
+                  <View style={styles.statusIndicator}>
+                    <View style={[styles.statusDot, { backgroundColor: '#22C55E' }]} />
+                    <Text style={styles.statusLabel}>App Cliente → Admin</Text>
+                  </View>
+                  <Text style={styles.statusDetail}>Tokens sendo gerados normalmente</Text>
+                </View>
+                
+                <View style={styles.statusItem}>
+                  <View style={styles.statusIndicator}>
+                    <View style={[styles.statusDot, { backgroundColor: '#22C55E' }]} />
+                    <Text style={styles.statusLabel}>Admin → Academias</Text>
+                  </View>
+                  <Text style={styles.statusDetail}>Credenciais sendo enviadas</Text>
+                </View>
+                
+                <View style={styles.statusItem}>
+                  <View style={styles.statusIndicator}>
+                    <View style={[styles.statusDot, { backgroundColor: '#22C55E' }]} />  
+                    <Text style={styles.statusLabel}>Academia → Sistema</Text>
+                  </View>
+                  <Text style={styles.statusDetail}>Validação funcionando</Text>
+                </View>
+              </View>
+            </View>
+
             {/* Recent Activity */}
             <View style={styles.recentActivity}>
               <Text style={styles.sectionTitle}>Atividade Recente</Text>
