@@ -379,31 +379,50 @@ export default function GymsManagement() {
                   return;
                 }
 
-                const headers = { Authorization: `Bearer ${token}` };
-                const response = await axios.put(`${API_URL}/api/admin/gyms/${gymId}/reset-password`, {}, { headers });
+                console.log(`🔑 Gerando nova senha para academia ${gymName}...`);
+
+                const headers = { 
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                };
                 
-                if (response.data.success) {
+                const response = await axios.put(
+                  `${API_URL}/api/admin/gyms/${gymId}/reset-password`, 
+                  {}, 
+                  { headers, timeout: 10000 }
+                );
+                
+                console.log('✅ Nova senha gerada:', response.data);
+
+                if (response.data.success && response.data.new_password) {
+                  // Mostrar as credenciais no modal
                   setGeneratedCredentials({
-                    username: response.data.login,
+                    username: response.data.login || `gym_${gymName.toLowerCase().replace(/\s+/g, '_')}`,
                     password: response.data.new_password
                   });
                   setShowCredentials(true);
                   
-                  Alert.alert('Sucesso', 'Nova senha gerada com sucesso!');
-                  await loadGyms();
+                  // Recarregar a lista
+                  setTimeout(async () => {
+                    await loadGyms();
+                  }, 1000);
+                  
                 } else {
                   Alert.alert('Erro', 'Não foi possível gerar nova senha');
                 }
               } catch (error: any) {
-                console.error('Erro ao resetar senha:', error);
-                Alert.alert('Erro', 'Não foi possível gerar nova senha');
+                console.error('❌ Erro ao resetar senha:', error);
+                if (error.response) {
+                  console.error('Response data:', error.response.data);
+                }
+                Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível gerar nova senha');
               }
             }
           }
         ]
       );
     } catch (error: any) {
-      console.error('Erro ao resetar senha:', error);
+      console.error('❌ Erro ao resetar senha:', error);
       Alert.alert('Erro', 'Não foi possível gerar nova senha');
     }
   }, [loadGyms, router]);
