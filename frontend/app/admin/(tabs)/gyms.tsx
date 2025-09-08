@@ -512,7 +512,7 @@ export default function GymsManagement() {
             </View>
           ) : (
             gyms.map((gym) => (
-              <View key={gym.id} style={styles.gymCard}>
+              <View key={gym._id} style={styles.gymCard}>
                 <View style={styles.gymHeader}>
                   <View style={styles.gymMainInfo}>
                     <Text style={styles.gymName}>{gym.name}</Text>
@@ -591,7 +591,7 @@ export default function GymsManagement() {
                   {gym.status === 'active' && (
                     <TouchableOpacity 
                       style={[styles.actionButton, styles.suspendButton]}
-                      onPress={() => updateGymStatus(gym.id, 'inactive')}
+                      onPress={() => updateGymStatus(gym._id, 'inactive')}
                     >
                       <Ionicons name="pause" size={16} color="#FFFFFF" />
                       <Text style={styles.actionButtonText}>Suspender</Text>
@@ -601,7 +601,7 @@ export default function GymsManagement() {
                   {(gym.status === 'active' || gym.status === 'inactive') && (
                     <TouchableOpacity 
                       style={[styles.actionButton, styles.resetButton]}
-                      onPress={() => resetGymPassword(gym.id, gym.name)}
+                      onPress={() => resetGymPassword(gym._id, gym.name)}
                     >
                       <Ionicons name="key" size={16} color="#FFFFFF" />
                       <Text style={styles.actionButtonText}>Nova Senha</Text>
