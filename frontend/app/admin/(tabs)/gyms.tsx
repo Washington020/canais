@@ -338,6 +338,53 @@ export default function GymsManagement() {
     }
   }, [loadGyms, router]);
 
+  const resetGymPassword = useCallback(async (gymId: string, gymName: string) => {
+    try {
+      Alert.alert(
+        'Confirmar Ação',
+        `Deseja realmente gerar uma nova senha para ${gymName}?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Gerar Nova Senha',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const token = await AsyncStorage.getItem('token');
+                if (!token) {
+                  router.replace('/admin/login');
+                  return;
+                }
+
+                const headers = { Authorization: `Bearer ${token}` };
+                const response = await axios.put(`${API_URL}/api/admin/gyms/${gymId}/reset-password`, {}, { headers });
+                
+                if (response.data.success) {
+                  setGeneratedCredentials({
+                    username: response.data.login,
+                    password: response.data.new_password
+                  });
+                  setShowCredentials(true);
+                  
+                  Alert.alert('Sucesso', 'Nova senha gerada com sucesso!');
+                  await loadGyms();
+                } else {
+                  Alert.alert('Erro', 'Não foi possível gerar nova senha');
+                }
+              } catch (error: any) {
+                console.error('Erro ao resetar senha:', error);
+                Alert.alert('Erro', 'Não foi possível gerar nova senha');
+              }
+            }
+          }
+        ]
+      );
+    } catch (error: any) {
+      console.error('Erro ao resetar senha:', error);
+      Alert.alert('Erro', 'Não foi possível gerar nova senha');
+    }
+  }, [loadGyms, router]);
+
   const formatAddress = (address: any) => {
     if (typeof address === 'string') return address;
     return `${address.street}, ${address.number} - ${address.city}/${address.state}`;
