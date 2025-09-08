@@ -48,6 +48,34 @@ export default function AdminTokens() {
     gym_tokens: 0,
     nutritionist_tokens: 0,
     usage_rate: 0
+  intercommunicationSection: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  systemStatus: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statusItem: {
+    marginBottom: 16,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusDetail: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginLeft: 16,
+  },
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,10 +98,66 @@ export default function AdminTokens() {
       const headers = { Authorization: `Bearer ${token}` };
       
       // Load token statistics
+  intercommunicationSection: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  systemStatus: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statusItem: {
+    marginBottom: 16,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusDetail: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginLeft: 16,
+  },
       const statsResponse = await axios.get(`${API_URL}/api/admin/tokens/stats`, { headers });
       setStats(statsResponse.data);
 
       // Load token usage data
+  intercommunicationSection: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  systemStatus: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statusItem: {
+    marginBottom: 16,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusDetail: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginLeft: 16,
+  },
       const tokensResponse = await axios.get(`${API_URL}/api/admin/tokens`, { headers });
       setTokens(tokensResponse.data);
       
@@ -119,6 +203,34 @@ export default function AdminTokens() {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
+  intercommunicationSection: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  systemStatus: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statusItem: {
+    marginBottom: 16,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusDetail: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginLeft: 16,
+  },
     });
   };
 
@@ -627,5 +739,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 16,
     textAlign: 'center',
+  },
+  intercommunicationSection: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  systemStatus: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statusItem: {
+    marginBottom: 16,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusDetail: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginLeft: 16,
   },
 });
