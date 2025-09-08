@@ -29,6 +29,26 @@ interface User {
   monthly_amount: number;
 }
 
+interface GymRevenue {
+  id: string;
+  name: string;
+  monthly_checkins: number;
+  monthly_revenue: number;
+  commission_rate: number;
+  commission_earned: number;
+  status: string;
+}
+
+interface FinancialStats {
+  monthly_revenue: number;
+  overdue_payments: number;
+  active_subscriptions: number;
+  blocked_users: number;
+  total_gym_commissions: number;
+  total_tokens_used: number;
+  avg_revenue_per_user: number;
+}
+
 export default function AdminFinancial() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
