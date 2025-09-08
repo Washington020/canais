@@ -302,10 +302,13 @@ export default function GymsManagement() {
     }));
   };
 
-  const updateGymStatus = async (gymId: string, status: 'active' | 'inactive') => {
+  const updateGymStatus = useCallback(async (gymId: string, status: 'active' | 'inactive') => {
     try {
       const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        router.replace('/admin/login');
+        return;
+      }
 
       const headers = { Authorization: `Bearer ${token}` };
       await axios.put(`${API_URL}/api/integration/gym/${gymId}/status`, { status }, { headers });
@@ -316,7 +319,7 @@ export default function GymsManagement() {
       console.error('Erro ao atualizar status:', error);
       Alert.alert('Erro', 'Não foi possível atualizar o status');
     }
-  };
+  }, [loadGyms, router]);
 
   const formatAddress = (address: any) => {
     if (typeof address === 'string') return address;
@@ -328,10 +331,11 @@ export default function GymsManagement() {
     return `Seg-Sex: ${hours['seg-sex'] || 'N/I'}`;
   };
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
+    console.log('🔄 Iniciando refresh...');
     setRefreshing(true);
     loadGyms();
-  };
+  }, [loadGyms]);
 
   if (loading) {
     return (
