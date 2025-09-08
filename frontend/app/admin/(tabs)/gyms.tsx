@@ -1426,6 +1426,26 @@ const styles = StyleSheet.create({
     marginTop: 12,
     lineHeight: 16,
   },
+  instructionsContainer: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  instructionsTitle: {
+    color: '#3B82F6',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  instructionsText: {
+    color: '#E2E8F0',
+    fontSize: 13,
+    lineHeight: 18,
+  },
   credentialsCloseButton: {
     backgroundColor: '#8B5CF6',
     borderRadius: 12,
