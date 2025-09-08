@@ -228,6 +228,12 @@ async def get_all_gyms(current_user: str = Depends(get_current_user)):
             raise HTTPException(status_code=500, detail="Serviços não inicializados")
         
         gyms = await admin_service.gyms_collection.find().to_list(length=None)
+        
+        # Converter ObjectId para string
+        for gym in gyms:
+            if '_id' in gym:
+                gym['_id'] = str(gym['_id'])
+                
         return {"gyms": gyms}
     except Exception as e:
         logger.error(f"Erro ao buscar academias: {e}")
