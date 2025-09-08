@@ -334,6 +334,76 @@ export default function AdminFinancial() {
           )}
         </View>
 
+        {/* Gym Revenues Section */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>💰 Receitas das Academias</Text>
+          <Text style={styles.sectionSubtitle}>
+            Controle de faturamento e comissões das academias parceiras
+          </Text>
+        </View>
+
+        <View style={styles.gymRevenueContainer}>
+          {gymRevenues.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="business-outline" size={48} color="#64748B" />
+              <Text style={styles.emptyText}>Nenhuma academia com receita encontrada</Text>
+            </View>
+          ) : (
+            gymRevenues.map((gym) => (
+              <View key={gym.id} style={styles.gymRevenueCard}>
+                <View style={styles.gymHeader}>
+                  <View style={styles.gymMainInfo}>
+                    <Text style={styles.gymName}>{gym.name}</Text>
+                    <View style={[
+                      styles.statusBadge,
+                      { backgroundColor: gym.status === 'active' ? '#22C55E' : '#F59E0B' }
+                    ]}>
+                      <Text style={styles.statusText}>
+                        {gym.status === 'active' ? 'Ativa' : 'Pendente'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.gymStats}>
+                  <View style={styles.statCard}>
+                    <Ionicons name="fitness" size={20} color="#8B5CF6" />
+                    <Text style={styles.statLabel}>Check-ins</Text>
+                    <Text style={styles.statValue}>{gym.monthly_checkins}</Text>
+                  </View>
+
+                  <View style={styles.statCard}>
+                    <Ionicons name="cash" size={20} color="#22C55E" />
+                    <Text style={styles.statLabel}>Receita Mensal</Text>
+                    <Text style={styles.statValue}>
+                      {gym.monthly_revenue.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.commissionInfo}>
+                  <View style={styles.commissionRow}>
+                    <Text style={styles.commissionLabel}>Taxa de Comissão:</Text>
+                    <Text style={styles.commissionValue}>{gym.commission_rate}%</Text>
+                  </View>
+                  <View style={styles.commissionRow}>
+                    <Text style={styles.commissionLabel}>Comissão Ganha:</Text>
+                    <Text style={[styles.commissionValue, styles.commissionEarned]}>
+                      {gym.commission_earned.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+
         {/* Revenue Chart Placeholder */}
         <View style={styles.chartContainer}>
           <Text style={styles.sectionTitle}>Receita dos Últimos 6 Meses</Text>
@@ -543,5 +613,66 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 14,
     marginTop: 12,
+  },
+  sectionContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  sectionSubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  gymRevenueContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  gymRevenueCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  gymHeader: {
+    marginBottom: 16,
+  },
+  gymMainInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  gymName: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+  },
+  gymStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  commissionInfo: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: 16,
+  },
+  commissionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  commissionLabel: {
+    color: '#94A3B8',
+    fontSize: 14,
+  },
+  commissionValue: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  commissionEarned: {
+    color: '#22C55E',
   },
 });
