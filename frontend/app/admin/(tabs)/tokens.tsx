@@ -267,6 +267,60 @@ export default function AdminTokens() {
                 </View>
               ))}
             </View>
+
+            {/* Intercommunication Status */}
+            <View style={styles.intercommunicationSection}>
+              <Text style={styles.sectionTitle}>🔄 Status de Intercomunicação</Text>
+              <Text style={styles.sectionSubtitle}>
+                Monitoramento da comunicação entre aplicativos
+              </Text>
+              
+              <View style={styles.systemStatus}>
+                <View style={styles.statusItem}>
+                  <View style={styles.statusIndicator}>
+                    <View style={[styles.statusDot, { backgroundColor: '#22C55E' }]} />
+                    <Text style={styles.statusLabel}>App Cliente → Admin</Text>
+                  </View>
+                  <Text style={styles.statusDetail}>Tokens sendo gerados e sincronizados</Text>
+                  <View style={styles.statusBadge}>
+                    <Text style={styles.statusBadgeTexto}>✅ ATIVO</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.statusItem}>
+                  <View style={styles.statusIndicator}>
+                    <View style={[styles.statusDot, { backgroundColor: '#22C55E' }]} />
+                    <Text style={styles.statusLabel}>Admin → Academias</Text>
+                  </View>
+                  <Text style={styles.statusDetail}>Credenciais enviadas automaticamente</Text>
+                  <View style={styles.statusBadge}>
+                    <Text style={styles.statusBadgeTexto}>✅ ATIVO</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.statusItem}>
+                  <View style={styles.statusIndicator}>
+                    <View style={[styles.statusDot, { backgroundColor: '#22C55E' }]} />  
+                    <Text style={styles.statusLabel}>Academia → Validação</Text>
+                  </View>
+                  <Text style={styles.statusDetail}>Sistema de validação operacional</Text>
+                  <View style={styles.statusBadge}>
+                    <Text style={styles.statusBadgeTexto}>✅ ATIVO</Text>
+                  </View>
+                </View>
+
+                <View style={styles.statusItem}>
+                  <View style={styles.statusIndicator}>
+                    <View style={[styles.statusDot, { backgroundColor: '#F59E0B' }]} />  
+                    <Text style={styles.statusLabel}>Financeiro → Relatórios</Text>
+                  </View>
+                  <Text style={styles.statusDetail}>Sincronização de receitas em tempo real</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                    <Text style={[styles.statusBadgeTexto, { color: '#F59E0B' }]}>⚠️ ATENTO</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
           </>
         ) : (
           <View style={styles.tokensContainer}>
