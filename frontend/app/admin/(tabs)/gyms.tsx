@@ -770,7 +770,7 @@ export default function GymsManagement() {
                     </View>
 
                     <TouchableOpacity 
-                      style={styles.saveButton}
+                      style={styles.saveButtonContainer}
                       onPress={() => {
                         Alert.alert('Sucesso', 'Dados atualizados com sucesso!');
                         setShowEditModal(false);
