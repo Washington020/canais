@@ -1812,16 +1812,19 @@ class FitPassTester:
 if __name__ == "__main__":
     tester = FitPassTester()
     
-    # Run the specific gym authentication test as requested in review
-    print("🚀 Starting Specific Gym Authentication Test")
+    print("🎯 RUNNING SPECIFIC ENDPOINT TESTS AS REQUESTED")
+    print("Testing the problematic endpoints reported by user:")
+    print("1. POST /api/tokens/generate-simple (NEW format with body)")
+    print("2. POST /api/admin/gyms/register (gym registration)")
+    print("3. POST /api/auth/login (login verification)")
     print("="*70)
     
-    # Test the specific gym authentication issue
-    tester.test_specific_gym_authentication_issue()
+    # Run the specific test for problematic endpoints
+    success = tester.test_specific_problematic_endpoints()
     
     # Summary
     print("\n" + "="*70)
-    print("📊 SPECIFIC GYM AUTHENTICATION TEST SUMMARY")
+    print("📊 SPECIFIC ENDPOINT TEST SUMMARY")
     print("="*70)
     
     passed = sum(1 for result in tester.test_results if result["success"])
@@ -1830,6 +1833,7 @@ if __name__ == "__main__":
     print(f"Total Tests: {total}")
     print(f"Passed: {passed}")
     print(f"Failed: {total - passed}")
+    print(f"Success Rate: {(passed/total)*100:.1f}%")
     
     # Show all test results
     for result in tester.test_results:
@@ -1838,13 +1842,24 @@ if __name__ == "__main__":
         if result["details"]:
             print(f"   Details: {result['details']}")
     
-    print(f"\n🎯 CONCLUSION:")
-    if any("Response Structure" in result["test"] and result["success"] for result in tester.test_results):
-        print(f"✅ The gym authentication endpoint structure is CORRECT for frontend")
-        print(f"✅ Response includes access_token and gym_info.name as required")
-        print(f"✅ Frontend should be able to access response.gym_info.name")
-        print(f"❌ The specific credentials 'gym_academia_teste_2039/sm7zK4QN' may not exist")
-        print(f"💡 RECOMMENDATION: Create gym with these exact credentials or use existing valid credentials")
+    if success:
+        print("\n🎉 ALL SPECIFIC TESTS PASSED!")
+        print("The endpoints that were reported as problematic are now working correctly:")
+        print("  ✓ POST /api/auth/login - Authentication working")
+        print("  ✓ POST /api/tokens/generate-simple - Token generation with NEW body format working")
+        print("  ✓ POST /api/admin/gyms/register - Gym registration working")
+        print("\n💡 CONCLUSION: The backend endpoints are functioning properly.")
+        print("If the frontend is still having issues, the problem is likely in:")
+        print("  - Frontend code implementation")
+        print("  - Network/CORS configuration")
+        print("  - Different credentials being used in frontend")
     else:
-        print(f"❌ There may be an issue with the gym authentication endpoint structure")
-        print(f"🔍 Further investigation needed")
+        print("\n❌ SOME TESTS FAILED!")
+        print("Check the detailed output above for specific issues.")
+        
+        # Show failed tests
+        failed_tests = [result for result in tester.test_results if not result["success"]]
+        if failed_tests:
+            print("\n❌ Failed Tests:")
+            for test in failed_tests:
+                print(f"  - {test['test']}: {test['details']}")
