@@ -9,7 +9,7 @@ import json
 import os
 
 # Backend URL
-BACKEND_URL = "https://fitness-token-app.preview.emergentagent.com"
+BACKEND_URL = "https://luxeforma-app.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 def test_gym_auth():
