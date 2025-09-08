@@ -17,7 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'https://luxeforma-app.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
 
 export default function ClientDashboard() {
   const [loading, setLoading] = useState(true);
@@ -176,7 +176,7 @@ export default function ClientDashboard() {
         </TouchableOpacity>
         
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>LuxePass</Text>
+          <Text style={styles.headerTitle}>LuxePass Cliente</Text>
         </View>
         
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -224,15 +224,15 @@ export default function ClientDashboard() {
 
           <TouchableOpacity 
             style={[styles.actionButton, styles.tokensButton]}
-            onPress={() => router.push('/(tabs)/tokens')}
+            onPress={() => router.push('/client/(tabs)/tokens')}
           >
             <Ionicons name="qr-code" size={20} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Meus Tokens</Text>
+            <Text style={styles.actionButtonText}>Gerar Tokens</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={[styles.actionButton, styles.gymsButton]}
-            onPress={() => router.push('/(tabs)/gyms')}
+            onPress={() => router.push('/client/(tabs)/gyms')}
           >
             <Ionicons name="location" size={20} color="#FFFFFF" />
             <Text style={styles.actionButtonText}>Academias Parceiras</Text>
@@ -243,7 +243,7 @@ export default function ClientDashboard() {
         <View style={styles.logoutSection}>
           <TouchableOpacity style={styles.logoutFullButton} onPress={handleLogout}>
             <Ionicons name="log-out" size={20} color="#FFFFFF" />
-            <Text style={styles.logoutFullText}>Sair do App</Text>
+            <Text style={styles.logoutFullText}>Sair do App Cliente</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

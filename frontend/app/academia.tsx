@@ -73,21 +73,8 @@ export default function AcademiaSystem() {
               <Text style={styles.buttonIconText}>🔑</Text>
             </View>
             <View style={styles.buttonContent}>
-              <Text style={styles.buttonTitle}>Login Academia</Text>
-              <Text style={styles.buttonSubtitle}>Login com credenciais fornecidas pelo admin</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.accessButton, styles.directButton]}
-            onPress={() => router.push('/gym/validation')}
-          >
-            <View style={styles.buttonIcon}>
-              <Text style={styles.buttonIconText}>🚀</Text>
-            </View>
-            <View style={styles.buttonContent}>
-              <Text style={styles.buttonTitle}>Acesso Direto</Text>
-              <Text style={styles.buttonSubtitle}>Ir direto para validação (demo)</Text>
+              <Text style={styles.buttonTitle}>Login Obrigatório</Text>
+              <Text style={styles.buttonSubtitle}>Entre com credenciais fornecidas pelo admin</Text>
             </View>
           </TouchableOpacity>
 
@@ -98,6 +85,16 @@ export default function AcademiaSystem() {
               • Receba suas credenciais de acesso por email{'\n'}
               • Use o sistema para validar tokens dos clientes{'\n'}
               • Administrador: admin@luxepass.com
+            </Text>
+          </View>
+
+          <View style={styles.warningCard}>
+            <Text style={styles.warningTitle}>⚠️ IMPORTANTE:</Text>
+            <Text style={styles.warningText}>
+              • LOGIN É OBRIGATÓRIO para usar o sistema{'\n'}
+              • Sem login, não é possível validar tokens{'\n'}
+              • Credenciais são geradas pelo administrador{'\n'}
+              • Cada academia tem login único e seguro
             </Text>
           </View>
         </View>
@@ -225,16 +222,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderRadius: 16,
-    marginBottom: 16,
+    marginBottom: 24,
     borderWidth: 2,
   },
   loginButton: {
     backgroundColor: 'rgba(34, 197, 94, 0.1)',
     borderColor: '#22C55E',
-  },
-  directButton: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderColor: '#F59E0B',
   },
   buttonIcon: {
     width: 50,
@@ -265,7 +258,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(34, 197, 94, 0.1)',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(34, 197, 94, 0.3)',
   },
@@ -277,6 +270,25 @@ const styles = StyleSheet.create({
   },
   infoText: {
     color: '#94A3B8',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  warningCard: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  warningTitle: {
+    color: '#F59E0B',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  warningText: {
+    color: '#FEF3C7',
     fontSize: 14,
     lineHeight: 20,
   },
