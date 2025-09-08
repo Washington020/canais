@@ -224,11 +224,14 @@ async def get_all_users(
 async def get_all_gyms(current_user: str = Depends(get_current_user)):
     """Lista todas as academias para o admin"""
     try:
+        if admin_service is None:
+            raise HTTPException(status_code=500, detail="Serviços não inicializados")
+        
         gyms = await admin_service.gyms_collection.find().to_list(length=None)
         return {"gyms": gyms}
     except Exception as e:
         logger.error(f"Erro ao buscar academias: {e}")
-        raise HTTPException(status_code=500, detail="Erro interno")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 @integration_router.get("/admin/tokens")
 async def get_all_tokens(
