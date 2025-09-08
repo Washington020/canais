@@ -77,13 +77,15 @@ export default function ClientTokens() {
 
       console.log('✅ Token gerado com sucesso:', response.data);
 
-      Alert.alert(
-        'Token Gerado! ✅',
-        `Tipo: ${type}\nCódigo: ${response.data.token_code}\nExpira em: 4 horas`,
-        [
-          { text: 'OK', onPress: () => loadTokens() }
-        ]
-      );
+      // Show success message in UI instead of alert (works better on web)
+      setSuccessMessage(`Token ${type} gerado! Código: ${response.data.token_code}`);
+      setErrorMessage('');
+      
+      // Hide success message after 5 seconds
+      setTimeout(() => setSuccessMessage(''), 5000);
+      
+      // Reload tokens
+      loadTokens();
 
     } catch (error: any) {
       console.error('❌ Erro ao gerar token:', error);
@@ -96,10 +98,13 @@ export default function ClientTokens() {
         Alert.alert('Sessão Expirada', 'Faça login novamente');
         router.replace('/client/login');
       } else {
-        Alert.alert(
-          'Erro ao Gerar Token', 
+        setErrorMessage(
           error.response?.data?.detail || 'Não foi possível gerar o token. Tente novamente.'
         );
+        setSuccessMessage('');
+        
+        // Hide error message after 5 seconds
+        setTimeout(() => setErrorMessage(''), 5000);
       }
     } finally {
       setLoading(false);
