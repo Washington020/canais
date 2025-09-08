@@ -97,6 +97,37 @@ export default function PlansScreen() {
     );
   }
 
+  if (plans.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Image 
+              source={{ uri: 'https://customer-assets.emergentagent.com/job_fitness-token-app/artifacts/8gnzidak_IMG_0187.png' }}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.headerTitle}>Escolha seu Plano</Text>
+          </View>
+        </View>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="warning" size={64} color="#F59E0B" />
+          <Text style={styles.loadingText}>Erro ao carregar planos</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={loadPlans}
+          >
+            <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
