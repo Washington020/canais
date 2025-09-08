@@ -119,10 +119,6 @@ export default function GymsManagement() {
     'Aulas em grupo', 'Piscina', 'Sauna', 'Massagem'
   ];
 
-  useEffect(() => {
-    loadGyms();
-  }, [loadGyms]);
-
   const loadGyms = useCallback(async () => {
     // Previne múltiplas chamadas simultâneas
     if (loadingRef.current) {
@@ -185,6 +181,10 @@ export default function GymsManagement() {
       console.log('🏁 Carregamento finalizado');
     }
   }, [router]);
+
+  useEffect(() => {
+    loadGyms();
+  }, [loadGyms]);
 
   const validateForm = () => {
     if (!form.name.trim()) {
