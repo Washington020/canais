@@ -327,14 +327,35 @@ export default function GymsManagement() {
         return;
       }
 
-      const headers = { Authorization: `Bearer ${token}` };
-      await axios.put(`${API_URL}/api/integration/gym/${gymId}/status`, { status }, { headers });
+      console.log(`🔄 Atualizando status da academia ${gymId} para ${status}`);
+
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
       
+      // A API espera um objeto JSON com o campo status
+      const response = await axios.put(
+        `${API_URL}/api/integration/gym/${gymId}/status`, 
+        status, // Enviar apenas a string diretamente
+        { headers, timeout: 10000 }
+      );
+      
+      console.log('✅ Status atualizado com sucesso:', response.data);
       Alert.alert('Sucesso', `Status da academia atualizado para ${status === 'active' ? 'Ativa' : 'Inativa'}`);
-      await loadGyms();
+      
+      // Aguardar um pouco antes de recarregar
+      setTimeout(async () => {
+        await loadGyms();
+      }, 1000);
+      
     } catch (error: any) {
-      console.error('Erro ao atualizar status:', error);
-      Alert.alert('Erro', 'Não foi possível atualizar o status');
+      console.error('❌ Erro ao atualizar status:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível atualizar o status');
     }
   }, [loadGyms, router]);
 
