@@ -868,12 +868,12 @@ async def reset_gym_password(gym_id: str):
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     hashed_password = pwd_context.hash(new_password)
     
-    # Update gym password
+    # Update gym password using the id field, not _id
     result = await db.gyms.update_one(
-        {"_id": ObjectId(gym_id)},
+        {"id": gym_id},
         {
             "$set": {
-                "hashed_password": hashed_password,
+                "login_credentials.password_hash": hashed_password,
                 "password_reset_at": datetime.now(timezone.utc)
             }
         }
@@ -882,14 +882,14 @@ async def reset_gym_password(gym_id: str):
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Academia não encontrada")
     
-    # Get gym info for email
-    gym = await db.gyms.find_one({"_id": ObjectId(gym_id)})
+    # Get gym info
+    gym = await db.gyms.find_one({"id": gym_id})
     
     return {
         "success": True,
         "new_password": new_password,
-        "login": gym["login"],
-        "message": f"Nova senha gerada para {gym['name']}"
+        "login": gym.get("login_credentials", {}).get("username", f"gym_{gym_id[:8]}"),
+        "message": "Nova senha gerada com sucesso"
     }
 
 # Gym authentication endpoint for validation system
