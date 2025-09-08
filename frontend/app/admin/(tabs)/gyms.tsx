@@ -985,11 +985,11 @@ export default function GymsManagement() {
       >
         <View style={styles.credentialsModalOverlay}>
           <View style={styles.credentialsModal}>
-            <Text style={styles.credentialsModalTitle}>🎉 Academia Cadastrada!</Text>
+            <Text style={styles.credentialsModalTitle}>🔑 Nova Senha Gerada!</Text>
             
             {generatedCredentials && (
               <View style={styles.credentialsDisplay}>
-                <Text style={styles.credentialsLabel}>Credenciais de Acesso Geradas:</Text>
+                <Text style={styles.credentialsLabel}>Credenciais da Academia:</Text>
                 
                 <View style={styles.credentialItem}>
                   <Text style={styles.credentialLabel}>Usuário:</Text>
@@ -997,12 +997,25 @@ export default function GymsManagement() {
                 </View>
                 
                 <View style={styles.credentialItem}>
-                  <Text style={styles.credentialLabel}>Senha:</Text>
+                  <Text style={styles.credentialLabel}>Nova Senha:</Text>
                   <Text style={styles.credentialValue}>{generatedCredentials.password}</Text>
                 </View>
                 
+                <View style={styles.instructionsContainer}>
+                  <Text style={styles.instructionsTitle}>📋 Instruções:</Text>
+                  <Text style={styles.instructionsText}>
+                    1. Copie essas credenciais{'
+'}
+                    2. Envie para o email da academia{'
+'}
+                    3. A academia usa no Sistema Academia{'
+'}
+                    4. URL: {API_URL}/academia
+                  </Text>
+                </View>
+                
                 <Text style={styles.credentialsWarning}>
-                  ⚠️ Guarde essas informações! A senha não será mostrada novamente.
+                  ⚠️ IMPORTANTE: Anote essas credenciais! A senha não será mostrada novamente.
                 </Text>
               </View>
             )}
@@ -1015,7 +1028,7 @@ export default function GymsManagement() {
                 setGeneratedCredentials(null);
               }}
             >
-              <Text style={styles.credentialsCloseText}>Entendi</Text>
+              <Text style={styles.credentialsCloseText}>Credenciais Anotadas</Text>
             </TouchableOpacity>
           </View>
         </View>
