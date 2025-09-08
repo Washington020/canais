@@ -620,3 +620,479 @@ export default function AdminDashboard() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0B0D17',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginTop: 16,
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  adminAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F59E0B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  adminAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  welcomeText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  adminRole: {
+    color: '#F59E0B',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  logoutButton: {
+    padding: 10,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  logoutButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  metricsContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 4,
+  },
+  usersCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#22C55E',
+  },
+  subscriptionsCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#22C55E',
+  },
+  gymsCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#8B5CF6',
+  },
+  revenueCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+  },
+  tokensCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+  },
+  metricIcon: {
+    marginBottom: 8,
+  },
+  metricNumber: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  metricLabel: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  metricSubtext: {
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  metricChange: {
+    color: '#22C55E',
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  // New styles for the enhanced sections
+  section: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  seeAllText: {
+    color: '#F59E0B',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  usersList: {
+    gap: 12,
+  },
+  userCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F59E0B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  userAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  userEmail: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  userMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  planBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  planBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  userDate: {
+    color: '#64748B',
+    fontSize: 10,
+  },
+  userRevenue: {
+    alignItems: 'flex-end',
+  },
+  userRevenueText: {
+    color: '#22C55E',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  userRevenueLabel: {
+    color: '#64748B',
+    fontSize: 10,
+  },
+  gymsList: {
+    gap: 12,
+  },
+  gymCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  gymHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  gymIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  gymInfo: {
+    flex: 1,
+  },
+  gymName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  gymStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  gymStat: {
+    alignItems: 'center',
+  },
+  gymStatNumber: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  gymStatLabel: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  tokensList: {
+    gap: 8,
+  },
+  tokenCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tokenIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  tokenInfo: {
+    flex: 1,
+  },
+  tokenCode: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  tokenType: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  tokenStatus: {
+    alignItems: 'flex-end',
+  },
+  tokenStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 2,
+  },
+  tokenStatusText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  tokenTime: {
+    color: '#64748B',
+    fontSize: 10,
+  },
+  chartContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  chartCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 20,
+  },
+  revenueHeader: {
+    marginBottom: 20,
+  },
+  revenueAmount: {
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  revenueGrowth: {
+    color: '#22C55E',
+    fontSize: 14,
+  },
+  chartArea: {
+    height: 120,
+  },
+  chartBars: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    height: 100,
+  },
+  chartBarContainer: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  chartBar: {
+    backgroundColor: '#F59E0B',
+    width: 20,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  chartLabel: {
+    color: '#94A3B8',
+    fontSize: 10,
+  },
+  actionsContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  actionCard: {
+    width: '48%',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  actionIcon: {
+    marginBottom: 8,
+  },
+  actionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  activityContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  activityIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  activityTime: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  statusContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 40,
+  },
+  statusCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statusItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  statusValue: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+});
