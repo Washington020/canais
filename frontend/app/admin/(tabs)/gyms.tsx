@@ -1340,9 +1340,6 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     backgroundColor: '#F59E0B',
-  customPasswordButton: {
-    backgroundColor: '#8B5CF6',
-  },
   },
   editButton: {
     backgroundColor: '#3B82F6',
