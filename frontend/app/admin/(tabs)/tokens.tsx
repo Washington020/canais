@@ -218,7 +218,7 @@ export default function AdminTokens() {
                     <Ionicons name="fitness" size={24} color="#8B5CF6" />
                   </View>
                   <Text style={styles.statValue}>{stats.gym_tokens}</Text>
-                  <Text style={styles.statLabel}>Tokens Academia</Text>
+                  <Text style={styles.statLabel}>Academia</Text>
                 </View>
 
                 <View style={styles.statCard}>
