@@ -259,6 +259,32 @@ export default function PlansScreen() {
             <Text style={styles.infoDesc}>Atendimento sempre disponível</Text>
           </View>
         </View>
+
+        {/* Already a Client Section */}
+        <View style={styles.existingClientSection}>
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>ou</Text>
+            <View style={styles.dividerLine} />
+          </View>
+          
+          <View style={styles.loginPrompt}>
+            <Ionicons name="person-circle" size={48} color="#8B5CF6" />
+            <Text style={styles.loginPromptTitle}>Já é cliente LuxePass?</Text>
+            <Text style={styles.loginPromptSubtitle}>
+              Acesse sua conta e continue aproveitando todos os benefícios
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.loginButton}
+              onPress={() => router.push('/client/login')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="log-in" size={20} color="#FFFFFF" />
+              <Text style={styles.loginButtonText}>Fazer Login</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
