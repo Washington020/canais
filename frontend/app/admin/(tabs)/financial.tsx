@@ -80,6 +80,7 @@ export default function AdminFinancial() {
 
       const headers = { Authorization: `Bearer ${token}` };
       
+      const statsResponse = await axios.get(`${API_URL}/api/admin/dashboard`, { headers });
       // Load dashboard stats
       setStats({
         monthly_revenue: statsResponse.data.monthly_revenue,
