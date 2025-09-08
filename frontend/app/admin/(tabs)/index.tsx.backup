@@ -19,6 +19,25 @@ import Constants from 'expo-constants';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'https://fitness-token-app.preview.emergentagent.com';
 
+// Helper functions
+const getPlanColor = (planType: string) => {
+  switch (planType) {
+    case 'basico': return '#22C55E';
+    case 'intermediario': return '#F59E0B';
+    case 'avancado': return '#8B5CF6';
+    default: return '#94A3B8';
+  }
+};
+
+const getPlanName = (planType: string) => {
+  switch (planType) {
+    case 'basico': return 'Básico';
+    case 'intermediario': return 'Intermediário';
+    case 'avancado': return 'Avançado';
+    default: return 'Padrão';
+  }
+};
+
 interface AdminStats {
   total_users: number;
   active_subscriptions?: number;
@@ -272,50 +291,204 @@ export default function AdminDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Key Metrics */}
+        {/* Key Metrics Integradas */}
         <View style={styles.metricsContainer}>
-          <Text style={styles.sectionTitle}>Métricas Principais</Text>
+          <Text style={styles.sectionTitle}>📊 Métricas Principais</Text>
           
           <View style={styles.metricsRow}>
             <View style={[styles.metricCard, styles.usersCard]}>
               <View style={styles.metricIcon}>
-                <Ionicons name="people" size={24} color="#3B82F6" />
+                <Ionicons name="people" size={24} color="#22C55E" />
               </View>
-              <Text style={styles.metricNumber}>{stats?.total_users.toLocaleString() || '0'}</Text>
-              <Text style={styles.metricLabel}>Usuários Totais</Text>
-              <Text style={styles.metricChange}>+12% este mês</Text>
+              <Text style={styles.metricNumber}>{stats.total_users}</Text>
+              <Text style={styles.metricLabel}>Usuários Total</Text>
+              <Text style={styles.metricSubtext}>{stats.active_users || 0} ativos</Text>
             </View>
             
-            <View style={[styles.metricCard, styles.subscriptionsCard]}>
+            <View style={[styles.metricCard, styles.gymsCard]}>
               <View style={styles.metricIcon}>
-                <Ionicons name="card" size={24} color="#22C55E" />
+                <Ionicons name="fitness" size={24} color="#8B5CF6" />
               </View>
-              <Text style={styles.metricNumber}>{stats?.active_subscriptions.toLocaleString() || '0'}</Text>
-              <Text style={styles.metricLabel}>Assinaturas Ativas</Text>
-              <Text style={styles.metricChange}>+8% este mês</Text>
+              <Text style={styles.metricNumber}>{stats.total_gyms}</Text>
+              <Text style={styles.metricLabel}>Academias</Text>
+              <Text style={styles.metricSubtext}>{stats.active_gyms || 0} ativas</Text>
             </View>
           </View>
           
           <View style={styles.metricsRow}>
-            <View style={[styles.metricCard, styles.gymsCard]}>
+            <View style={[styles.metricCard, styles.revenueCard]}>
               <View style={styles.metricIcon}>
-                <Ionicons name="business" size={24} color="#F59E0B" />
+                <Ionicons name="card" size={24} color="#F59E0B" />
               </View>
-              <Text style={styles.metricNumber}>{stats?.total_gyms || '0'}</Text>
-              <Text style={styles.metricLabel}>Academias Parceiras</Text>
-              <Text style={styles.metricChange}>+5 esta semana</Text>
+              <Text style={styles.metricNumber}>
+                {(stats.monthly_revenue || 0).toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                  minimumFractionDigits: 0
+                })}
+              </Text>
+              <Text style={styles.metricLabel}>Receita Mensal</Text>
+              <Text style={styles.metricSubtext}>
+                {stats.conversion_rate?.toFixed(1) || 0}% conversão
+              </Text>
             </View>
             
             <View style={[styles.metricCard, styles.tokensCard]}>
               <View style={styles.metricIcon}>
-                <Ionicons name="qr-code" size={24} color="#8B5CF6" />
+                <Ionicons name="qr-code" size={24} color="#EF4444" />
               </View>
-              <Text style={styles.metricNumber}>{stats?.tokens_generated_today.toLocaleString() || '0'}</Text>
-              <Text style={styles.metricLabel}>Tokens Hoje</Text>
-              <Text style={styles.metricChange}>Meta: 1.500</Text>
+              <Text style={styles.metricNumber}>{stats.tokens_generated_month || 0}</Text>
+              <Text style={styles.metricLabel}>Tokens Mês</Text>
+              <Text style={styles.metricSubtext}>{stats.checkins_month || 0} check-ins</Text>
             </View>
           </View>
         </View>
+
+        {/* Recent Users Section */}
+        {stats.recent_users && stats.recent_users.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>👥 Usuários Recentes</Text>
+              <TouchableOpacity onPress={() => router.push('/admin/(tabs)/users')}>
+                <Text style={styles.seeAllText}>Ver todos</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.usersList}>
+              {stats.recent_users.slice(0, 3).map((user, index) => (
+                <View key={user.id} style={styles.userCard}>
+                  <View style={styles.userAvatar}>
+                    <Text style={styles.userAvatarText}>
+                      {user.full_name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.userInfo}>
+                    <Text style={styles.userName}>{user.full_name}</Text>
+                    <Text style={styles.userEmail}>{user.email}</Text>
+                    <View style={styles.userMeta}>
+                      <View style={[styles.planBadge, { backgroundColor: getPlanColor(user.plan_type) }]}>
+                        <Text style={styles.planBadgeText}>
+                          {getPlanName(user.plan_type)}
+                        </Text>
+                      </View>
+                      <Text style={styles.userDate}>
+                        {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.userRevenue}>
+                    <Text style={styles.userRevenueText}>
+                      {user.subscription.monthly_amount.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}
+                    </Text>
+                    <Text style={styles.userRevenueLabel}>/ mês</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Recent Gyms Section */}
+        {stats.recent_gyms && stats.recent_gyms.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>🏋️ Performance das Academias</Text>
+              <TouchableOpacity onPress={() => router.push('/admin/(tabs)/gyms')}>
+                <Text style={styles.seeAllText}>Ver todas</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.gymsList}>
+              {stats.recent_gyms.map((gym, index) => (
+                <View key={gym.id} style={styles.gymCard}>
+                  <View style={styles.gymHeader}>
+                    <View style={styles.gymIcon}>
+                      <Ionicons name="fitness" size={20} color="#8B5CF6" />
+                    </View>
+                    <View style={styles.gymInfo}>
+                      <Text style={styles.gymName}>{gym.name}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: '#22C55E' }]}>
+                        <Text style={styles.statusText}>Ativa</Text>
+                      </View>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.gymStats}>
+                    <View style={styles.gymStat}>
+                      <Text style={styles.gymStatNumber}>{gym.monthly_checkins}</Text>
+                      <Text style={styles.gymStatLabel}>Check-ins</Text>
+                    </View>
+                    <View style={styles.gymStat}>
+                      <Text style={styles.gymStatNumber}>
+                        {gym.monthly_revenue.toLocaleString('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                          minimumFractionDigits: 0
+                        })}
+                      </Text>
+                      <Text style={styles.gymStatLabel}>Receita</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Recent Tokens Section */}
+        {stats.recent_tokens && stats.recent_tokens.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>🎟️ Tokens Recentes</Text>
+              <TouchableOpacity onPress={() => router.push('/admin/(tabs)/tokens')}>
+                <Text style={styles.seeAllText}>Ver todos</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.tokensList}>
+              {stats.recent_tokens.map((token, index) => (
+                <View key={index} style={styles.tokenCard}>
+                  <View style={styles.tokenIcon}>
+                    <Ionicons 
+                      name={token.token_type === 'gym' ? 'fitness' : 'restaurant'} 
+                      size={16} 
+                      color={token.token_type === 'gym' ? '#8B5CF6' : '#22C55E'} 
+                    />
+                  </View>
+                  
+                  <View style={styles.tokenInfo}>
+                    <Text style={styles.tokenCode}>{token.token_code}</Text>
+                    <Text style={styles.tokenType}>
+                      {token.token_type === 'gym' ? 'Academia' : 'Nutrição'}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.tokenStatus}>
+                    <View style={[
+                      styles.tokenStatusBadge, 
+                      { backgroundColor: token.status === 'active' ? '#22C55E' : '#94A3B8' }
+                    ]}>
+                      <Text style={styles.tokenStatusText}>
+                        {token.status === 'active' ? 'Ativo' : 'Usado'}
+                      </Text>
+                    </View>
+                    <Text style={styles.tokenTime}>
+                      {new Date(token.created_at).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Revenue Chart */}
         <View style={styles.chartContainer}>
@@ -553,7 +726,7 @@ const styles = StyleSheet.create({
   },
   usersCard: {
     borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
+    borderLeftColor: '#22C55E',
   },
   subscriptionsCard: {
     borderLeftWidth: 4,
@@ -561,11 +734,15 @@ const styles = StyleSheet.create({
   },
   gymsCard: {
     borderLeftWidth: 4,
+    borderLeftColor: '#8B5CF6',
+  },
+  revenueCard: {
+    borderLeftWidth: 4,
     borderLeftColor: '#F59E0B',
   },
   tokensCard: {
     borderLeftWidth: 4,
-    borderLeftColor: '#8B5CF6',
+    borderLeftColor: '#EF4444',
   },
   metricIcon: {
     marginBottom: 8,
@@ -581,10 +758,207 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 4,
   },
+  metricSubtext: {
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '500',
+  },
   metricChange: {
     color: '#22C55E',
     fontSize: 10,
     fontWeight: '500',
+  },
+  // New styles for the enhanced sections
+  section: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  seeAllText: {
+    color: '#F59E0B',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  usersList: {
+    gap: 12,
+  },
+  userCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F59E0B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  userAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  userEmail: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  userMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  planBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  planBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  userDate: {
+    color: '#64748B',
+    fontSize: 10,
+  },
+  userRevenue: {
+    alignItems: 'flex-end',
+  },
+  userRevenueText: {
+    color: '#22C55E',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  userRevenueLabel: {
+    color: '#64748B',
+    fontSize: 10,
+  },
+  gymsList: {
+    gap: 12,
+  },
+  gymCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  gymHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  gymIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  gymInfo: {
+    flex: 1,
+  },
+  gymName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  gymStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  gymStat: {
+    alignItems: 'center',
+  },
+  gymStatNumber: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  gymStatLabel: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  tokensList: {
+    gap: 8,
+  },
+  tokenCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tokenIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  tokenInfo: {
+    flex: 1,
+  },
+  tokenCode: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  tokenType: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  tokenStatus: {
+    alignItems: 'flex-end',
+  },
+  tokenStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 2,
+  },
+  tokenStatusText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  tokenTime: {
+    color: '#64748B',
+    fontSize: 10,
   },
   chartContainer: {
     paddingHorizontal: 24,
