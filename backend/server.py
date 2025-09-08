@@ -445,6 +445,38 @@ async def get_gyms_for_client(current_user: User = Depends(get_current_user)):
         logger.error(f"Erro ao buscar academias para cliente: {e}")
         raise HTTPException(status_code=500, detail="Erro ao buscar academias")
 
+@api_router.get("/admin/token-validations")
+async def get_token_validations():
+    """Buscar validações de tokens para o admin - comunicação entre apps"""
+    try:
+        # Buscar validações recentes ordenadas por data (mais recentes primeiro)
+        validations = await db.token_validations.find().sort("validated_at", -1).limit(50).to_list(50)
+        
+        # Formatar validações para o admin
+        formatted_validations = []
+        for validation in validations:
+            formatted_validations.append({
+                "validation_id": validation["validation_id"],
+                "token_code": validation["token_code"],
+                "token_type": validation["token_type"],
+                "user_name": validation["user_name"],
+                "user_email": validation["user_email"],
+                "gym_name": validation["gym_name"],
+                "validated_at": validation["validated_at"].isoformat() if validation["validated_at"] else None,
+                "status": validation["status"],
+                "created_at": validation["created_at"].isoformat() if validation["created_at"] else None
+            })
+        
+        return {
+            "validations": formatted_validations,
+            "total": len(formatted_validations),
+            "message": "Validações carregadas com sucesso"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar validações de tokens: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar validações")
+
 @api_router.put("/admin/users/{user_id}/update-profile")
 async def update_user_profile(user_id: str, full_name: str, email: str):
     """Admin endpoint to update user profile"""
