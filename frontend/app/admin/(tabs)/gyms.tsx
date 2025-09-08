@@ -84,6 +84,8 @@ export default function GymsManagement() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [selectedGym, setSelectedGym] = useState<Gym | null>(null);
   const [showCredentials, setShowCredentials] = useState(false);
@@ -587,8 +589,22 @@ export default function GymsManagement() {
                   )}
 
                   <TouchableOpacity 
+                    style={[styles.actionButton, styles.editButton]}
+                    onPress={() => {
+                      setSelectedGym(gym);
+                      setShowEditModal(true);
+                    }}
+                  >
+                    <Ionicons name="create" size={16} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>Editar</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
                     style={[styles.actionButton, styles.detailsButton]}
-                    onPress={() => setSelectedGym(gym)}
+                    onPress={() => {
+                      setSelectedGym(gym);
+                      setShowDetailsModal(true);
+                    }}
                   >
                     <Ionicons name="eye" size={16} color="#FFFFFF" />
                     <Text style={styles.actionButtonText}>Detalhes</Text>
@@ -1105,6 +1121,9 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     backgroundColor: '#F59E0B',
+  },
+  editButton: {
+    backgroundColor: '#3B82F6',
   },
   detailsButton: {
     backgroundColor: '#64748B',
