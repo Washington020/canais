@@ -226,7 +226,7 @@ export default function AdminTokens() {
                     <Ionicons name="nutrition" size={24} color="#22C55E" />
                   </View>
                   <Text style={styles.statValue}>{stats.nutritionist_tokens}</Text>
-                  <Text style={styles.statLabel}>Tokens Nutricionista</Text>
+                  <Text style={styles.statLabel}>Nutricionista</Text>
                 </View>
               </View>
 
