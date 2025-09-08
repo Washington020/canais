@@ -656,6 +656,28 @@ async def validate_simple_token(token_code: str, request: Request, gym_id: str):
         if not user_doc:
             logger.error(f"Usuário não encontrado para token: {token_doc['user_id']}")
             raise HTTPException(status_code=500, detail="Dados do usuário não encontrados")
+
+        # Get gym info for validation record
+        gym_doc = await db.gyms.find_one({"_id": ObjectId(gym_id)})
+        
+        # Create validation record for admin tracking
+        validation_record = {
+            "validation_id": str(uuid.uuid4()),
+            "token_id": token_doc["token_id"],
+            "token_code": token_doc["token_code"],
+            "token_type": token_doc["token_type"],
+            "user_id": token_doc["user_id"],
+            "user_name": user_doc["full_name"],
+            "user_email": user_doc["email"],
+            "gym_id": gym_id,
+            "gym_name": gym_doc.get("name", "Academia") if gym_doc else "Academia",
+            "validated_at": datetime.now(timezone.utc),
+            "status": "validated",
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        # Save validation record for admin dashboard
+        await db.token_validations.insert_one(validation_record)
         
         return {
             "valid": True,
@@ -672,7 +694,8 @@ async def validate_simple_token(token_code: str, request: Request, gym_id: str):
                 "plan_type": user_doc["plan_type"],
                 "email": user_doc["email"]
             },
-            "gym_id": gym_id
+            "gym_id": gym_id,
+            "validation_id": validation_record["validation_id"]
         }
         
     except HTTPException:
