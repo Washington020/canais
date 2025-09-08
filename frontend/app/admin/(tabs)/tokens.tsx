@@ -651,4 +651,54 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: 'center',
   },
+  intercommunicationSection: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  sectionSubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  systemStatus: {
+    gap: 16,
+  },
+  statusItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statusDetail: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  statusBadge: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  statusBadgeTexto: {
+    color: '#22C55E',
+    fontSize: 10,
+    fontWeight: '600',
+  },
 });
