@@ -1007,6 +1007,51 @@ async def reset_gym_password(gym_id: str):
         "message": "Nova senha gerada com sucesso"
     }
 
+@api_router.put("/admin/gyms/{gym_id}/set-password")
+async def set_gym_password(gym_id: str, password_data: dict):
+    """Endpoint para definir senha manual da academia"""
+    custom_password = password_data.get("password", "").strip()
+    custom_login = password_data.get("login", "").strip()
+    
+    if not custom_password:
+        raise HTTPException(status_code=400, detail="Senha é obrigatória")
+    
+    if len(custom_password) < 6:
+        raise HTTPException(status_code=400, detail="Senha deve ter pelo menos 6 caracteres")
+    
+    # Hash the new password
+    from passlib.context import CryptContext
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    hashed_password = pwd_context.hash(custom_password)
+    
+    # Prepare update data
+    update_data = {
+        "login_credentials.password_hash": hashed_password,
+        "password_reset_at": datetime.now(timezone.utc)
+    }
+    
+    # Update login if provided
+    if custom_login:
+        update_data["login_credentials.username"] = custom_login
+    
+    # Update gym password and login
+    result = await db.gyms.update_one(
+        {"_id": ObjectId(gym_id)},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Academia não encontrada")
+    
+    # Get updated gym info
+    gym = await db.gyms.find_one({"_id": ObjectId(gym_id)})
+    
+    return {
+        "success": True,
+        "login": gym.get("login_credentials", {}).get("username", custom_login),
+        "message": "Senha definida com sucesso"
+    }
+
 # Gym authentication endpoint for validation system
 @api_router.post("/gym/auth")
 async def gym_authenticate(credentials: dict):
