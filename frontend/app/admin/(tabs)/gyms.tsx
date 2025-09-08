@@ -431,6 +431,77 @@ export default function GymsManagement() {
     }
   }, [loadGyms, router]);
 
+  const setCustomGymPassword = useCallback(async () => {
+    if (!selectedGymForPassword || !customPassword.trim()) {
+      Alert.alert('Erro', 'Por favor, defina uma senha para a academia');
+      return;
+    }
+
+    if (customPassword.length < 6) {
+      Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        router.replace('/admin/login');
+        return;
+      }
+
+      console.log(`🔑 Definindo senha customizada para academia ${selectedGymForPassword.name}...`);
+
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await axios.put(
+        `${API_URL}/api/admin/gyms/${selectedGymForPassword._id}/set-password`, 
+        { 
+          password: customPassword,
+          login: customLogin.trim() || undefined
+        }, 
+        { headers, timeout: 10000 }
+      );
+      
+      console.log('✅ Senha customizada definida:', response.data);
+
+      if (response.data.success) {
+        // Show success with credentials
+        setGeneratedCredentials({
+          username: response.data.login || selectedGymForPassword.login_credentials?.username || 'gym_user',
+          password: customPassword
+        });
+        setShowCredentials(true);
+        setShowPasswordModal(false);
+        
+        // Clear form
+        setCustomPassword('');
+        setCustomLogin('');
+        setSelectedGymForPassword(null);
+        
+        // Reload data
+        setTimeout(async () => {
+          await loadGyms();
+        }, 1000);
+        
+      } else {
+        Alert.alert('Erro', 'Não foi possível definir a senha');
+      }
+    } catch (error: any) {
+      console.error('❌ Erro ao definir senha customizada:', error);
+      Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível definir a senha');
+    }
+  }, [selectedGymForPassword, customPassword, customLogin, loadGyms, router]);
+
+  const openPasswordModal = useCallback((gym: Gym) => {
+    setSelectedGymForPassword(gym);
+    setCustomLogin(gym.login_credentials?.username || '');
+    setCustomPassword('');
+    setShowPasswordModal(true);
+  }, []);
+
   const formatAddress = (address: any) => {
     if (typeof address === 'string') return address;
     return `${address.street}, ${address.number} - ${address.city}/${address.state}`;
