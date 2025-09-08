@@ -309,11 +309,11 @@ export default function AdminDashboard() {
           </TouchableOpacity>
           <View style={styles.headerLeft}>
             <View style={styles.adminAvatar}>
-              <Text style={styles.adminAvatarText}>A</Text>
+              <Text style={styles.adminAvatarText}>{user?.full_name?.charAt(0) || 'A'}</Text>
             </View>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.welcomeText}>Painel Admin</Text>
-              <Text style={styles.adminRole}>LuxePass</Text>
+              <Text style={styles.welcomeText}>Olá, {user?.full_name || 'Administrador'}!</Text>
+              <Text style={styles.adminRole}>LuxePass Admin</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
