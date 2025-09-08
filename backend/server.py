@@ -403,6 +403,48 @@ async def get_user_tokens(current_user: User = Depends(get_current_user)):
         logger.error(f"Erro ao buscar tokens do usuário: {e}")
         raise HTTPException(status_code=500, detail="Erro ao buscar tokens")
 
+@api_router.get("/users/gyms")
+async def get_gyms_for_client(current_user: User = Depends(get_current_user)):
+    """Buscar academias ativas para o cliente fazer check-in"""
+    try:
+        # Buscar apenas academias ativas e aprovadas
+        gyms = await db.gyms.find(
+            {"status": {"$in": ["active", "approved"]}}
+        ).to_list(50)
+        
+        # Formatar academias para o cliente
+        formatted_gyms = []
+        for gym in gyms:
+            gym_data = {
+                "id": str(gym["_id"]),
+                "name": gym.get("name", "Academia"),
+                "address": {
+                    "street": gym.get("endereco", ""),
+                    "number": gym.get("numero", ""),
+                    "neighborhood": gym.get("bairro", ""),
+                    "city": gym.get("cidade", ""),
+                    "state": gym.get("estado", ""),
+                    "zipcode": gym.get("cep", "")
+                },
+                "full_address": f"{gym.get('endereco', '')}, {gym.get('numero', '')} - {gym.get('bairro', '')}, {gym.get('cidade', '')}/{gym.get('estado', '')}",
+                "phone": gym.get("telefone_principal", ""),
+                "type": gym.get("tipo_academia", "Completa"),
+                "capacity": gym.get("capacidade_maxima", 100),
+                "amenities": gym.get("amenities", []),
+                "operating_hours": gym.get("horario_funcionamento", {}),
+                "status": gym.get("status", "active"),
+                "rating": gym.get("rating", 4.5),  # Default rating
+                "distance": "Calculando...",  # Will be calculated on frontend
+                "created_at": gym.get("created_at")
+            }
+            formatted_gyms.append(gym_data)
+        
+        return formatted_gyms
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar academias para cliente: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar academias")
+
 @api_router.put("/admin/users/{user_id}/update-profile")
 async def update_user_profile(user_id: str, full_name: str, email: str):
     """Admin endpoint to update user profile"""
