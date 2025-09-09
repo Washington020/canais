@@ -1035,6 +1035,14 @@ async def set_gym_password(gym_id: str, password_data: dict):
     # Update login if provided
     if custom_login:
         update_data["login_credentials.username"] = custom_login
+    else:
+        # If no custom login provided, we need to ensure username exists
+        # Get current gym to check if username already exists
+        current_gym = await db.gyms.find_one({"_id": ObjectId(gym_id)})
+        if current_gym and not current_gym.get("login_credentials", {}).get("username"):
+            # Generate a username if none exists
+            import random
+            update_data["login_credentials.username"] = f"gym_{gym_id[:8]}_{random.randint(1000, 9999)}"
     
     # Update gym password and login
     result = await db.gyms.update_one(
