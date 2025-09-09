@@ -847,6 +847,45 @@ class FitPassTester:
         
         return True
 
+    def run_pagarme_tests(self):
+        """Run focused Pagar.me payment endpoint tests as requested in review"""
+        print("🚀 Starting LuxePass Pagar.me Payment Endpoints Tests")
+        print(f"Testing against: {API_BASE}")
+        print("Testing the new Pagar.me payment endpoints as specifically requested...")
+        
+        # Run the comprehensive Pagar.me tests
+        self.test_pagarme_endpoints_comprehensive()
+        
+        # Summary
+        print("\n" + "="*60)
+        print("📊 PAGAR.ME ENDPOINTS TEST SUMMARY")
+        print("="*60)
+        
+        passed = sum(1 for result in self.test_results if result["success"])
+        total = len(self.test_results)
+        
+        print(f"Total Pagar.me Tests: {total}")
+        print(f"Passed: {passed}")
+        print(f"Failed: {total - passed}")
+        print(f"Success Rate: {(passed/total)*100:.1f}%")
+        
+        # Show failed tests
+        failed_tests = [result for result in self.test_results if not result["success"]]
+        if failed_tests:
+            print("\n❌ Failed Tests:")
+            for test in failed_tests:
+                print(f"  - {test['test']}: {test['details']}")
+        else:
+            print("\n✅ All Pagar.me endpoints are working correctly!")
+            print("The Pagar.me payment integration is operational, including:")
+            print("  ✓ Payment methods listing (stripe, pix, boleto)")
+            print("  ✓ Checkout session creation with authentication")
+            print("  ✓ Order status verification")
+            print("  ✓ JSON structure validation")
+            print("  ✓ Multiple payment methods support")
+        
+        return passed == total
+
     def run_all_tests(self):
         """Run all backend tests in sequence"""
         print("🚀 Starting FitPass Brasil Backend API Tests")
