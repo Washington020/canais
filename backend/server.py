@@ -1608,6 +1608,227 @@ async def get_admin_tokens():
     
     return result
 
+# Payment System Endpoints
+@api_router.get("/payments/plans", response_model=List[PaymentPlan])
+async def get_payment_plans():
+    """Get available payment plans"""
+    plans = []
+    for plan_id, plan_data in PAYMENT_PLANS.items():
+        plans.append(PaymentPlan(**plan_data))
+    return plans
+
+@api_router.post("/payments/checkout/session")
+async def create_checkout_session(
+    request: CreateCheckoutRequest,
+    http_request: Request,
+    current_user: User = Depends(get_current_user)
+):
+    """Create Stripe checkout session"""
+    try:
+        # Validate plan exists
+        if request.plan_id not in PAYMENT_PLANS:
+            raise HTTPException(status_code=400, detail="Plano inválido")
+        
+        plan = PAYMENT_PLANS[request.plan_id]
+        
+        # Initialize Stripe checkout
+        host_url = str(http_request.base_url).rstrip('/')
+        webhook_url = f"{host_url}/api/webhook/stripe"
+        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+        
+        # Create success and cancel URLs
+        success_url = f"{request.origin_url}/client/(tabs)/financial?session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{request.origin_url}/client/(tabs)/financial"
+        
+        # Create checkout session request
+        checkout_request = CheckoutSessionRequest(
+            amount=plan["price"],
+            currency=plan["currency"].lower(),
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={
+                "user_id": str(current_user.id),
+                "plan_id": request.plan_id,
+                "plan_name": plan["name"],
+                "payment_method": request.payment_method
+            }
+        )
+        
+        # Create Stripe session
+        session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_request)
+        
+        # Save transaction to database
+        transaction = PaymentTransaction(
+            user_id=str(current_user.id),
+            plan_id=request.plan_id,
+            session_id=session.session_id,
+            amount=plan["price"],
+            currency=plan["currency"],
+            payment_status="pending",
+            payment_method=request.payment_method,
+            created_at=datetime.now(timezone.utc).isoformat(),
+            metadata=checkout_request.metadata
+        )
+        
+        await db.payment_transactions.insert_one(transaction.dict())
+        
+        return {
+            "url": session.url,
+            "session_id": session.session_id,
+            "plan_name": plan["name"],
+            "amount": plan["price"],
+            "currency": plan["currency"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar sessão de checkout: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao processar pagamento")
+
+@api_router.get("/payments/checkout/status/{session_id}")
+async def get_checkout_status(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Check payment status and update user subscription"""
+    try:
+        # Initialize Stripe checkout
+        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url="")
+        
+        # Get status from Stripe
+        status_response: CheckoutStatusResponse = await stripe_checkout.get_checkout_status(session_id)
+        
+        # Find transaction in database
+        transaction = await db.payment_transactions.find_one({"session_id": session_id})
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transação não encontrada")
+        
+        # Update transaction status if payment completed and not already processed
+        if status_response.payment_status == "paid" and transaction["payment_status"] != "paid":
+            # Update transaction
+            await db.payment_transactions.update_one(
+                {"session_id": session_id},
+                {
+                    "$set": {
+                        "payment_status": "paid",
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            )
+            
+            # Update user subscription
+            plan = PAYMENT_PLANS[transaction["plan_id"]]
+            subscription_end = datetime.now(timezone.utc) + timedelta(days=plan["duration_days"])
+            
+            await db.users.update_one(
+                {"_id": ObjectId(current_user.id)},
+                {
+                    "$set": {
+                        "plan_type": transaction["plan_id"],
+                        "payment_status": "active",
+                        "subscription_end": subscription_end,
+                        "monthly_amount": plan["price"],
+                        "tokens_available": plan["token_limit"] if plan["token_limit"] != -1 else 9999,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
+                }
+            )
+            
+            logger.info(f"Subscription updated for user {current_user.id} - Plan: {transaction['plan_id']}")
+        
+        return {
+            "status": status_response.status,
+            "payment_status": status_response.payment_status,
+            "amount_total": status_response.amount_total,
+            "currency": status_response.currency,
+            "plan_id": transaction["plan_id"],
+            "plan_name": PAYMENT_PLANS[transaction["plan_id"]]["name"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao verificar status do pagamento: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao verificar pagamento")
+
+@api_router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhooks"""
+    try:
+        body = await request.body()
+        signature = request.headers.get("Stripe-Signature")
+        
+        if not signature:
+            raise HTTPException(status_code=400, detail="Missing Stripe signature")
+        
+        # Initialize Stripe checkout
+        stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url="")
+        
+        # Handle webhook
+        webhook_response = await stripe_checkout.handle_webhook(body, signature)
+        
+        if webhook_response.event_type == "checkout.session.completed":
+            # Find and update transaction
+            transaction = await db.payment_transactions.find_one({"session_id": webhook_response.session_id})
+            
+            if transaction and transaction["payment_status"] != "paid":
+                # Update transaction
+                await db.payment_transactions.update_one(
+                    {"session_id": webhook_response.session_id},
+                    {
+                        "$set": {
+                            "payment_status": "paid",
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        }
+                    }
+                )
+                
+                # Update user subscription
+                plan = PAYMENT_PLANS[transaction["plan_id"]]
+                subscription_end = datetime.now(timezone.utc) + timedelta(days=plan["duration_days"])
+                
+                await db.users.update_one(
+                    {"_id": ObjectId(transaction["user_id"])},
+                    {
+                        "$set": {
+                            "plan_type": transaction["plan_id"],
+                            "payment_status": "active", 
+                            "subscription_end": subscription_end,
+                            "monthly_amount": plan["price"],
+                            "tokens_available": plan["token_limit"] if plan["token_limit"] != -1 else 9999,
+                            "updated_at": datetime.now(timezone.utc)
+                        }
+                    }
+                )
+                
+                logger.info(f"Webhook processed - User subscription updated: {transaction['user_id']}")
+        
+        return {"status": "success"}
+        
+    except Exception as e:
+        logger.error(f"Erro no webhook Stripe: {e}")
+        raise HTTPException(status_code=400, detail="Webhook error")
+
+@api_router.get("/payments/user/transactions")
+async def get_user_transactions(current_user: User = Depends(get_current_user)):
+    """Get user payment transactions"""
+    transactions = await db.payment_transactions.find(
+        {"user_id": str(current_user.id)}
+    ).sort("created_at", -1).to_list(50)
+    
+    result = []
+    for transaction in transactions:
+        plan = PAYMENT_PLANS.get(transaction["plan_id"], {})
+        result.append({
+            "id": str(transaction["_id"]),
+            "plan_name": plan.get("name", transaction["plan_id"]),
+            "amount": transaction["amount"],
+            "currency": transaction["currency"],
+            "payment_status": transaction["payment_status"],
+            "payment_method": transaction["payment_method"],
+            "created_at": transaction["created_at"],
+            "session_id": transaction["session_id"]
+        })
+    
+    return result
+
 # Include the router in the main app
 # Include routers
 app.include_router(api_router)
