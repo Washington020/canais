@@ -18,7 +18,6 @@ import secrets
 import qrcode
 from io import BytesIO
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
-from pagarme_service import pagarme_service
 
 # Import the advanced token system
 from token_system import token_manager, AdvancedToken, TokenAuditLog, TokenSystemManager
@@ -30,6 +29,9 @@ from server_integrations import integration_router, init_services
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+# Import pagarme_service after loading environment variables
+from pagarme_service import pagarme_service
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
