@@ -1294,6 +1294,426 @@ class FitPassTester:
         
         return False
 
+    def test_new_dashboard_endpoints(self):
+        """Test the NEW dashboard endpoints as requested in review"""
+        print("\n" + "="*70)
+        print("📊 TESTING NEW DASHBOARD ENDPOINTS - LUXEPASS")
+        print("="*70)
+        print("Testing the new dashboard endpoints that were just implemented...")
+        
+        # First login to get auth token
+        print("\n🔐 Logging in with cliente@luxepass.com...")
+        login_data = {
+            "email": "cliente@luxepass.com",
+            "password": "cliente123"
+        }
+        
+        response = self.make_request("POST", "/auth/login", login_data, auth_required=False)
+        if response and response.status_code == 200:
+            data = response.json()
+            self.auth_token = data["access_token"]
+            print(f"   ✅ Login successful")
+        else:
+            print(f"   ❌ Login failed, continuing with admin endpoints...")
+        
+        # Test 1: GET /api/admin/dashboard/stats
+        print("\n1️⃣ Testing GET /api/admin/dashboard/stats...")
+        response = self.make_request("GET", "/admin/dashboard/stats", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            expected_fields = ["total_users", "active_users", "total_gyms", "monthly_revenue", "conversion_rate"]
+            
+            if all(field in data for field in expected_fields):
+                self.log_test("Dashboard Stats", True, f"Stats loaded: Users: {data['total_users']}, Revenue: R$ {data['monthly_revenue']}")
+                print(f"   Total Users: {data['total_users']}")
+                print(f"   Active Users: {data['active_users']}")
+                print(f"   Total Gyms: {data['total_gyms']}")
+                print(f"   Monthly Revenue: R$ {data['monthly_revenue']}")
+                print(f"   Conversion Rate: {data['conversion_rate']}%")
+            else:
+                missing = [f for f in expected_fields if f not in data]
+                self.log_test("Dashboard Stats", False, f"Missing fields: {missing}")
+        else:
+            self.log_test("Dashboard Stats", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        # Test 2: GET /api/admin/dashboard/recent-users
+        print("\n2️⃣ Testing GET /api/admin/dashboard/recent-users...")
+        response = self.make_request("GET", "/admin/dashboard/recent-users", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "users" in data and isinstance(data["users"], list):
+                self.log_test("Recent Users", True, f"Retrieved {len(data['users'])} recent users")
+                if len(data["users"]) > 0:
+                    user = data["users"][0]
+                    print(f"   Sample user: {user.get('full_name', 'N/A')} ({user.get('email', 'N/A')})")
+            else:
+                self.log_test("Recent Users", False, "Response missing 'users' array")
+        else:
+            self.log_test("Recent Users", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        # Test 3: GET /api/admin/dashboard/recent-tokens
+        print("\n3️⃣ Testing GET /api/admin/dashboard/recent-tokens...")
+        response = self.make_request("GET", "/admin/dashboard/recent-tokens", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "tokens" in data and isinstance(data["tokens"], list):
+                self.log_test("Recent Tokens", True, f"Retrieved {len(data['tokens'])} recent tokens")
+                if len(data["tokens"]) > 0:
+                    token = data["tokens"][0]
+                    print(f"   Sample token: {token.get('token_code', 'N/A')[:8]}... ({token.get('token_type', 'N/A')})")
+            else:
+                self.log_test("Recent Tokens", False, "Response missing 'tokens' array")
+        else:
+            self.log_test("Recent Tokens", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        # Test 4: GET /api/admin/dashboard/appointments
+        print("\n4️⃣ Testing GET /api/admin/dashboard/appointments...")
+        response = self.make_request("GET", "/admin/dashboard/appointments", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "appointments" in data and isinstance(data["appointments"], list):
+                self.log_test("Dashboard Appointments", True, f"Retrieved {len(data['appointments'])} appointments")
+                if len(data["appointments"]) > 0:
+                    appointment = data["appointments"][0]
+                    print(f"   Sample appointment: {appointment.get('user_name', 'N/A')} - {appointment.get('appointment_type', 'N/A')}")
+            else:
+                self.log_test("Dashboard Appointments", False, "Response missing 'appointments' array")
+        else:
+            self.log_test("Dashboard Appointments", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        # Test 5: GET /api/admin/dashboard/gym-performance
+        print("\n5️⃣ Testing GET /api/admin/dashboard/gym-performance...")
+        response = self.make_request("GET", "/admin/dashboard/gym-performance", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "gyms" in data and isinstance(data["gyms"], list):
+                self.log_test("Gym Performance", True, f"Retrieved performance for {len(data['gyms'])} gyms")
+                if len(data["gyms"]) > 0:
+                    gym = data["gyms"][0]
+                    print(f"   Sample gym: {gym.get('name', 'N/A')} - {gym.get('monthly_checkins', 0)} check-ins")
+            else:
+                self.log_test("Gym Performance", False, "Response missing 'gyms' array")
+        else:
+            self.log_test("Gym Performance", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        return True
+
+    def test_new_appointments_endpoints(self):
+        """Test the NEW appointments endpoints as requested in review"""
+        print("\n" + "="*70)
+        print("📅 TESTING NEW APPOINTMENTS ENDPOINTS - LUXEPASS")
+        print("="*70)
+        print("Testing the new appointments system endpoints...")
+        
+        # Ensure we have auth token
+        if not self.auth_token:
+            print("🔐 Logging in with cliente@luxepass.com...")
+            login_data = {
+                "email": "cliente@luxepass.com",
+                "password": "cliente123"
+            }
+            
+            response = self.make_request("POST", "/auth/login", login_data, auth_required=False)
+            if response and response.status_code == 200:
+                data = response.json()
+                self.auth_token = data["access_token"]
+                print(f"   ✅ Login successful")
+            else:
+                self.log_test("Appointments Login", False, "Could not login for appointments testing")
+                return False
+        
+        # Test 1: GET /api/appointments/available-slots?professional_type=nutritionist
+        print("\n1️⃣ Testing GET /api/appointments/available-slots?professional_type=nutritionist...")
+        response = self.make_request("GET", "/appointments/available-slots?professional_type=nutritionist", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list) or "slots" in data:
+                slots = data if isinstance(data, list) else data.get("slots", [])
+                self.log_test("Available Slots (Nutritionist)", True, f"Retrieved {len(slots)} available slots")
+                if len(slots) > 0:
+                    slot = slots[0]
+                    print(f"   Sample slot: {slot}")
+            else:
+                self.log_test("Available Slots (Nutritionist)", False, "Unexpected response format")
+        else:
+            self.log_test("Available Slots (Nutritionist)", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        # Test 2: POST /api/appointments/request (requires authentication)
+        print("\n2️⃣ Testing POST /api/appointments/request...")
+        appointment_data = {
+            "professional_type": "nutritionist",
+            "appointment_date": "2025-01-20T10:00:00Z",
+            "notes": "Consulta para plano alimentar"
+        }
+        
+        response = self.make_request("POST", "/appointments/request", appointment_data)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "success" in data or "appointment_id" in data:
+                self.log_test("Request Appointment", True, "Appointment requested successfully")
+                if "appointment_id" in data:
+                    self.test_appointment_id = data["appointment_id"]
+                    print(f"   Appointment ID: {data['appointment_id']}")
+            else:
+                self.log_test("Request Appointment", False, "Unexpected response format")
+        else:
+            self.log_test("Request Appointment", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        # Test 3: GET /api/appointments/user (requires authentication)
+        print("\n3️⃣ Testing GET /api/appointments/user...")
+        response = self.make_request("GET", "/appointments/user")
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list) or "appointments" in data:
+                appointments = data if isinstance(data, list) else data.get("appointments", [])
+                self.log_test("User Appointments", True, f"Retrieved {len(appointments)} user appointments")
+                if len(appointments) > 0:
+                    appointment = appointments[0]
+                    print(f"   Sample appointment: {appointment}")
+            else:
+                self.log_test("User Appointments", False, "Unexpected response format")
+        else:
+            self.log_test("User Appointments", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        # Test 4: POST /api/admin/appointment-slots (admin endpoint)
+        print("\n4️⃣ Testing POST /api/admin/appointment-slots...")
+        slot_data = {
+            "professional_type": "nutritionist",
+            "professional_name": "Dra. Ana Nutricionista",
+            "date": "2025-01-21",
+            "time_slots": ["09:00", "10:00", "11:00", "14:00", "15:00"]
+        }
+        
+        response = self.make_request("POST", "/admin/appointment-slots", slot_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "success" in data or "slots_created" in data:
+                self.log_test("Create Appointment Slots", True, "Appointment slots created successfully")
+                print(f"   Slots created for: {slot_data['professional_name']}")
+            else:
+                self.log_test("Create Appointment Slots", False, "Unexpected response format")
+        else:
+            self.log_test("Create Appointment Slots", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        return True
+
+    def test_new_supplements_endpoints(self):
+        """Test the NEW supplements endpoints as requested in review"""
+        print("\n" + "="*70)
+        print("💊 TESTING NEW SUPPLEMENTS ENDPOINTS - LUXEPASS")
+        print("="*70)
+        print("Testing the new supplements system endpoints...")
+        
+        # Ensure we have auth token
+        if not self.auth_token:
+            print("🔐 Logging in with cliente@luxepass.com...")
+            login_data = {
+                "email": "cliente@luxepass.com",
+                "password": "cliente123"
+            }
+            
+            response = self.make_request("POST", "/auth/login", login_data, auth_required=False)
+            if response and response.status_code == 200:
+                data = response.json()
+                self.auth_token = data["access_token"]
+                print(f"   ✅ Login successful")
+            else:
+                self.log_test("Supplements Login", False, "Could not login for supplements testing")
+                return False
+        
+        # Test 1: GET /api/supplements/user/plan (requires authentication)
+        print("\n1️⃣ Testing GET /api/supplements/user/plan...")
+        response = self.make_request("GET", "/supplements/user/plan")
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "plan" in data or "supplements" in data or "message" in data:
+                self.log_test("User Supplement Plan", True, "User supplement plan endpoint working")
+                if "supplements" in data:
+                    print(f"   User has {len(data['supplements'])} supplements in plan")
+                elif "message" in data:
+                    print(f"   Message: {data['message']}")
+            else:
+                self.log_test("User Supplement Plan", False, "Unexpected response format")
+        else:
+            self.log_test("User Supplement Plan", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        # Test 2: POST /api/admin/supplements/plan (admin endpoint)
+        print("\n2️⃣ Testing POST /api/admin/supplements/plan...")
+        supplement_plan = {
+            "user_id": "test_user_id",
+            "supplements": [
+                {
+                    "name": "Whey Protein",
+                    "dosage": "30g",
+                    "frequency": "2x ao dia",
+                    "instructions": "Tomar após treino e antes de dormir"
+                },
+                {
+                    "name": "Creatina",
+                    "dosage": "5g",
+                    "frequency": "1x ao dia",
+                    "instructions": "Tomar com água após treino"
+                }
+            ],
+            "duration_days": 30,
+            "notes": "Plano para ganho de massa muscular"
+        }
+        
+        response = self.make_request("POST", "/admin/supplements/plan", supplement_plan, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "success" in data or "plan_id" in data:
+                self.log_test("Create Supplement Plan", True, "Supplement plan created successfully")
+                if "plan_id" in data:
+                    print(f"   Plan ID: {data['plan_id']}")
+            else:
+                self.log_test("Create Supplement Plan", False, "Unexpected response format")
+        else:
+            self.log_test("Create Supplement Plan", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        return True
+
+    def test_new_workouts_endpoints(self):
+        """Test the NEW workouts endpoints as requested in review"""
+        print("\n" + "="*70)
+        print("🏋️ TESTING NEW WORKOUTS ENDPOINTS - LUXEPASS")
+        print("="*70)
+        print("Testing the new workouts system endpoints...")
+        
+        # Ensure we have auth token
+        if not self.auth_token:
+            print("🔐 Logging in with cliente@luxepass.com...")
+            login_data = {
+                "email": "cliente@luxepass.com",
+                "password": "cliente123"
+            }
+            
+            response = self.make_request("POST", "/auth/login", login_data, auth_required=False)
+            if response and response.status_code == 200:
+                data = response.json()
+                self.auth_token = data["access_token"]
+                print(f"   ✅ Login successful")
+            else:
+                self.log_test("Workouts Login", False, "Could not login for workouts testing")
+                return False
+        
+        # Test 1: GET /api/workouts/user/plan (requires authentication)
+        print("\n1️⃣ Testing GET /api/workouts/user/plan...")
+        response = self.make_request("GET", "/workouts/user/plan")
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "plan" in data or "workouts" in data or "message" in data:
+                self.log_test("User Workout Plan", True, "User workout plan endpoint working")
+                if "workouts" in data:
+                    print(f"   User has {len(data['workouts'])} workouts in plan")
+                elif "message" in data:
+                    print(f"   Message: {data['message']}")
+            else:
+                self.log_test("User Workout Plan", False, "Unexpected response format")
+        else:
+            self.log_test("User Workout Plan", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        # Test 2: POST /api/admin/workouts/plan (admin endpoint)
+        print("\n2️⃣ Testing POST /api/admin/workouts/plan...")
+        workout_plan = {
+            "user_id": "test_user_id",
+            "workouts": [
+                {
+                    "name": "Treino A - Peito e Tríceps",
+                    "exercises": [
+                        {"name": "Supino reto", "sets": 4, "reps": "8-12", "rest": "90s"},
+                        {"name": "Supino inclinado", "sets": 3, "reps": "10-15", "rest": "60s"},
+                        {"name": "Tríceps pulley", "sets": 3, "reps": "12-15", "rest": "45s"}
+                    ],
+                    "day": "Segunda-feira"
+                },
+                {
+                    "name": "Treino B - Costas e Bíceps",
+                    "exercises": [
+                        {"name": "Puxada frontal", "sets": 4, "reps": "8-12", "rest": "90s"},
+                        {"name": "Remada baixa", "sets": 3, "reps": "10-15", "rest": "60s"},
+                        {"name": "Rosca direta", "sets": 3, "reps": "12-15", "rest": "45s"}
+                    ],
+                    "day": "Quarta-feira"
+                }
+            ],
+            "duration_weeks": 8,
+            "notes": "Plano para hipertrofia muscular"
+        }
+        
+        response = self.make_request("POST", "/admin/workouts/plan", workout_plan, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "success" in data or "plan_id" in data:
+                self.log_test("Create Workout Plan", True, "Workout plan created successfully")
+                if "plan_id" in data:
+                    print(f"   Plan ID: {data['plan_id']}")
+            else:
+                self.log_test("Create Workout Plan", False, "Unexpected response format")
+        else:
+            self.log_test("Create Workout Plan", False, f"Status: {response.status_code if response else 'No response'}")
+        
+        return True
+
+    def run_luxepass_new_endpoints_test(self):
+        """Run focused test on NEW LuxePass endpoints as requested in review"""
+        print("🚀 Starting LuxePass NEW Endpoints Tests")
+        print(f"Testing against: {API_BASE}")
+        print("Testing the NEW endpoints for dashboard admin and scheduling system...")
+        
+        # Clear previous test results
+        self.test_results = []
+        
+        # Run the NEW endpoint tests
+        self.test_new_dashboard_endpoints()
+        self.test_new_appointments_endpoints()
+        self.test_new_supplements_endpoints()
+        self.test_new_workouts_endpoints()
+        
+        # Summary
+        print("\n" + "="*70)
+        print("📊 LUXEPASS NEW ENDPOINTS TEST SUMMARY")
+        print("="*70)
+        
+        passed = sum(1 for result in self.test_results if result["success"])
+        total = len(self.test_results)
+        
+        print(f"Total NEW Endpoint Tests: {total}")
+        print(f"Passed: {passed}")
+        print(f"Failed: {total - passed}")
+        print(f"Success Rate: {(passed/total)*100:.1f}%" if total > 0 else "No tests run")
+        
+        # Show failed tests
+        failed_tests = [result for result in self.test_results if not result["success"]]
+        if failed_tests:
+            print("\n❌ Failed Tests:")
+            for test in failed_tests:
+                print(f"  - {test['test']}: {test['details']}")
+        else:
+            print("\n✅ All NEW LuxePass endpoints are working correctly!")
+            print("The new dashboard and scheduling system is operational, including:")
+            print("  ✓ Dashboard statistics endpoints")
+            print("  ✓ Recent users and tokens tracking")
+            print("  ✓ Appointments system (available slots, requests, user appointments)")
+            print("  ✓ Supplements plan management")
+            print("  ✓ Workouts plan management")
+            print("  ✓ Admin appointment slots creation")
+        
+        return passed == total
+
     def test_gym_password_reset_flow(self):
         """Test the complete gym password reset flow as requested"""
         print("\n" + "="*60)
