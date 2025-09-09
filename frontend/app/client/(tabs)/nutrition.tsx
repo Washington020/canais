@@ -463,7 +463,9 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  overviewContainer: {
+  
+  // Today's supplements section
+  todayContainer: {
     paddingHorizontal: 24,
     marginBottom: 24,
   },
@@ -473,208 +475,109 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 16,
   },
-  caloriesCard: {
+  noSupplementsCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  caloriesHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    padding: 24,
     alignItems: 'center',
-    marginBottom: 12,
   },
-  caloriesTitle: {
+  noSupplementsTitle: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
-  },
-  caloriesNumbers: {
-    color: '#8B5CF6',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  progressContainer: {
+    marginTop: 16,
     marginBottom: 8,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 4,
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  progressText: {
-    color: '#94A3B8',
-    fontSize: 12,
-  },
-  macrosContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  macroCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 12,
-    marginHorizontal: 4,
-  },
-  macroName: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  macroValue: {
-    color: '#94A3B8',
-    fontSize: 10,
-    marginBottom: 8,
-  },
-  macroProgress: {
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 2,
-    marginBottom: 4,
-  },
-  macroProgressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  macroPercent: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
     textAlign: 'center',
   },
-  waterCard: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
-  },
-  waterHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  waterTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-    flex: 1,
-  },
-  addWaterButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  waterAmount: {
-    color: '#3B82F6',
+  noSupplementsText: {
+    color: '#94A3B8',
     fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
   },
-  waterProgress: {
-    height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 3,
-  },
-  waterProgressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  mealsContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  mealCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  mealCardCompleted: {
+  noSupplementsTodayCard: {
     backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(34, 197, 94, 0.3)',
   },
-  mealHeader: {
+  noSupplementsTodayText: {
+    color: '#22C55E',
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  supplementsList: {
+    gap: 12,
+  },
+  supplementCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  supplementHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  mealInfo: {
+  supplementInfo: {
     flex: 1,
   },
-  mealName: {
+  supplementName: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
-  mealTime: {
+  supplementTime: {
     color: '#94A3B8',
-    fontSize: 12,
+    fontSize: 14,
   },
-  mealCalories: {
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  mealCaloriesText: {
-    color: '#8B5CF6',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  mealFoods: {
-    marginBottom: 16,
-  },
-  foodItem: {
-    color: '#A1A1AA',
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  mealActions: {
-    alignItems: 'center',
-  },
-  completedMeal: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
   },
-  completedMealText: {
-    color: '#22C55E',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  completeMealButton: {
-    backgroundColor: '#8B5CF6',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  completeMealButtonText: {
-    color: '#FFFFFF',
+  statusText: {
     fontSize: 12,
     fontWeight: '600',
   },
-  nutritionistContainer: {
+  takeSupplementButton: {
+    backgroundColor: '#22C55E',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 6,
+  },
+  takeSupplementText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  takenAtText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  
+  // Consultation section
+  consultationContainer: {
     paddingHorizontal: 24,
     marginBottom: 24,
   },
-  nutritionistCard: {
+  consultationCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     padding: 16,
@@ -682,20 +585,20 @@ const styles = StyleSheet.create({
   nutritionistHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   nutritionistAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#22C55E',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#8B5CF6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   nutritionistAvatarText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   nutritionistInfo: {
@@ -711,7 +614,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 12,
   },
-  nutritionistMessage: {
+  consultationMessage: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 8,
     padding: 12,
@@ -723,78 +626,131 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontStyle: 'italic',
   },
-  nutritionistActions: {
-    flexDirection: 'row',
-    gap: 8,
+  upgradeSection: {
+    alignItems: 'center',
+    paddingTop: 8,
   },
-  scheduleButton: {
-    flex: 1,
+  upgradeText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  upgradeButton: {
+    backgroundColor: '#8B5CF6',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
+    gap: 6,
   },
-  scheduleButtonText: {
+  upgradeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  appointmentSection: {
+    paddingTop: 8,
+  },
+  appointmentTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  noSlotsText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  slotsScroll: {
+    marginBottom: 16,
+  },
+  slotCard: {
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  slotDate: {
     color: '#8B5CF6',
     fontSize: 12,
     fontWeight: '600',
-    marginLeft: 4,
+    marginBottom: 4,
   },
-  messageButton: {
-    flex: 1,
+  slotTime: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  messageNutritionistButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(34, 197, 94, 0.2)',
     paddingVertical: 8,
     borderRadius: 8,
+    gap: 6,
   },
-  messageButtonText: {
+  messageNutritionistText: {
     color: '#22C55E',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    marginLeft: 4,
   },
-  supplementsContainer: {
+  
+  // Plan details section
+  planDetailsContainer: {
     paddingHorizontal: 24,
     marginBottom: 24,
   },
-  supplementCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  planDetailsCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 8,
   },
-  supplementInfo: {
-    flex: 1,
+  planInfo: {
+    marginBottom: 16,
   },
-  supplementName: {
+  planStartDate: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
   },
-  supplementDosage: {
+  planCreatedDate: {
     color: '#94A3B8',
     fontSize: 12,
   },
-  supplementCheck: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#94A3B8',
-    justifyContent: 'center',
-    alignItems: 'center',
+  supplementsOverview: {
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
-  supplementCheckCompleted: {
-    backgroundColor: '#22C55E',
-    borderColor: '#22C55E',
+  overviewTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
   },
+  overviewItem: {
+    marginBottom: 8,
+  },
+  overviewSupplementName: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  overviewSupplementDetails: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  
+  // Tips section
   tipsContainer: {
     paddingHorizontal: 24,
     marginBottom: 40,
