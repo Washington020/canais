@@ -6,16 +6,17 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Share
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import Constants from 'expo-constants';
 
 const API_URL = '/api';
 
@@ -52,31 +53,34 @@ export default function ClientTokens() {
   const copyTokenCode = useCallback(async (tokenCode: string) => {
     try {
       await Clipboard.setStringAsync(tokenCode);
-      setSuccessMessage('Código copiado para a área de transferência!');
+      setSuccessMessage('✅ Código copiado para a área de transferência!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
-      setErrorMessage('Erro ao copiar código');
+      setErrorMessage('❌ Erro ao copiar código');
       setTimeout(() => setErrorMessage(''), 3000);
     }
   }, []);
 
-  const showTokenDetails = useCallback((token: any) => {
-    Alert.alert(
-      'Detalhes do Token',
-      `Código: ${token.code}\nTipo: ${token.type === 'academia' ? 'Academia' : 'Nutricionista'}\nStatus: ${token.status === 'active' ? 'Ativo' : 'Usado'}\nExpira: ${new Date(token.expires_at).toLocaleDateString('pt-BR')}`,
-      [
-        { text: 'Copiar Código', onPress: () => copyTokenCode(token.code) },
-        { text: 'Fechar', style: 'cancel' }
-      ]
-    );
-  }, [copyTokenCode]);
+  const shareToken = useCallback(async (tokenCode: string) => {
+    try {
+      await Share.share({
+        message: `Meu token LuxePass: ${tokenCode}`,
+        title: 'Token LuxePass'
+      });
+    } catch (error) {
+      console.error('Erro ao compartilhar:', error);
+    }
+  }, []);
 
   const generateToken = useCallback(async (type: 'academia' | 'nutricionista') => {
     setLoading(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+    
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        Alert.alert('Erro', 'Você precisa estar logado para gerar tokens');
+        Alert.alert('Sessão Expirada', 'Você precisa estar logado para gerar tokens');
         router.replace('/client/login');
         return;
       }
@@ -90,45 +94,59 @@ export default function ClientTokens() {
       };
 
       const response = await axios.post(
-        `${API_URL}/api/tokens/generate-simple`,
+        `${API_URL}/tokens/generate-simple`,
         {
           token_type: type,
           validity_hours: 4
         },
-        { headers, timeout: 10000 }
+        { headers, timeout: 15000 }
       );
 
       console.log('✅ Token gerado com sucesso:', response.data);
 
-      // Show success message in UI instead of alert (works better on web)
-      setSuccessMessage(`Token ${type} gerado! Código: ${response.data.token_code}`);
-      setErrorMessage('');
-      
-      // Hide success message after 5 seconds
-      setTimeout(() => setSuccessMessage(''), 5000);
-      
-      // Reload tokens
-      loadTokens();
+      if (response.data.success) {
+        setSuccessMessage(`🎉 Token ${type} gerado com sucesso!\n🎫 Código: ${response.data.token_code}\n⏰ Válido por 4 horas`);
+        setErrorMessage('');
+        
+        // Reload tokens to show new one
+        loadTokens();
+        
+        // Auto-hide success message after 8 seconds
+        setTimeout(() => setSuccessMessage(''), 8000);
+      } else {
+        throw new Error(response.data.message || 'Erro na resposta do servidor');
+      }
 
     } catch (error: any) {
       console.error('❌ Erro ao gerar token:', error);
+      
+      let errorMsg = 'Não foi possível gerar o token. Tente novamente.';
+      
       if (error.response) {
         console.error('Status:', error.response.status);
-        console.error('Data:', error.response.data);
+        console.error('Error data:', error.response.data);
+        
+        if (error.response.status === 401) {
+          errorMsg = 'Sessão expirada. Faça login novamente.';
+          setTimeout(() => router.replace('/client/login'), 2000);
+        } else if (error.response.status === 429) {
+          errorMsg = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+        } else if (error.response.status >= 500) {
+          errorMsg = 'Erro interno do servidor. Tente novamente em alguns minutos.';
+        } else {
+          errorMsg = error.response.data?.detail || error.response.data?.message || errorMsg;
+        }
+      } else if (error.code === 'ECONNABORTED') {
+        errorMsg = 'Timeout na conexão. Verifique sua internet e tente novamente.';
+      } else if (error.message) {
+        errorMsg = error.message;
       }
       
-      if (error.response?.status === 401) {
-        Alert.alert('Sessão Expirada', 'Faça login novamente');
-        router.replace('/client/login');
-      } else {
-        setErrorMessage(
-          error.response?.data?.detail || 'Não foi possível gerar o token. Tente novamente.'
-        );
-        setSuccessMessage('');
-        
-        // Hide error message after 5 seconds
-        setTimeout(() => setErrorMessage(''), 5000);
-      }
+      setErrorMessage(`❌ ${errorMsg}`);
+      setSuccessMessage('');
+      
+      // Auto-hide error after 8 seconds
+      setTimeout(() => setErrorMessage(''), 8000);
     } finally {
       setLoading(false);
     }
@@ -142,194 +160,281 @@ export default function ClientTokens() {
         return;
       }
 
-      const headers = { Authorization: `Bearer ${token}` };
+      const headers = { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
       
-      // Carregar tokens do usuário
+      // Load user tokens
       try {
-        const response = await axios.get(`${API_URL}/api/users/tokens`, { headers });
-        setTokens(response.data || []);
-      } catch (error) {
-        console.log('Usando dados demo para tokens');
+        const response = await axios.get(`${API_URL}/users/tokens`, { headers });
+        if (response.data && Array.isArray(response.data)) {
+          setTokens(response.data);
+        } else {
+          console.log('No tokens found or invalid response format');
+          setTokens([]);
+        }
+      } catch (error: any) {
+        console.log('Error loading tokens:', error.response?.status);
+        if (error.response?.status === 401) {
+          router.replace('/client/login');
+          return;
+        }
         setTokens([]);
       }
 
-      // Carregar estatísticas
+      // Load stats
       try {
-        const statsResponse = await axios.get(`${API_URL}/api/users/stats`, { headers });
-        setStats(statsResponse.data);
+        const statsResponse = await axios.get(`${API_URL}/users/stats`, { headers });
+        if (statsResponse.data) {
+          setStats(statsResponse.data);
+        }
       } catch (error) {
-        console.log('Usando dados demo para stats');
+        console.log('Using demo stats data');
+        // Keep default stats
       }
 
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      console.error('Error loading data:', error);
     }
   }, [router]);
 
   useEffect(() => {
     loadTokens();
+    const interval = setInterval(loadTokens, 30000); // Refresh every 30 seconds
+    return () => clearInterval(interval);
   }, [loadTokens]);
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Meus Tokens</Text>
-        </View>
-        
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out" size={24} color="#FF4444" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Success/Error Messages */}
-      {successMessage !== '' && (
-        <View style={styles.successMessage}>
-          <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
-          <Text style={styles.successText}>{successMessage}</Text>
-        </View>
-      )}
-      
-      {errorMessage !== '' && (
-        <View style={styles.errorMessage}>
-          <Ionicons name="close-circle" size={20} color="#FF4444" />
-          <Text style={styles.errorText}>{errorMessage}</Text>
-        </View>
-      )}
-
-      <ScrollView style={styles.content}>
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Ionicons name="qr-code" size={24} color="#8B5CF6" />
-            <Text style={styles.statNumber}>{stats.tokens_available}</Text>
-            <Text style={styles.statLabel}>Disponíveis</Text>
-          </View>
-          
-          <View style={styles.statCard}>
-            <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
-            <Text style={styles.statNumber}>{stats.tokens_used}</Text>
-            <Text style={styles.statLabel}>Usados</Text>
-          </View>
-          
-          <View style={styles.statCard}>
-            <Ionicons name="add-circle" size={24} color="#F59E0B" />
-            <Text style={styles.statNumber}>{stats.tokens_generated}</Text>
-            <Text style={styles.statLabel}>Gerados</Text>
-          </View>
-        </View>
-
-        {/* Generate Tokens */}
-        <View style={styles.generateSection}>
-          <Text style={styles.sectionTitle}>Gerar Novos Tokens</Text>
-          
-          <TouchableOpacity 
-            style={[styles.generateButton, styles.academiaButton]}
-            onPress={() => generateToken('academia')}
-            disabled={loading}
-          >
-            <Ionicons name="fitness" size={20} color="#FFFFFF" />
-            <Text style={styles.generateButtonText}>
-              {loading ? 'Gerando...' : 'Token Academia'}
-            </Text>
-            {loading && <ActivityIndicator size="small" color="#FFFFFF" />}
+      <LinearGradient
+        colors={['#0B0D17', '#1E1A3C', '#2A1B4A']}
+        style={styles.backgroundGradient}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <LinearGradient
+              colors={['rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.1)']}
+              style={styles.backButtonGradient}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </LinearGradient>
           </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.generateButton, styles.nutricionistaButton]}
-            onPress={() => generateToken('nutricionista')}
-            disabled={loading}
-          >
-            <Ionicons name="nutrition" size={20} color="#FFFFFF" />
-            <Text style={styles.generateButtonText}>
-              {loading ? 'Gerando...' : 'Token Nutricionista'}
-            </Text>
-            {loading && <ActivityIndicator size="small" color="#FFFFFF" />}
+          
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>🎫 Meus Tokens</Text>
+            <Text style={styles.headerSubtitle}>Geração e Gerenciamento</Text>
+          </View>
+          
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <LinearGradient
+              colors={['rgba(239, 68, 68, 0.3)', 'rgba(239, 68, 68, 0.1)']}
+              style={styles.logoutButtonGradient}
+            >
+              <Ionicons name="log-out" size={24} color="#EF4444" />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 
-        {/* Recent Tokens */}
-        <View style={styles.tokensSection}>
-          <Text style={styles.sectionTitle}>Meus Tokens Ativos</Text>
-          
-          {tokens.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="qr-code-outline" size={48} color="#64748B" />
-              <Text style={styles.emptyText}>Nenhum token gerado ainda</Text>
-              <Text style={styles.emptySubtext}>Gere seus primeiros tokens acima</Text>
-            </View>
-          ) : (
-            tokens.map((token, index) => (
-              <View key={token.id || index} style={styles.tokenCard}>
-                <View style={styles.tokenHeader}>
-                  <View style={styles.tokenTypeContainer}>
-                    <Ionicons 
-                      name={token.type === 'academia' ? 'fitness' : 'nutrition'} 
-                      size={20} 
-                      color={token.type === 'academia' ? '#8B5CF6' : '#22C55E'} 
-                    />
-                    <Text style={styles.tokenType}>
-                      {token.type === 'academia' ? 'Academia' : 'Nutricionista'}
-                    </Text>
-                  </View>
-                  <View style={[
-                    styles.tokenStatusBadge,
-                    { backgroundColor: token.status === 'active' ? '#22C55E' : '#EF4444' }
-                  ]}>
-                    <Text style={styles.tokenStatusText}>
-                      {token.status === 'active' ? 'ATIVO' : 'USADO'}
-                    </Text>
-                  </View>
-                </View>
+        {/* Success/Error Messages */}
+        {successMessage !== '' && (
+          <View style={styles.successMessage}>
+            <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+            <Text style={styles.successText}>{successMessage}</Text>
+          </View>
+        )}
+        
+        {errorMessage !== '' && (
+          <View style={styles.errorMessage}>
+            <Ionicons name="close-circle" size={20} color="#EF4444" />
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        )}
 
-                {/* Token Code Display */}
-                <View style={styles.tokenCodeContainer}>
-                  <Text style={styles.tokenCodeLabel}>Código do Token:</Text>
-                  <View style={styles.tokenCodeDisplay}>
-                    <Text style={styles.tokenCode}>{token.code}</Text>
-                    <TouchableOpacity style={styles.copyButton} onPress={() => copyTokenCode(token.code)}>
-                      <Ionicons name="copy-outline" size={16} color="#8B5CF6" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Stats */}
+          <View style={styles.statsContainer}>
+            <LinearGradient
+              colors={['rgba(34, 197, 94, 0.15)', 'rgba(34, 197, 94, 0.08)']}
+              style={styles.statCard}
+            >
+              <Ionicons name="qr-code" size={28} color="#22C55E" />
+              <Text style={styles.statNumber}>{stats.tokens_available}</Text>
+              <Text style={styles.statLabel}>Disponíveis</Text>
+            </LinearGradient>
+            
+            <LinearGradient
+              colors={['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0.08)']}
+              style={styles.statCard}
+            >
+              <Ionicons name="checkmark-circle" size={28} color="#8B5CF6" />
+              <Text style={styles.statNumber}>{stats.tokens_used}</Text>
+              <Text style={styles.statLabel}>Usados</Text>
+            </LinearGradient>
+            
+            <LinearGradient
+              colors={['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.08)']}
+              style={styles.statCard}
+            >
+              <Ionicons name="add-circle" size={28} color="#F59E0B" />
+              <Text style={styles.statNumber}>{stats.tokens_generated}</Text>
+              <Text style={styles.statLabel}>Gerados</Text>
+            </LinearGradient>
+          </View>
 
-                {/* Token Info */}
-                <View style={styles.tokenInfo}>
-                  <View style={styles.tokenInfoRow}>
-                    <Ionicons name="time-outline" size={16} color="#94A3B8" />
-                    <Text style={styles.tokenInfoText}>
-                      Criado: {new Date(token.created_at).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </Text>
+          {/* Generate Tokens */}
+          <View style={styles.generateSection}>
+            <LinearGradient
+              colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.06)']}
+              style={styles.generateContainer}
+            >
+              <View style={styles.generateHeader}>
+                <LinearGradient
+                  colors={['#22C55E', '#16A34A']}
+                  style={styles.generateIcon}
+                >
+                  <Ionicons name="add" size={32} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={styles.sectionTitle}>Gerar Novos Tokens</Text>
+                <Text style={styles.sectionSubtitle}>Escolha o tipo de acesso desejado</Text>
+              </View>
+              
+              <TouchableOpacity 
+                style={[styles.generateButton, loading && styles.generateButtonDisabled]}
+                onPress={() => generateToken('academia')}
+                disabled={loading}
+              >
+                <LinearGradient
+                  colors={loading ? ['#64748B', '#475569'] : ['#22C55E', '#16A34A', '#15803D']}
+                  style={styles.generateButtonGradient}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="fitness" size={20} color="#FFFFFF" />
+                      <Text style={styles.generateButtonText}>Token Academia</Text>
+                      <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.generateButton, loading && styles.generateButtonDisabled]}
+                onPress={() => generateToken('nutricionista')}
+                disabled={loading}
+              >
+                <LinearGradient
+                  colors={loading ? ['#64748B', '#475569'] : ['#8B5CF6', '#A855F7', '#C084FC']}
+                  style={styles.generateButtonGradient}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="nutrition" size={20} color="#FFFFFF" />
+                      <Text style={styles.generateButtonText}>Token Nutricionista</Text>
+                      <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+
+          {/* Recent Tokens */}
+          <View style={styles.tokensSection}>
+            <Text style={styles.sectionTitle}>💎 Meus Tokens Ativos</Text>
+            
+            {tokens.length === 0 ? (
+              <LinearGradient
+                colors={['rgba(59, 130, 246, 0.15)', 'rgba(59, 130, 246, 0.08)']}
+                style={styles.emptyState}
+              >
+                <Ionicons name="qr-code-outline" size={64} color="#3B82F6" />
+                <Text style={styles.emptyText}>Nenhum token gerado ainda</Text>
+                <Text style={styles.emptySubtext}>Gere seus primeiros tokens acima para começar</Text>
+              </LinearGradient>
+            ) : (
+              tokens.map((token, index) => (
+                <LinearGradient
+                  key={token.id || `token-${index}`}
+                  colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.06)']}
+                  style={styles.tokenCard}
+                >
+                  <View style={styles.tokenHeader}>
+                    <View style={styles.tokenTypeContainer}>
+                      <LinearGradient
+                        colors={token.type === 'academia' ? ['#22C55E', '#16A34A'] : ['#8B5CF6', '#A855F7']}
+                        style={styles.tokenTypeIcon}
+                      >
+                        <Ionicons 
+                          name={token.type === 'academia' ? 'fitness' : 'nutrition'} 
+                          size={16} 
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
+                      <Text style={styles.tokenType}>
+                        {token.type === 'academia' ? '🏋️ Academia' : '🥗 Nutricionista'}
+                      </Text>
+                    </View>
+                    <LinearGradient
+                      colors={token.status === 'active' ? ['#22C55E', '#16A34A'] : ['#EF4444', '#DC2626']}
+                      style={styles.tokenStatusBadge}
+                    >
+                      <Text style={styles.tokenStatusText}>
+                        {token.status === 'active' ? 'ATIVO' : 'USADO'}
+                      </Text>
+                    </LinearGradient>
                   </View>
-                  <View style={styles.tokenInfoRow}>
-                    <Ionicons name="calendar-outline" size={16} color="#94A3B8" />
-                    <Text style={styles.tokenInfoText}>
-                      Expira: {new Date(token.expires_at).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </Text>
+
+                  {/* Token Code Display */}
+                  <View style={styles.tokenCodeContainer}>
+                    <Text style={styles.tokenCodeLabel}>📱 Código do Token:</Text>
+                    <LinearGradient
+                      colors={['rgba(34, 197, 94, 0.15)', 'rgba(34, 197, 94, 0.08)']}
+                      style={styles.tokenCodeDisplay}
+                    >
+                      <Text style={styles.tokenCode}>{token.code || token.token_code}</Text>
+                      <View style={styles.tokenActions}>
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => copyTokenCode(token.code || token.token_code)}
+                        >
+                          <Ionicons name="copy-outline" size={18} color="#22C55E" />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => shareToken(token.code || token.token_code)}
+                        >
+                          <Ionicons name="share-outline" size={18} color="#22C55E" />
+                        </TouchableOpacity>
+                      </View>
+                    </LinearGradient>
                   </View>
-                  {token.used_at && (
+
+                  {/* Token Info */}
+                  <View style={styles.tokenInfo}>
                     <View style={styles.tokenInfoRow}>
-                      <Ionicons name="checkmark-circle-outline" size={16} color="#22C55E" />
+                      <Ionicons name="time-outline" size={16} color="#94A3B8" />
                       <Text style={styles.tokenInfoText}>
-                        Usado: {new Date(token.used_at).toLocaleDateString('pt-BR', {
+                        Criado: {new Date(token.created_at).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </Text>
+                    </View>
+                    <View style={styles.tokenInfoRow}>
+                      <Ionicons name="calendar-outline" size={16} color="#94A3B8" />
+                      <Text style={styles.tokenInfoText}>
+                        Expira: {new Date(token.expires_at).toLocaleDateString('pt-BR', {
                           day: '2-digit',
                           month: '2-digit',
                           hour: '2-digit',
@@ -337,47 +442,89 @@ export default function ClientTokens() {
                         })}
                       </Text>
                     </View>
-                  )}
-                </View>
-
-                {/* Check-in Button */}
-                {token.status === 'active' && (
-                  <TouchableOpacity 
-                    style={styles.checkinButton}
-                    onPress={() => showTokenDetails(token)}
-                  >
-                    <Ionicons name="qr-code" size={20} color="#FFFFFF" />
-                    <Text style={styles.checkinButtonText}>Ver QR Code</Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Usage Info */}
-                <View style={styles.usageInfo}>
-                  <Text style={styles.usageText}>
-                    Usos: {token.usage_count}/{token.max_usage}
-                  </Text>
-                  <View style={styles.usageBar}>
-                    <View 
-                      style={[
-                        styles.usageProgress,
-                        { width: `${(token.usage_count / token.max_usage) * 100}%` }
-                      ]}
-                    />
+                    {token.used_at && (
+                      <View style={styles.tokenInfoRow}>
+                        <Ionicons name="checkmark-circle-outline" size={16} color="#22C55E" />
+                        <Text style={styles.tokenInfoText}>
+                          Usado: {new Date(token.used_at).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </Text>
+                      </View>
+                    )}
                   </View>
+
+                  {/* Usage Progress */}
+                  <View style={styles.usageInfo}>
+                    <Text style={styles.usageText}>
+                      Usos: {token.usage_count || 0}/{token.max_usage || 1}
+                    </Text>
+                    <View style={styles.usageBar}>
+                      <LinearGradient
+                        colors={['#22C55E', '#16A34A']}
+                        style={[
+                          styles.usageProgress,
+                          { width: `${((token.usage_count || 0) / (token.max_usage || 1)) * 100}%` }
+                        ]}
+                      />
+                    </View>
+                  </View>
+                </LinearGradient>
+              ))
+            )}
+          </View>
+
+          {/* Instructions */}
+          <View style={styles.instructionsSection}>
+            <LinearGradient
+              colors={['rgba(59, 130, 246, 0.15)', 'rgba(59, 130, 246, 0.08)']}
+              style={styles.instructionsContainer}
+            >
+              <View style={styles.instructionsHeader}>
+                <LinearGradient
+                  colors={['#3B82F6', '#1D4ED8']}
+                  style={styles.instructionsIcon}
+                >
+                  <Ionicons name="information-circle" size={24} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={styles.instructionsTitle}>Como Usar seus Tokens</Text>
+              </View>
+              
+              <View style={styles.instructionsSteps}>
+                <View style={styles.instructionStep}>
+                  <Text style={styles.stepNumber}>1</Text>
+                  <Text style={styles.instructionText}>
+                    Gere seu token clicando em "Token Academia" ou "Token Nutricionista"
+                  </Text>
+                </View>
+                <View style={styles.instructionStep}>
+                  <Text style={styles.stepNumber}>2</Text>
+                  <Text style={styles.instructionText}>
+                    Copie o código do token e apresente na academia/consultório
+                  </Text>
+                </View>
+                <View style={styles.instructionStep}>
+                  <Text style={styles.stepNumber}>3</Text>
+                  <Text style={styles.instructionText}>
+                    O profissional validará seu token e liberará o acesso
+                  </Text>
+                </View>
+                <View style={styles.instructionStep}>
+                  <Text style={styles.stepNumber}>4</Text>
+                  <Text style={styles.instructionText}>
+                    Tokens têm validade de 4 horas e são de uso único
+                  </Text>
                 </View>
               </View>
-            ))
-          )}
-        </View>
+            </LinearGradient>
+          </View>
 
-        {/* Logout Section */}
-        <View style={styles.logoutSection}>
-          <TouchableOpacity style={styles.logoutFullButton} onPress={handleLogout}>
-            <Ionicons name="log-out" size={20} color="#FFFFFF" />
-            <Text style={styles.logoutFullText}>Sair do App</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+          <View style={styles.bottomPadding} />
+        </ScrollView>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -385,7 +532,9 @@ export default function ClientTokens() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0D17',
+  },
+  backgroundGradient: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -399,7 +548,10 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 22,
+  },
+  backButtonGradient: {
+    flex: 1,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
@@ -413,10 +565,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  headerSubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+  },
   logoutButton: {
     width: 44,
     height: 44,
-    backgroundColor: 'rgba(255, 68, 68, 0.1)',
+    borderRadius: 22,
+  },
+  logoutButtonGradient: {
+    flex: 1,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
@@ -430,53 +589,82 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 24,
     marginBottom: 32,
+    gap: 12,
   },
   statCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     alignItems: 'center',
     flex: 1,
-    marginHorizontal: 4,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   statNumber: {
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    marginTop: 8,
+    marginTop: 12,
     marginBottom: 4,
   },
   statLabel: {
     color: '#94A3B8',
     fontSize: 12,
     textAlign: 'center',
+    fontWeight: '500',
   },
   generateSection: {
     marginBottom: 32,
   },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
+  generateContainer: {
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
+  },
+  generateHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  generateIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
   },
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  sectionSubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+  },
   generateButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 12,
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  generateButtonDisabled: {
+    opacity: 0.6,
+  },
+  generateButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 18,
     paddingHorizontal: 24,
-    borderRadius: 12,
-    marginBottom: 12,
-    gap: 8,
-  },
-  academiaButton: {
-    backgroundColor: '#8B5CF6',
-  },
-  nutricionistaButton: {
-    backgroundColor: '#22C55E',
+    gap: 12,
   },
   generateButtonText: {
     color: '#FFFFFF',
@@ -488,23 +676,29 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
   },
   emptyText: {
-    color: '#94A3B8',
-    fontSize: 16,
+    color: '#3B82F6',
+    fontSize: 18,
+    fontWeight: '600',
     marginTop: 16,
+    textAlign: 'center',
   },
   emptySubtext: {
-    color: '#64748B',
+    color: '#94A3B8',
     fontSize: 14,
-    marginTop: 4,
+    marginTop: 8,
+    textAlign: 'center',
   },
   tokenCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -512,22 +706,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   tokenTypeContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tokenTypeIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   tokenType: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    marginLeft: 8,
   },
   tokenStatusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   tokenStatusText: {
     color: '#FFFFFF',
@@ -535,61 +736,55 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   tokenCodeContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   tokenCodeLabel: {
     color: '#94A3B8',
-    fontSize: 12,
-    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
   },
   tokenCodeDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderColor: 'rgba(34, 197, 94, 0.3)',
   },
   tokenCode: {
-    color: '#8B5CF6',
-    fontSize: 16,
+    color: '#22C55E',
+    fontSize: 20,
     fontWeight: 'bold',
     fontFamily: 'monospace',
     flex: 1,
   },
-  copyButton: {
-    padding: 4,
+  tokenActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tokenInfo: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   tokenInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
+    gap: 8,
   },
   tokenInfoText: {
     color: '#94A3B8',
-    fontSize: 12,
-    marginLeft: 8,
-  },
-  checkinButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#8B5CF6',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 8,
-  },
-  checkinButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    flex: 1,
   },
   usageInfo: {
     marginTop: 8,
@@ -597,73 +792,109 @@ const styles = StyleSheet.create({
   usageText: {
     color: '#94A3B8',
     fontSize: 12,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   usageBar: {
-    height: 4,
+    height: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 2,
+    borderRadius: 3,
     overflow: 'hidden',
   },
   usageProgress: {
     height: '100%',
-    backgroundColor: '#8B5CF6',
-    borderRadius: 2,
+    borderRadius: 3,
   },
-  logoutSection: {
-    paddingVertical: 24,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  instructionsSection: {
+    marginBottom: 32,
   },
-  logoutFullButton: {
+  instructionsContainer: {
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+  },
+  instructionsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FF4444',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    gap: 8,
+    marginBottom: 20,
+    gap: 12,
   },
-  logoutFullText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  instructionsIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  instructionsTitle: {
+    color: '#3B82F6',
+    fontSize: 18,
     fontWeight: '600',
+  },
+  instructionsSteps: {
+    gap: 16,
+  },
+  instructionStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#3B82F6',
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  instructionText: {
+    color: '#E2E8F0',
+    fontSize: 14,
+    lineHeight: 20,
+    flex: 1,
   },
   successMessage: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderRadius: 12,
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderRadius: 16,
     padding: 16,
     marginHorizontal: 24,
-    marginTop: 16,
+    marginTop: 8,
     borderWidth: 1,
     borderColor: 'rgba(34, 197, 94, 0.3)',
-    gap: 8,
+    gap: 12,
   },
   successText: {
     color: '#22C55E',
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
+    lineHeight: 20,
   },
   errorMessage: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 68, 68, 0.1)',
-    borderRadius: 12,
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderRadius: 16,
     padding: 16,
     marginHorizontal: 24,
-    marginTop: 16,
+    marginTop: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 68, 68, 0.3)',
-    gap: 8,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    gap: 12,
   },
   errorText: {
-    color: '#FF4444',
+    color: '#EF4444',
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
+    lineHeight: 20,
+  },
+  bottomPadding: {
+    height: 40,
   },
 });

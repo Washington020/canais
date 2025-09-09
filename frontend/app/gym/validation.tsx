@@ -24,6 +24,7 @@ export default function TokenValidation() {
   const [loading, setLoading] = useState(false);
   const [gymInfo, setGymInfo] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [lastValidation, setLastValidation] = useState<any>(null);
   const router = useRouter();
 
   const handleLogout = useCallback(async () => {
@@ -42,7 +43,7 @@ export default function TokenValidation() {
               await AsyncStorage.removeItem('gymInfo');
               
               Alert.alert(
-                'Logout Realizado ✅',
+                '✅ Logout Realizado',
                 'Você foi desconectado do sistema com sucesso.',
                 [
                   {
@@ -64,7 +65,7 @@ export default function TokenValidation() {
   const validateToken = useCallback(async () => {
     if (!tokenCode.trim()) {
       Alert.alert(
-        'Campo Obrigatório ⚠️',
+        '⚠️ Campo Obrigatório',
         'Por favor, digite o código do token para validar.'
       );
       return;
@@ -75,7 +76,7 @@ export default function TokenValidation() {
       const gymToken = await AsyncStorage.getItem('gymToken');
       if (!gymToken) {
         Alert.alert(
-          'Sessão Expirada ❌',
+          '❌ Sessão Expirada',
           'Você não está autenticado. Faça login novamente.',
           [{ text: 'OK', onPress: () => router.replace('/gym/login') }]
         );
@@ -87,7 +88,7 @@ export default function TokenValidation() {
 
       if (!gym?.id) {
         Alert.alert(
-          'Erro de Configuração ❌',
+          '❌ Erro de Configuração',
           'Informações da academia não encontradas. Faça login novamente.',
           [{ text: 'OK', onPress: () => router.replace('/gym/login') }]
         );
@@ -102,56 +103,73 @@ export default function TokenValidation() {
         'Content-Type': 'application/json'
       };
       
+      // Use gym.id directly from the stored gym info
       const response = await axios.post(
-        `${API_URL}/tokens/validate/${tokenCode}?gym_id=${gym.id}`,
+        `${API_URL}/tokens/validate/${tokenCode.trim()}?gym_id=${gym.id}`,
         {},
         { headers, timeout: 15000 }
       );
 
       console.log('✅ Token validado com sucesso:', response.data);
 
-      const userData = response.data.user || response.data;
-      const clientName = userData.full_name || userData.name || 'Cliente';
+      const validationData = response.data;
+      setLastValidation(validationData);
 
-      Alert.alert(
-        '✅ TOKEN VALIDADO COM SUCESSO!',
-        `🎯 Cliente: ${clientName}\n🏋️ Academia: ${gym.name}\n⏰ Check-in realizado com sucesso!\n\n✅ Token utilizado e registrado no sistema.`,
-        [{ 
-          text: 'Validar Outro Token', 
-          onPress: () => setTokenCode('') 
-        }]
-      );
+      if (validationData.valid) {
+        const userData = validationData.user || validationData.token_info?.user_info || {};
+        const clientName = userData.full_name || userData.name || 'Cliente';
+        const planType = userData.plan_type || userData.plan || 'Premium';
+
+        Alert.alert(
+          '🎉 TOKEN VALIDADO COM SUCESSO!',
+          `🎯 Cliente: ${clientName}\n💎 Plano: ${planType}\n🏋️ Academia: ${gym.name}\n⏰ Check-in realizado com sucesso!\n\n✅ Token utilizado e registrado no sistema.\n\n📊 ID da Validação: ${validationData.validation_id?.slice(-8) || 'N/A'}`,
+          [
+            { 
+              text: 'Validar Outro Token', 
+              onPress: () => {
+                setTokenCode('');
+                setLastValidation(null);
+              }
+            }
+          ]
+        );
+      } else {
+        throw new Error(validationData.message || 'Token inválido');
+      }
 
     } catch (error: any) {
       console.error('❌ Erro na validação do token:', error);
       
-      let title = 'Erro na Validação ❌';
+      let title = '❌ Erro na Validação';
       let message = 'Não foi possível validar o token.';
 
       if (error.response?.status === 401) {
-        title = 'Sessão Expirada ❌';
+        title = '❌ Sessão Expirada';
         message = 'Sua sessão expirou. Faça login novamente.';
         setTimeout(() => router.replace('/gym/login'), 2000);
       } else if (error.response?.status === 404) {
-        title = 'Token Não Encontrado ❌';
-        message = 'O código do token digitado não existe no sistema ou já foi utilizado.';
+        title = '❌ Token Não Encontrado';
+        message = 'O código do token digitado não existe no sistema ou já foi utilizado.\n\n💡 Verifique se o código foi digitado corretamente.';
       } else if (error.response?.status === 400) {
         const detail = error.response.data?.detail || '';
-        if (detail.includes('expirado')) {
-          title = 'Token Expirado ❌';
-          message = 'Este token já expirou. O cliente precisa gerar um novo token.';
-        } else if (detail.includes('já foi utilizado')) {
-          title = 'Token Já Utilizado ❌';
+        if (detail.includes('expirado') || detail.includes('expired')) {
+          title = '⏰ Token Expirado';
+          message = 'Este token já expirou. O cliente precisa gerar um novo token no app.';
+        } else if (detail.includes('já foi utilizado') || detail.includes('already used')) {
+          title = '🔄 Token Já Utilizado';
           message = 'Este token já foi usado anteriormente. Cada token só pode ser usado uma vez.';
+        } else if (detail.includes('não é válido') || detail.includes('invalid')) {
+          title = '❌ Token Inválido';
+          message = 'O código do token não é válido. Verifique se foi digitado corretamente.';
         } else {
-          title = 'Token Inválido ❌';
+          title = '❌ Token Inválido';
           message = detail || 'O token não é válido para uso.';
         }
       } else if (error.code === 'ECONNABORTED') {
-        title = 'Timeout ❌';
+        title = '⏱️ Timeout';
         message = 'A validação demorou muito. Verifique sua conexão e tente novamente.';
       } else if (error.response?.status >= 500) {
-        title = 'Erro do Servidor ❌';
+        title = '🔧 Erro do Servidor';
         message = 'Erro interno do servidor. Tente novamente em alguns minutos.';
       } else {
         message = error.response?.data?.detail || error.message || 'Erro desconhecido na validação.';
@@ -194,10 +212,15 @@ export default function TokenValidation() {
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#22C55E" />
-          <Text style={styles.loadingText}>Verificando autenticação...</Text>
-        </View>
+        <LinearGradient
+          colors={['#0B0D17', '#1E1A3C', '#2A1B4A']}
+          style={styles.backgroundGradient}
+        >
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#22C55E" />
+            <Text style={styles.loadingText}>Verificando autenticação...</Text>
+          </View>
+        </LinearGradient>
       </SafeAreaView>
     );
   }
@@ -222,7 +245,7 @@ export default function TokenValidation() {
           </TouchableOpacity>
           
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Validação de Tokens</Text>
+            <Text style={styles.headerTitle}>🎫 Validação de Tokens</Text>
             <Text style={styles.headerSubtitle}>{gymInfo?.name || 'Academia'}</Text>
           </View>
           
@@ -236,7 +259,7 @@ export default function TokenValidation() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.content}>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Validation Form */}
           <View style={styles.validationContainer}>
             <LinearGradient
@@ -251,7 +274,7 @@ export default function TokenValidation() {
                   <Ionicons name="qr-code" size={32} color="#FFFFFF" />
                 </LinearGradient>
                 <Text style={styles.formTitle}>Validar Token do Cliente</Text>
-                <Text style={styles.formSubtitle}>Digite ou escaneie o código do token</Text>
+                <Text style={styles.formSubtitle}>Digite o código apresentado pelo cliente</Text>
               </View>
 
               <View style={styles.inputGroup}>
@@ -270,11 +293,21 @@ export default function TokenValidation() {
                       style={styles.textInput}
                       value={tokenCode}
                       onChangeText={setTokenCode}
-                      placeholder="Ex: ABC123DEF456"
+                      placeholder="Ex: 12345"
                       placeholderTextColor="#64748B"
                       autoCapitalize="characters"
                       autoCorrect={false}
+                      maxLength={10}
+                      keyboardType="numeric"
                     />
+                    {tokenCode.length > 0 && (
+                      <TouchableOpacity 
+                        style={styles.clearButton}
+                        onPress={() => setTokenCode('')}
+                      >
+                        <Ionicons name="close-circle" size={20} color="#64748B" />
+                      </TouchableOpacity>
+                    )}
                   </LinearGradient>
                 </View>
               </View>
@@ -291,7 +324,10 @@ export default function TokenValidation() {
                   style={styles.validateButtonGradient}
                 >
                   {loading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <>
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <Text style={styles.validateButtonText}>Validando...</Text>
+                    </>
                   ) : (
                     <>
                       <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
@@ -303,6 +339,38 @@ export default function TokenValidation() {
               </TouchableOpacity>
             </LinearGradient>
           </View>
+
+          {/* Last Validation Result */}
+          {lastValidation && (
+            <View style={styles.resultContainer}>
+              <LinearGradient
+                colors={['rgba(34, 197, 94, 0.15)', 'rgba(34, 197, 94, 0.08)']}
+                style={styles.resultGradient}
+              >
+                <View style={styles.resultHeader}>
+                  <LinearGradient
+                    colors={['#22C55E', '#16A34A']}
+                    style={styles.resultIcon}
+                  >
+                    <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
+                  </LinearGradient>
+                  <Text style={styles.resultTitle}>✅ Última Validação</Text>
+                </View>
+                
+                <View style={styles.resultContent}>
+                  <Text style={styles.resultText}>
+                    <Text style={styles.resultLabel}>Cliente:</Text> {lastValidation.user?.full_name || 'N/A'}
+                  </Text>
+                  <Text style={styles.resultText}>
+                    <Text style={styles.resultLabel}>Plano:</Text> {lastValidation.user?.plan_type || 'Premium'}
+                  </Text>
+                  <Text style={styles.resultText}>
+                    <Text style={styles.resultLabel}>Validação:</Text> {new Date().toLocaleString('pt-BR')}
+                  </Text>
+                </View>
+              </LinearGradient>
+            </View>
+          )}
 
           {/* Instructions */}
           <View style={styles.instructionsContainer}>
@@ -326,7 +394,7 @@ export default function TokenValidation() {
                     <Text style={styles.stepNumberText}>1</Text>
                   </View>
                   <Text style={styles.instructionText}>
-                    Cliente gera token no <Text style={styles.highlightText}>App Cliente</Text>
+                    Cliente gera token no <Text style={styles.highlightText}>App Cliente LuxePass</Text>
                   </Text>
                 </View>
                 <View style={styles.instructionStep}>
@@ -334,7 +402,7 @@ export default function TokenValidation() {
                     <Text style={styles.stepNumberText}>2</Text>
                   </View>
                   <Text style={styles.instructionText}>
-                    Cliente apresenta o <Text style={styles.highlightText}>código do token</Text>
+                    Cliente apresenta o <Text style={styles.highlightText}>código numérico</Text> do token
                   </Text>
                 </View>
                 <View style={styles.instructionStep}>
@@ -342,7 +410,7 @@ export default function TokenValidation() {
                     <Text style={styles.stepNumberText}>3</Text>
                   </View>
                   <Text style={styles.instructionText}>
-                    Digite o código no campo acima e clique <Text style={styles.highlightText}>Validar</Text>
+                    Digite o código no campo acima e clique <Text style={styles.highlightText}>Validar Token</Text>
                   </Text>
                 </View>
                 <View style={styles.instructionStep}>
@@ -350,7 +418,7 @@ export default function TokenValidation() {
                     <Text style={styles.stepNumberText}>4</Text>
                   </View>
                   <Text style={styles.instructionText}>
-                    Sistema confirma se token é <Text style={styles.highlightText}>válido ou inválido</Text>
+                    Sistema confirma se token é <Text style={styles.highlightText}>válido</Text> e libera acesso
                   </Text>
                 </View>
               </View>
@@ -359,22 +427,29 @@ export default function TokenValidation() {
 
           {/* Status Info */}
           <View style={styles.statusContainer}>
-            <Text style={styles.statusTitle}>Status do Sistema</Text>
-            <View style={styles.statusItems}>
-              <View style={styles.statusItem}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>Sistema Online</Text>
+            <Text style={styles.statusTitle}>📊 Status do Sistema</Text>
+            <LinearGradient
+              colors={['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.04)']}
+              style={styles.statusCard}
+            >
+              <View style={styles.statusItems}>
+                <View style={styles.statusItem}>
+                  <View style={styles.statusDot} />
+                  <Text style={styles.statusText}>Sistema Online</Text>
+                </View>
+                <View style={styles.statusItem}>
+                  <Ionicons name="shield-checkmark" size={16} color="#22C55E" />
+                  <Text style={styles.statusText}>Validação Segura</Text>
+                </View>
+                <View style={styles.statusItem}>
+                  <Ionicons name="time" size={16} color="#F59E0B" />
+                  <Text style={styles.statusText}>Tokens Únicos</Text>
+                </View>
               </View>
-              <View style={styles.statusItem}>
-                <Ionicons name="shield-checkmark" size={16} color="#22C55E" />
-                <Text style={styles.statusText}>Validação Segura</Text>
-              </View>
-              <View style={styles.statusItem}>
-                <Ionicons name="time" size={16} color="#F59E0B" />
-                <Text style={styles.statusText}>Tokens Únicos</Text>
-              </View>
-            </View>
+            </LinearGradient>
           </View>
+
+          <View style={styles.bottomPadding} />
         </ScrollView>
       </LinearGradient>
     </SafeAreaView>
@@ -511,9 +586,17 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
     marginLeft: 12,
     marginRight: 12,
+    textAlign: 'center',
+  },
+  clearButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   validateButton: {
     borderRadius: 16,
@@ -537,6 +620,45 @@ const styles = StyleSheet.create({
   validateButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  resultContainer: {
+    marginBottom: 24,
+  },
+  resultGradient: {
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  resultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  resultIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resultTitle: {
+    color: '#22C55E',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  resultContent: {
+    gap: 8,
+  },
+  resultText: {
+    color: '#E2E8F0',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  resultLabel: {
+    color: '#22C55E',
     fontWeight: '600',
   },
   instructionsContainer: {
@@ -608,14 +730,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
-  statusItems: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  statusCard: {
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  statusItems: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
   },
   statusItem: {
     flexDirection: 'row',
@@ -632,5 +755,8 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 12,
     fontWeight: '500',
+  },
+  bottomPadding: {
+    height: 40,
   },
 });

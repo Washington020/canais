@@ -80,7 +80,7 @@ export default function ClientLogin() {
     try {
       if (!email || !password) {
         Alert.alert(
-          'Campos Obrigatórios ⚠️',
+          '⚠️ Campos Obrigatórios',
           'Por favor, preencha email e senha para continuar.'
         );
         return;
@@ -88,7 +88,7 @@ export default function ClientLogin() {
 
       if (!email.includes('@')) {
         Alert.alert(
-          'Email Inválido ❌',
+          '❌ Email Inválido',
           'Por favor, digite um email válido (exemplo: cliente@luxepass.com).'
         );
         return;
@@ -122,20 +122,20 @@ export default function ClientLogin() {
         const errorData = await response.text();
         console.error('❌ Response not ok:', errorData);
         
-        let title = 'Erro no Login ❌';
+        let title = '❌ Erro no Login';
         let message = 'Não foi possível realizar o login.';
 
         if (response.status === 401) {
-          title = 'Credenciais Inválidas ❌';
-          message = 'Email ou senha incorretos. Verifique seus dados e tente novamente.\n\n💡 Credenciais padrão:\nEmail: cliente@luxepass.com\nSenha: cliente123';
+          title = '❌ Credenciais Inválidas';
+          message = 'Email ou senha incorretos. Verifique seus dados e tente novamente.\n\n💡 Credenciais padrão:\n📧 Email: cliente@luxepass.com\n🔐 Senha: cliente123';
         } else if (response.status === 400) {
-          title = 'Dados Inválidos ❌';
+          title = '❌ Dados Inválidos';
           message = 'Email e senha são obrigatórios. Verifique se preencheu todos os campos corretamente.';
         } else if (response.status === 403) {
-          title = 'Acesso Negado ❌';
+          title = '❌ Acesso Negado';
           message = 'Sua conta pode estar bloqueada. Entre em contato com o suporte.';
         } else if (response.status >= 500) {
-          title = 'Erro do Servidor ❌';
+          title = '🔧 Erro do Servidor';
           message = 'Erro interno do servidor. Tente novamente em alguns minutos.';
         } else {
           try {
@@ -157,7 +157,7 @@ export default function ClientLogin() {
       
       if (!access_token) {
         Alert.alert(
-          'Erro de Resposta ❌',
+          '❌ Erro de Resposta',
           'Token de acesso não foi recebido. Tente novamente.'
         );
         return;
@@ -175,11 +175,11 @@ export default function ClientLogin() {
     } catch (error: any) {
       console.error('❌ Erro geral no login:', error);
       
-      let title = 'Erro no Login ❌';
+      let title = '❌ Erro no Login';
       let message = 'Não foi possível realizar o login.';
 
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        title = 'Erro de Conexão ❌';
+        title = '🌐 Erro de Conexão';
         message = 'Não foi possível conectar ao servidor. Verifique sua conexão com a internet.';
       } else {
         message = error.message || 'Erro desconhecido ao fazer login.';
@@ -377,7 +377,10 @@ export default function ClientLogin() {
                     style={styles.loginButtonGradient}
                   >
                     {loading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <>
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <Text style={styles.loginButtonText}>Entrando...</Text>
+                      </>
                     ) : (
                       <>
                         <Ionicons name="fitness" size={20} color="#FFFFFF" />
@@ -399,7 +402,7 @@ export default function ClientLogin() {
                 }
               ]}
             >
-              <Text style={styles.featuresTitle}>Recursos Disponíveis</Text>
+              <Text style={styles.featuresTitle}>🚀 Recursos Disponíveis</Text>
               <View style={styles.featuresGrid}>
                 <View style={styles.feature}>
                   <LinearGradient
@@ -460,15 +463,15 @@ export default function ClientLogin() {
                   >
                     <Ionicons name="information-circle" size={20} color="#FFFFFF" />
                   </LinearGradient>
-                  <Text style={styles.credentialsTitle}>Credenciais de Demonstração</Text>
+                  <Text style={styles.credentialsTitle}>✨ Credenciais de Demonstração</Text>
                 </View>
                 
                 <View style={styles.credentialsContent}>
                   <Text style={styles.credentialsText}>
-                    <Text style={styles.credentialsLabel}>Email:</Text> cliente@luxepass.com
+                    <Text style={styles.credentialsLabel}>📧 Email:</Text> cliente@luxepass.com
                   </Text>
                   <Text style={styles.credentialsText}>
-                    <Text style={styles.credentialsLabel}>Senha:</Text> cliente123
+                    <Text style={styles.credentialsLabel}>🔐 Senha:</Text> cliente123
                   </Text>
                 </View>
               </LinearGradient>

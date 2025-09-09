@@ -76,7 +76,7 @@ export default function AdminLogin() {
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert(
-        'Campos Obrigatórios ⚠️',
+        '⚠️ Campos Obrigatórios',
         'Por favor, preencha email e senha para continuar.'
       );
       return;
@@ -84,7 +84,7 @@ export default function AdminLogin() {
 
     if (!email.includes('@')) {
       Alert.alert(
-        'Email Inválido ❌',
+        '❌ Email Inválido',
         'Por favor, digite um email válido (exemplo: admin@luxepass.com).'
       );
       return;
@@ -106,23 +106,23 @@ export default function AdminLogin() {
     } catch (error: any) {
       console.error('Admin login error:', error);
       
-      let title = 'Erro no Login ❌';
+      let title = '❌ Erro no Login';
       let message = 'Não foi possível realizar o login.';
 
       if (error.response?.status === 401) {
-        title = 'Credenciais Inválidas ❌';
-        message = 'Email ou senha incorretos. Verifique seus dados e tente novamente.\n\n💡 Credenciais padrão:\nEmail: admin@luxepass.com\nSenha: admin123';
+        title = '❌ Credenciais Inválidas';
+        message = 'Email ou senha incorretos. Verifique seus dados e tente novamente.\n\n💡 Credenciais padrão:\n📧 Email: admin@luxepass.com\n🔐 Senha: admin123';
       } else if (error.response?.status === 400) {
-        title = 'Dados Inválidos ❌';
+        title = '❌ Dados Inválidos';
         message = 'Email e senha são obrigatórios. Verifique se preencheu todos os campos corretamente.';
       } else if (error.response?.status === 403) {
-        title = 'Acesso Negado ❌';
+        title = '❌ Acesso Negado';
         message = 'Você não tem permissão de administrador. Entre em contato com o suporte.';
       } else if (error.code === 'ECONNABORTED') {
-        title = 'Timeout ❌';
+        title = '⏱️ Timeout';
         message = 'A conexão demorou muito. Verifique sua internet e tente novamente.';
       } else if (error.response?.status >= 500) {
-        title = 'Erro do Servidor ❌';
+        title = '🔧 Erro do Servidor';
         message = 'Erro interno do servidor. Tente novamente em alguns minutos.';
       } else {
         message = error.response?.data?.detail || error.message || 'Erro desconhecido ao fazer login.';
@@ -325,7 +325,10 @@ export default function AdminLogin() {
                     style={styles.loginButtonGradient}
                   >
                     {loading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <>
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <Text style={styles.loginButtonText}>Entrando...</Text>
+                      </>
                     ) : (
                       <>
                         <Ionicons name="shield-checkmark" size={20} color="#FFFFFF" />
@@ -347,7 +350,7 @@ export default function AdminLogin() {
                 }
               ]}
             >
-              <Text style={styles.featuresTitle}>Recursos Administrativos</Text>
+              <Text style={styles.featuresTitle}>🚀 Recursos Administrativos</Text>
               <View style={styles.featuresGrid}>
                 <View style={styles.feature}>
                   <LinearGradient
@@ -408,15 +411,15 @@ export default function AdminLogin() {
                   >
                     <Ionicons name="information-circle" size={20} color="#FFFFFF" />
                   </LinearGradient>
-                  <Text style={styles.credentialsTitle}>Credenciais de Demonstração</Text>
+                  <Text style={styles.credentialsTitle}>✨ Credenciais de Demonstração</Text>
                 </View>
                 
                 <View style={styles.credentialsContent}>
                   <Text style={styles.credentialsText}>
-                    <Text style={styles.credentialsLabel}>Email:</Text> admin@luxepass.com
+                    <Text style={styles.credentialsLabel}>📧 Email:</Text> admin@luxepass.com
                   </Text>
                   <Text style={styles.credentialsText}>
-                    <Text style={styles.credentialsLabel}>Senha:</Text> admin123
+                    <Text style={styles.credentialsLabel}>🔐 Senha:</Text> admin123
                   </Text>
                 </View>
               </LinearGradient>
