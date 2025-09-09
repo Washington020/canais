@@ -986,10 +986,22 @@ async def reset_gym_password(gym_id: str):
     hashed_password = pwd_context.hash(new_password)
     
     # Update gym password using MongoDB _id - salvar na estrutura correta
+    # First get the current gym to preserve the username
+    current_gym = await db.gyms.find_one({"_id": ObjectId(gym_id)})
+    if not current_gym:
+        raise HTTPException(status_code=404, detail="Academia não encontrada")
+    
+    # Get existing username or generate one
+    existing_username = current_gym.get("login_credentials", {}).get("username")
+    if not existing_username:
+        # If no username exists, generate one
+        existing_username = f"gym_{gym_id[:8]}_{random.randint(1000, 9999)}"
+    
     result = await db.gyms.update_one(
         {"_id": ObjectId(gym_id)},
         {
             "$set": {
+                "login_credentials.username": existing_username,
                 "login_credentials.password_hash": hashed_password,
                 "password_reset_at": datetime.now(timezone.utc)
             }
