@@ -1648,10 +1648,12 @@ class FitPassTester:
         
         boleto_response = self.make_request("POST", "/payments/pagarme/checkout/session", boleto_data)
         
-        if boleto_response and boleto_response.status_code == 200:
+        if boleto_response is None:
+            self.log_test("Pagar.me Boleto Payment", False, "No response received from server")
+        elif boleto_response.status_code == 200:
             boleto_result = boleto_response.json()
             self.log_test("Pagar.me Boleto Payment", True, f"Boleto payment method working - Order: {boleto_result.get('order_id', 'N/A')}")
-        elif boleto_response and boleto_response.status_code == 500:
+        elif boleto_response.status_code == 500:
             # Check if it's the expected Pagar.me API error
             error_detail = ""
             try:
@@ -1664,7 +1666,7 @@ class FitPassTester:
             else:
                 self.log_test("Pagar.me Boleto Payment", False, f"Unexpected error: {error_detail}")
         else:
-            self.log_test("Pagar.me Boleto Payment", False, "Boleto payment method failed")
+            self.log_test("Pagar.me Boleto Payment", False, f"Unexpected status code: {boleto_response.status_code}")
         
         print("\n✅ PAGAR.ME ENDPOINTS TESTING COMPLETE!")
         print("Summary of Pagar.me tests:")
