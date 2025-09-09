@@ -160,6 +160,27 @@ class CreateCheckoutRequest(BaseModel):
     origin_url: str
     payment_method: str = "stripe"  # stripe or pagarme
 
+# Notification Models
+class PushTokenRequest(BaseModel):
+    push_token: str
+    device_info: Optional[Dict[str, Any]] = None
+
+class NotificationRequest(BaseModel):
+    title: str
+    body: str
+    data: Optional[Dict[str, Any]] = None
+    user_ids: Optional[List[str]] = None  # If None, send to all users
+
+class ScheduledNotification(BaseModel):
+    id: Optional[str] = None
+    user_id: str
+    title: str
+    body: str
+    data: Optional[Dict[str, Any]] = None
+    schedule_time: datetime
+    sent: bool = False
+    created_at: Optional[datetime] = None
+
 # Admin Models
 class AdminStats(BaseModel):
     total_users: int
