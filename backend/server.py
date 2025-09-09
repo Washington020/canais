@@ -1339,6 +1339,202 @@ async def get_admin_users():
     
     return result
 
+# Enhanced Dashboard Endpoints for Admin
+@api_router.get("/admin/dashboard/stats")
+async def get_enhanced_dashboard_stats():
+    """Get comprehensive dashboard statistics"""
+    try:
+        # Get current date for monthly calculations
+        current_date = datetime.now(timezone.utc)
+        start_of_month = current_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Users statistics
+        total_users = await db.users.count_documents({})
+        active_users = await db.users.count_documents({"payment_status": "active"})
+        
+        # Gyms statistics  
+        total_gyms = await db.gyms.count_documents({})
+        active_gyms = await db.gyms.count_documents({"status": "active"})
+        
+        # Tokens statistics this month
+        tokens_this_month = await db.user_tokens.count_documents({
+            "created_at": {"$gte": start_of_month}
+        })
+        
+        # Check-ins this month
+        checkins_this_month = await db.token_validations.count_documents({
+            "validated_at": {"$gte": start_of_month}
+        })
+        
+        # Revenue this month from transactions
+        revenue_pipeline = [
+            {
+                "$match": {
+                    "payment_status": "paid",
+                    "created_at": {"$gte": start_of_month.isoformat()}
+                }
+            },
+            {
+                "$group": {
+                    "_id": None,
+                    "total_revenue": {"$sum": "$amount"}
+                }
+            }
+        ]
+        
+        revenue_result = await db.payment_transactions.aggregate(revenue_pipeline).to_list(1)
+        monthly_revenue = revenue_result[0]["total_revenue"] if revenue_result else 0
+        
+        # Conversion rate (paid users / total users)
+        conversion_rate = (active_users / total_users * 100) if total_users > 0 else 0
+        
+        # Scheduled appointments this month
+        appointments_this_month = await db.appointments.count_documents({
+            "appointment_date": {"$gte": start_of_month},
+            "status": {"$in": ["scheduled", "completed"]}
+        })
+        
+        # Revenue to receive (pending transactions)
+        pending_revenue = await db.payment_transactions.count_documents({
+            "payment_status": "pending"
+        })
+        
+        return {
+            "total_users": total_users,
+            "active_users": active_users,
+            "overdue_payments": total_users - active_users,
+            "blocked_users": 0,  # We don't have blocked users yet
+            "total_gyms": total_gyms,
+            "active_gyms": active_gyms,
+            "tokens_generated_today": 0,  # Would need daily tracking
+            "tokens_generated_month": tokens_this_month,
+            "monthly_revenue": monthly_revenue,
+            "checkins_month": checkins_this_month,
+            "conversion_rate": round(conversion_rate, 1),
+            "appointments_month": appointments_this_month,
+            "pending_revenue": pending_revenue
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar estatísticas do dashboard: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar estatísticas")
+
+@api_router.get("/admin/dashboard/recent-users")
+async def get_recent_users(limit: int = 10):
+    """Get recently registered users"""
+    try:
+        users = await db.users.find({}).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        result = []
+        for user in users:
+            result.append({
+                "id": str(user["_id"]),
+                "full_name": user.get("full_name", "Usuário"),
+                "email": user.get("email", ""),
+                "plan_type": user.get("plan_type", "basic"),
+                "status": user.get("payment_status", "inactive"),
+                "created_at": user.get("created_at", datetime.now(timezone.utc)).isoformat(),
+                "subscription": {
+                    "monthly_amount": user.get("monthly_amount", 0),
+                    "status": user.get("payment_status", "inactive")
+                }
+            })
+        
+        return {"users": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar usuários recentes: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar usuários")
+
+@api_router.get("/admin/dashboard/recent-tokens") 
+async def get_recent_tokens(limit: int = 10):
+    """Get recently generated tokens"""
+    try:
+        tokens = await db.user_tokens.find({}).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        result = []
+        for token in tokens:
+            result.append({
+                "token_code": token.get("token_code", ""),
+                "token_type": token.get("token_type", "gym"),
+                "created_at": token.get("created_at", datetime.now(timezone.utc)).isoformat(),
+                "user_id": str(token.get("user_id", "")),
+                "status": token.get("status", "active")
+            })
+        
+        return {"tokens": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar tokens recentes: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar tokens")
+
+@api_router.get("/admin/dashboard/appointments")
+async def get_scheduled_appointments(limit: int = 20):
+    """Get scheduled appointments for dashboard"""
+    try:
+        appointments = await db.appointments.find({
+            "status": {"$in": ["scheduled", "completed"]}
+        }).sort("appointment_date", 1).limit(limit).to_list(limit)
+        
+        result = []
+        for appointment in appointments:
+            # Get user details
+            user = await db.users.find_one({"_id": ObjectId(appointment["user_id"])})
+            
+            result.append({
+                "id": str(appointment["_id"]),
+                "user_name": user.get("full_name", "Usuário") if user else "Usuário",
+                "user_email": user.get("email", "") if user else "",
+                "user_plan": user.get("plan_type", "basic") if user else "basic",
+                "appointment_type": appointment.get("appointment_type", "nutritionist"),  # nutritionist or personal
+                "appointment_date": appointment.get("appointment_date").isoformat(),
+                "status": appointment.get("status", "scheduled"),
+                "notes": appointment.get("notes", ""),
+                "created_at": appointment.get("created_at", datetime.now(timezone.utc)).isoformat()
+            })
+        
+        return {"appointments": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar agendamentos: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar agendamentos")
+
+@api_router.get("/admin/dashboard/gym-performance")
+async def get_gym_performance(limit: int = 10):
+    """Get gym performance statistics"""
+    try:
+        # Get gyms with their check-in counts
+        current_month = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        gyms = await db.gyms.find({"status": "active"}).limit(limit).to_list(limit)
+        
+        result = []
+        for gym in gyms:
+            gym_id = str(gym["_id"])
+            
+            # Count check-ins this month for this gym
+            checkins = await db.token_validations.count_documents({
+                "gym_id": gym_id,
+                "validated_at": {"$gte": current_month}
+            })
+            
+            # Calculate revenue (assuming R$ 5 per check-in)
+            monthly_revenue = checkins * 5.0
+            
+            result.append({
+                "id": gym_id,
+                "name": gym.get("name", "Academia"),
+                "status": gym.get("status", "active"),
+                "monthly_checkins": checkins,
+                "monthly_revenue": monthly_revenue
+            })
+        
+        return {"gyms": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar performance das academias: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar performance")
+
 @api_router.put("/admin/users/{user_id}/block")
 async def block_user(user_id: str):
     result = await db.users.update_one(
