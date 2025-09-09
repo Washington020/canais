@@ -279,6 +279,11 @@ class LuxePassTester:
         
         response = self.make_request("POST", "/auth/login", wrong_admin, auth_required=False)
         
+        print(f"   DEBUG: Response object: {response}")
+        print(f"   DEBUG: Response is None: {response is None}")
+        if response:
+            print(f"   DEBUG: Response status: {response.status_code}")
+        
         if response and response.status_code == 401:
             try:
                 error_detail = response.json().get("detail", "")
