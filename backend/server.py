@@ -1818,6 +1818,7 @@ async def get_user_transactions(current_user: User = Depends(get_current_user)):
         plan = PAYMENT_PLANS.get(transaction["plan_id"], {})
         result.append({
             "id": str(transaction["_id"]),
+            "plan_id": transaction["plan_id"],
             "plan_name": plan.get("name", transaction["plan_id"]),
             "amount": transaction["amount"],
             "currency": transaction["currency"],
