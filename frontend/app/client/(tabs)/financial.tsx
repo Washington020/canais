@@ -552,10 +552,61 @@ export default function Financial() {
                       <Text style={styles.currentPlanText}>Plano Atual</Text>
                     </View>
                   ) : (
-                    <View style={styles.selectPlanButton}>
-                      <Text style={styles.selectPlanText}>
-                        Assinar por {formatCurrency(plan.price)}/mês
-                      </Text>
+                    <View style={styles.paymentMethodsContainer}>
+                      <Text style={styles.paymentMethodsTitle}>Escolha sua forma de pagamento:</Text>
+                      
+                      {/* Stripe Payment */}
+                      <TouchableOpacity 
+                        style={styles.paymentMethodButton}
+                        onPress={() => subscribeToPlan(plan.id, 'stripe')}
+                      >
+                        <View style={styles.paymentMethodContent}>
+                          <Ionicons name="card" size={20} color="#4285F4" />
+                          <View style={styles.paymentMethodText}>
+                            <Text style={styles.paymentMethodName}>Cartão de Crédito</Text>
+                            <Text style={styles.paymentMethodDesc}>Visa, Mastercard, American Express</Text>
+                          </View>
+                          <Text style={styles.paymentMethodPrice}>
+                            {formatCurrency(plan.price)}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+
+                      {/* PIX Payment */}
+                      <TouchableOpacity 
+                        style={styles.paymentMethodButton}
+                        onPress={() => subscribeToPlan(plan.id, 'pix')}
+                      >
+                        <View style={styles.paymentMethodContent}>
+                          <View style={styles.pixIcon}>
+                            <Text style={styles.pixText}>PIX</Text>
+                          </View>
+                          <View style={styles.paymentMethodText}>
+                            <Text style={styles.paymentMethodName}>PIX</Text>
+                            <Text style={styles.paymentMethodDesc}>Pagamento instantâneo via PIX</Text>
+                          </View>
+                          <Text style={styles.paymentMethodPrice}>
+                            {formatCurrency(plan.price)}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+
+                      {/* Boleto Payment */}
+                      <TouchableOpacity 
+                        style={styles.paymentMethodButton}
+                        onPress={() => subscribeToPlan(plan.id, 'boleto')}
+                      >
+                        <View style={styles.paymentMethodContent}>
+                          <Ionicons name="receipt" size={20} color="#FF6B35" />
+                          <View style={styles.paymentMethodText}>
+                            <Text style={styles.paymentMethodName}>Boleto Bancário</Text>
+                            <Text style={styles.paymentMethodDesc}>Vencimento em 3 dias úteis</Text>
+                          </View>
+                          <Text style={styles.paymentMethodPrice}>
+                            {formatCurrency(plan.price)}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
                     </View>
                   )}
                 </TouchableOpacity>
