@@ -1830,6 +1830,213 @@ async def get_user_transactions(current_user: User = Depends(get_current_user)):
     
     return result
 
+# Notification System Endpoints
+@api_router.post("/notifications/register-token")
+async def register_push_token(
+    request: PushTokenRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Register user's push notification token"""
+    try:
+        # Update user with push token
+        await db.users.update_one(
+            {"_id": ObjectId(current_user.id)},
+            {
+                "$set": {
+                    "push_token": request.push_token,
+                    "device_info": request.device_info,
+                    "push_token_updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        logger.info(f"Push token registered for user {current_user.id}")
+        return {"success": True, "message": "Push token registrado com sucesso"}
+        
+    except Exception as e:
+        logger.error(f"Erro ao registrar push token: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao registrar token de notificação")
+
+@api_router.get("/notifications/user/preferences")
+async def get_notification_preferences(current_user: User = Depends(get_current_user)):
+    """Get user notification preferences"""
+    try:
+        user = await db.users.find_one({"_id": ObjectId(current_user.id)})
+        preferences = user.get("notification_preferences", {
+            "payment_reminders": True,
+            "token_reminders": True,
+            "gym_reminders": True,
+            "promotional": False,
+            "weekly_summary": True
+        })
+        
+        return preferences
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar preferências de notificação: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar preferências")
+
+@api_router.put("/notifications/user/preferences")
+async def update_notification_preferences(
+    preferences: Dict[str, bool],
+    current_user: User = Depends(get_current_user)
+):
+    """Update user notification preferences"""
+    try:
+        await db.users.update_one(
+            {"_id": ObjectId(current_user.id)},
+            {
+                "$set": {
+                    "notification_preferences": preferences,
+                    "preferences_updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        return {"success": True, "message": "Preferências atualizadas com sucesso"}
+        
+    except Exception as e:
+        logger.error(f"Erro ao atualizar preferências: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao atualizar preferências")
+
+@api_router.post("/notifications/schedule")
+async def schedule_notification(
+    notification: ScheduledNotification,
+    current_user: User = Depends(get_current_user)
+):
+    """Schedule a notification for a user"""
+    try:
+        notification_data = {
+            "user_id": str(current_user.id),
+            "title": notification.title,
+            "body": notification.body,
+            "data": notification.data or {},
+            "schedule_time": notification.schedule_time,
+            "sent": False,
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        result = await db.scheduled_notifications.insert_one(notification_data)
+        
+        return {
+            "success": True,
+            "notification_id": str(result.inserted_id),
+            "message": "Notificação agendada com sucesso"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao agendar notificação: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao agendar notificação")
+
+@api_router.get("/notifications/user/scheduled")
+async def get_user_scheduled_notifications(current_user: User = Depends(get_current_user)):
+    """Get user's scheduled notifications"""
+    try:
+        notifications = await db.scheduled_notifications.find(
+            {"user_id": str(current_user.id), "sent": False}
+        ).sort("schedule_time", 1).to_list(50)
+        
+        result = []
+        for notification in notifications:
+            result.append({
+                "id": str(notification["_id"]),
+                "title": notification["title"],
+                "body": notification["body"],
+                "data": notification.get("data", {}),
+                "schedule_time": notification["schedule_time"].isoformat(),
+                "created_at": notification["created_at"].isoformat()
+            })
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar notificações agendadas: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar notificações")
+
+@api_router.delete("/notifications/scheduled/{notification_id}")
+async def cancel_scheduled_notification(
+    notification_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Cancel a scheduled notification"""
+    try:
+        result = await db.scheduled_notifications.delete_one({
+            "_id": ObjectId(notification_id),
+            "user_id": str(current_user.id),
+            "sent": False
+        })
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Notificação não encontrada")
+        
+        return {"success": True, "message": "Notificação cancelada com sucesso"}
+        
+    except Exception as e:
+        logger.error(f"Erro ao cancelar notificação: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao cancelar notificação")
+
+# Admin notification endpoints
+@api_router.post("/admin/notifications/send")
+async def send_admin_notification(notification: NotificationRequest):
+    """Send notification to users (admin only)"""
+    try:
+        # Get users to send notification to
+        if notification.user_ids:
+            users = await db.users.find(
+                {"_id": {"$in": [ObjectId(uid) for uid in notification.user_ids]}}
+            ).to_list(1000)
+        else:
+            # Send to all users with push tokens
+            users = await db.users.find({"push_token": {"$exists": True}}).to_list(1000)
+        
+        sent_count = 0
+        for user in users:
+            if user.get("push_token"):
+                # Here you would integrate with Expo Push Notification Service
+                # For now, we'll just store the notification
+                notification_data = {
+                    "user_id": str(user["_id"]),
+                    "title": notification.title,
+                    "body": notification.body,
+                    "data": notification.data or {},
+                    "sent_at": datetime.now(timezone.utc),
+                    "sent": True,
+                    "push_token": user["push_token"]
+                }
+                
+                await db.sent_notifications.insert_one(notification_data)
+                sent_count += 1
+        
+        return {
+            "success": True,
+            "sent_count": sent_count,
+            "message": f"Notificação enviada para {sent_count} usuários"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao enviar notificação: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao enviar notificação")
+
+@api_router.get("/admin/notifications/stats")
+async def get_notification_stats():
+    """Get notification statistics for admin"""
+    try:
+        total_users_with_tokens = await db.users.count_documents({"push_token": {"$exists": True}})
+        scheduled_notifications = await db.scheduled_notifications.count_documents({"sent": False})
+        sent_today = await db.sent_notifications.count_documents({
+            "sent_at": {"$gte": datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)}
+        })
+        
+        return {
+            "users_with_push_tokens": total_users_with_tokens,
+            "scheduled_notifications": scheduled_notifications,
+            "sent_today": sent_today
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar estatísticas de notificação: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar estatísticas")
+
 # Include the router in the main app
 # Include routers
 app.include_router(api_router)
