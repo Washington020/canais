@@ -204,14 +204,16 @@ export default function Nutrition() {
     );
   }
 
+  const todaySupplementsList = getSupplementsForToday();
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Nutrição</Text>
-        <Text style={styles.subtitle}>Acompanhe sua alimentação</Text>
+        <Text style={styles.title}>Suplementação</Text>
+        <Text style={styles.subtitle}>Acompanhe sua suplementação diária</Text>
       </View>
 
       <ScrollView 
@@ -220,227 +222,207 @@ export default function Nutrition() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Daily Overview */}
-        <View style={styles.overviewContainer}>
-          <Text style={styles.sectionTitle}>Resumo Diário</Text>
+        {/* Today's Supplements */}
+        <View style={styles.todayContainer}>
+          <Text style={styles.sectionTitle}>📋 Hoje - {new Date().toLocaleDateString('pt-BR')}</Text>
           
-          <View style={styles.caloriesCard}>
-            <View style={styles.caloriesHeader}>
-              <Text style={styles.caloriesTitle}>Calorias</Text>
-              <Text style={styles.caloriesNumbers}>
-                {consumedCalories} / {nutritionPlan?.daily_calories} kcal
+          {!supplementPlan ? (
+            <View style={styles.noSupplementsCard}>
+              <Ionicons name="restaurant-outline" size={48} color="#64748B" />
+              <Text style={styles.noSupplementsTitle}>Nenhum Plano de Suplementação</Text>
+              <Text style={styles.noSupplementsText}>
+                Você ainda não possui um plano de suplementação ativo. Agende uma consulta com nossa nutricionista para criar seu plano personalizado.
               </Text>
+              {userPlan === 'basic' && (
+                <TouchableOpacity 
+                  style={styles.upgradeButton}
+                  onPress={() => router.push('/client/(tabs)/financial')}
+                >
+                  <Text style={styles.upgradeButtonText}>Upgrade para Premium/VIP</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View style={[
-                  styles.progressFill,
-                  { 
-                    width: `${Math.min(getCaloriesProgress(), 100)}%`,
-                    backgroundColor: getCaloriesProgress() > 100 ? '#EF4444' : '#8B5CF6'
-                  }
-                ]} />
-              </View>
-              <Text style={styles.progressText}>
-                {Math.round(getCaloriesProgress())}% da meta
-              </Text>
+          ) : todaySupplementsList.length === 0 ? (
+            <View style={styles.noSupplementsTodayCard}>
+              <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
+              <Text style={styles.noSupplementsTodayText}>Nenhum suplemento programado para hoje!</Text>
             </View>
-          </View>
-
-          {/* Macronutrients */}
-          <View style={styles.macrosContainer}>
-            <View style={styles.macroCard}>
-              <Text style={styles.macroName}>Proteínas</Text>
-              <Text style={styles.macroValue}>142g / {nutritionPlan?.daily_protein}g</Text>
-              <View style={styles.macroProgress}>
-                <View style={[
-                  styles.macroProgressFill,
-                  { 
-                    width: `${Math.min(getProteinProgress(), 100)}%`,
-                    backgroundColor: '#22C55E'
-                  }
-                ]} />
-              </View>
-              <Text style={styles.macroPercent}>{Math.round(getProteinProgress())}%</Text>
-            </View>
-
-            <View style={styles.macroCard}>
-              <Text style={styles.macroName}>Carboidratos</Text>
-              <Text style={styles.macroValue}>198g / {nutritionPlan?.daily_carbs}g</Text>
-              <View style={styles.macroProgress}>
-                <View style={[
-                  styles.macroProgressFill,
-                  { 
-                    width: `${Math.min(getCarbsProgress(), 100)}%`,
-                    backgroundColor: '#F59E0B'
-                  }
-                ]} />
-              </View>
-              <Text style={styles.macroPercent}>{Math.round(getCarbsProgress())}%</Text>
-            </View>
-
-            <View style={styles.macroCard}>
-              <Text style={styles.macroName}>Gorduras</Text>
-              <Text style={styles.macroValue}>67g / {nutritionPlan?.daily_fats}g</Text>
-              <View style={styles.macroProgress}>
-                <View style={[
-                  styles.macroProgressFill,
-                  { 
-                    width: `${Math.min(getFatsProgress(), 100)}%`,
-                    backgroundColor: '#EF4444'
-                  }
-                ]} />
-              </View>
-              <Text style={styles.macroPercent}>{Math.round(getFatsProgress())}%</Text>
-            </View>
-          </View>
-
-          {/* Water Intake */}
-          <View style={styles.waterCard}>
-            <View style={styles.waterHeader}>
-              <Ionicons name="water" size={24} color="#3B82F6" />
-              <Text style={styles.waterTitle}>Hidratação</Text>
-              <TouchableOpacity style={styles.addWaterButton} onPress={addWater}>
-                <Ionicons name="add" size={20} color="#3B82F6" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.waterAmount}>{waterIntake.toFixed(1)}L / 3.0L</Text>
-            <View style={styles.waterProgress}>
-              <View style={[
-                styles.waterProgressFill,
-                { 
-                  width: `${Math.min(getWaterProgress(), 100)}%`,
-                  backgroundColor: '#3B82F6'
-                }
-              ]} />
-            </View>
-          </View>
-        </View>
-
-        {/* Meal Plan */}
-        <View style={styles.mealsContainer}>
-          <Text style={styles.sectionTitle}>Plano Alimentar</Text>
-          
-          {nutritionPlan?.meals.map((meal, index) => (
-            <View key={index} style={[
-              styles.mealCard,
-              meal.completed && styles.mealCardCompleted
-            ]}>
-              <View style={styles.mealHeader}>
-                <View style={styles.mealInfo}>
-                  <Text style={styles.mealName}>{meal.name}</Text>
-                  <Text style={styles.mealTime}>{meal.time}</Text>
-                </View>
-                <View style={styles.mealCalories}>
-                  <Text style={styles.mealCaloriesText}>{meal.calories} kcal</Text>
-                </View>
-              </View>
-              
-              <View style={styles.mealFoods}>
-                {meal.foods.map((food: string, foodIndex: number) => (
-                  <Text key={foodIndex} style={styles.foodItem}>• {food}</Text>
-                ))}
-              </View>
-              
-              <View style={styles.mealActions}>
-                {meal.completed ? (
-                  <View style={styles.completedMeal}>
-                    <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
-                    <Text style={styles.completedMealText}>Concluída</Text>
+          ) : (
+            <View style={styles.supplementsList}>
+              {todaySupplementsList.map((supplement) => {
+                const status = getSupplementStatus(supplement);
+                return (
+                  <View key={supplement.id} style={styles.supplementCard}>
+                    <View style={styles.supplementHeader}>
+                      <View style={styles.supplementInfo}>
+                        <Text style={styles.supplementName}>{supplement.supplement_name}</Text>
+                        <Text style={styles.supplementTime}>
+                          {new Date(supplement.scheduled_time).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </Text>
+                      </View>
+                      
+                      <View style={[styles.statusBadge, { backgroundColor: `${status.color}20` }]}>
+                        <Ionicons name={status.icon as any} size={16} color={status.color} />
+                        <Text style={[styles.statusText, { color: status.color }]}>
+                          {status.text}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    {supplement.status === 'pending' && (
+                      <TouchableOpacity 
+                        style={styles.takeSupplementButton}
+                        onPress={() => markSupplementTaken(supplement.id)}
+                      >
+                        <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                        <Text style={styles.takeSupplementText}>Marcar como Tomado</Text>
+                      </TouchableOpacity>
+                    )}
+                    
+                    {supplement.taken_at && (
+                      <Text style={styles.takenAtText}>
+                        Tomado em: {new Date(supplement.taken_at).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </Text>
+                    )}
                   </View>
-                ) : (
-                  <TouchableOpacity 
-                    style={styles.completeMealButton}
-                    onPress={() => markMealAsCompleted(index)}
-                  >
-                    <Text style={styles.completeMealButtonText}>Marcar como Concluída</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+                );
+              })}
             </View>
-          ))}
+          )}
         </View>
 
-        {/* Nutritionist Section */}
-        <View style={styles.nutritionistContainer}>
-          <Text style={styles.sectionTitle}>Orientações da Nutricionista</Text>
+        {/* Nutritionist Consultation */}
+        <View style={styles.consultationContainer}>
+          <Text style={styles.sectionTitle}>👩‍⚕️ Orientações da Nutricionista</Text>
           
-          <View style={styles.nutritionistCard}>
+          <View style={styles.consultationCard}>
             <View style={styles.nutritionistHeader}>
               <View style={styles.nutritionistAvatar}>
-                <Text style={styles.nutritionistAvatarText}>AC</Text>
+                <Text style={styles.nutritionistAvatarText}>DR</Text>
               </View>
               <View style={styles.nutritionistInfo}>
-                <Text style={styles.nutritionistName}>Dra. Ana Carolina</Text>
-                <Text style={styles.nutritionistTitle}>Nutricionista Esportiva</Text>
+                <Text style={styles.nutritionistName}>Dra. Roberta Silva</Text>
+                <Text style={styles.nutritionistTitle}>Nutricionista Esportiva - CRN 12345</Text>
               </View>
             </View>
             
-            <View style={styles.nutritionistMessage}>
+            <View style={styles.consultationMessage}>
               <Text style={styles.messageText}>
-                "Parabéns pelo progresso! Continue mantendo a consistência nas refeições. 
-                Lembre-se de beber água ao longo do dia e não pular o café da manhã."
+                "Olá! Para ter um plano de suplementação personalizado, é importante agendar uma consulta. 
+                Vamos avaliar suas necessidades individuais e criar um protocolo adequado para seus objetivos."
               </Text>
             </View>
             
-            <View style={styles.nutritionistActions}>
-              <TouchableOpacity style={styles.scheduleButton}>
-                <Ionicons name="calendar" size={16} color="#8B5CF6" />
-                <Text style={styles.scheduleButtonText}>Próxima Consulta: 25/01</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.messageButton}>
-                <Ionicons name="chatbubble" size={16} color="#22C55E" />
-                <Text style={styles.messageButtonText}>Enviar Mensagem</Text>
-              </TouchableOpacity>
-            </View>
+            {userPlan === 'basic' ? (
+              <View style={styles.upgradeSection}>
+                <Text style={styles.upgradeText}>
+                  Agendamentos disponíveis para planos Premium e VIP
+                </Text>
+                <TouchableOpacity 
+                  style={styles.upgradeButton}
+                  onPress={() => router.push('/client/(tabs)/financial')}
+                >
+                  <Ionicons name="arrow-up-circle" size={16} color="#FFFFFF" />
+                  <Text style={styles.upgradeButtonText}>Fazer Upgrade</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.appointmentSection}>
+                <Text style={styles.appointmentTitle}>Horários Disponíveis</Text>
+                
+                {availableSlots.length === 0 ? (
+                  <Text style={styles.noSlotsText}>
+                    Nenhum horário disponível no momento. Tente novamente mais tarde.
+                  </Text>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slotsScroll}>
+                    {availableSlots.slice(0, 5).map((slot) => (
+                      <TouchableOpacity 
+                        key={slot.id}
+                        style={styles.slotCard}
+                        onPress={() => scheduleAppointment(slot.id)}
+                      >
+                        <Text style={styles.slotDate}>
+                          {new Date(slot.date).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: 'short'
+                          })}
+                        </Text>
+                        <Text style={styles.slotTime}>
+                          {new Date(slot.date).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+                
+                <TouchableOpacity style={styles.messageNutritionistButton}>
+                  <Ionicons name="chatbubble" size={16} color="#22C55E" />
+                  <Text style={styles.messageNutritionistText}>Enviar Mensagem</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
 
-        {/* Supplements */}
-        <View style={styles.supplementsContainer}>
-          <Text style={styles.sectionTitle}>Suplementação</Text>
-          
-          {nutritionPlan?.supplements.map((supplement, index) => (
-            <View key={index} style={styles.supplementCard}>
-              <View style={styles.supplementInfo}>
-                <Text style={styles.supplementName}>{supplement.name}</Text>
-                <Text style={styles.supplementDosage}>{supplement.dosage} - {supplement.time}</Text>
+        {/* Supplement Plan Details */}
+        {supplementPlan && (
+          <View style={styles.planDetailsContainer}>
+            <Text style={styles.sectionTitle}>📊 Detalhes do Plano</Text>
+            
+            <View style={styles.planDetailsCard}>
+              <View style={styles.planInfo}>
+                <Text style={styles.planStartDate}>
+                  Iniciado em: {new Date(supplementPlan.start_date).toLocaleDateString('pt-BR')}
+                </Text>
+                <Text style={styles.planCreatedDate}>
+                  Criado em: {new Date(supplementPlan.created_at).toLocaleDateString('pt-BR')}
+                </Text>
               </View>
               
-              <TouchableOpacity 
-                style={[
-                  styles.supplementCheck,
-                  supplement.completed && styles.supplementCheckCompleted
-                ]}
-              >
-                {supplement.completed && (
-                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                )}
-              </TouchableOpacity>
+              <View style={styles.supplementsOverview}>
+                <Text style={styles.overviewTitle}>Suplementos no Plano:</Text>
+                {supplementPlan.supplements.map((supplement, index) => (
+                  <View key={index} style={styles.overviewItem}>
+                    <Text style={styles.overviewSupplementName}>{supplement.name}</Text>
+                    <Text style={styles.overviewSupplementDetails}>
+                      {supplement.dosage} - {supplement.timings?.join(', ') || 'Conforme orientação'}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
-          ))}
-        </View>
+          </View>
+        )}
 
         {/* Tips */}
         <View style={styles.tipsContainer}>
-          <Text style={styles.sectionTitle}>Dicas Nutricionais</Text>
+          <Text style={styles.sectionTitle}>💡 Dicas de Suplementação</Text>
           <View style={styles.tipsCard}>
             <View style={styles.tip}>
               <Ionicons name="time" size={20} color="#8B5CF6" />
-              <Text style={styles.tipText}>Faça refeições a cada 3-4 horas</Text>
-            </View>
-            <View style={styles.tip}>
-              <Ionicons name="restaurant" size={20} color="#22C55E" />
-              <Text style={styles.tipText}>Inclua proteína em todas as refeições</Text>
-            </View>
-            <View style={styles.tip}>
-              <Ionicons name="leaf" size={20} color="#F59E0B" />
-              <Text style={styles.tipText}>Consuma pelo menos 5 porções de frutas/vegetais</Text>
+              <Text style={styles.tipText}>Mantenha horários regulares para máxima eficácia</Text>
             </View>
             <View style={styles.tip}>
               <Ionicons name="water" size={20} color="#3B82F6" />
-              <Text style={styles.tipText}>Beba água antes, durante e após exercícios</Text>
+              <Text style={styles.tipText}>Sempre tome com água, nunca com outros líquidos</Text>
+            </View>
+            <View style={styles.tip}>
+              <Ionicons name="restaurant" size={20} color="#22C55E" />
+              <Text style={styles.tipText}>Alguns suplementos são melhores com alimentos</Text>
+            </View>
+            <View style={styles.tip}>
+              <Ionicons name="alarm" size={20} color="#F59E0B" />
+              <Text style={styles.tipText}>Configure lembretes para não esquecer</Text>
             </View>
           </View>
         </View>
