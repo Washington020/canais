@@ -130,6 +130,36 @@ class Subscription(BaseModel):
     monthly_amount: float
     next_billing: datetime
 
+# Additional Payment Models
+class PaymentPlan(BaseModel):
+    id: str
+    name: str
+    price: float
+    currency: str = "BRL"
+    duration_days: int
+    features: List[str]
+    token_limit: int
+    description: str
+
+class PaymentTransaction(BaseModel):
+    id: Optional[str] = None
+    user_id: str
+    plan_id: str
+    session_id: str
+    payment_id: Optional[str] = None
+    amount: float
+    currency: str = "BRL"
+    payment_status: str = "pending"  # pending, paid, failed, expired
+    payment_method: str  # stripe, pagarme
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+class CreateCheckoutRequest(BaseModel):
+    plan_id: str
+    origin_url: str
+    payment_method: str = "stripe"  # stripe or pagarme
+
 # Admin Models
 class AdminStats(BaseModel):
     total_users: int
