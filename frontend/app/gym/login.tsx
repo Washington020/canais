@@ -87,49 +87,54 @@ export default function GymLogin() {
 
     setLoading(true);
     try {
-      console.log('🔍 [DEBUG] API_URL:', API_URL);
-      console.log('🔍 [DEBUG] Login attempt:', { login, password });
-      console.log('🔍 [DEBUG] Full URL:', `${API_URL}/api/gym/auth`);
+      console.log('🔍 [LOGIN] API_URL:', API_URL);
+      console.log('🔍 [LOGIN] Login attempt:', { login, password: '***' });
+      console.log('🔍 [LOGIN] Full URL:', `${API_URL}/api/gym/auth`);
       
       const response = await axios.post(`${API_URL}/api/gym/auth`, {
         login,
         password
       });
 
-      console.log('✅ [DEBUG] Response received:', response.status);
-      console.log('✅ [DEBUG] Response data:', response.data);
+      console.log('✅ [LOGIN] Response received:', response.status);
+      console.log('✅ [LOGIN] Response data:', response.data);
 
       const { access_token, gym_info } = response.data;
       
       if (!access_token || !gym_info) {
-        console.error('❌ [DEBUG] Missing data in response:', { access_token: !!access_token, gym_info: !!gym_info });
+        console.error('❌ [LOGIN] Missing data in response:', { access_token: !!access_token, gym_info: !!gym_info });
         Alert.alert('Erro', 'Resposta inválida do servidor. Tente novamente.');
         return;
       }
       
-      console.log('💾 [DEBUG] Saving to AsyncStorage...');
+      console.log('💾 [LOGIN] Saving to AsyncStorage...');
       await AsyncStorage.setItem('gymToken', access_token);
       await AsyncStorage.setItem('gymInfo', JSON.stringify(gym_info));
-      console.log('✅ [DEBUG] Saved to AsyncStorage');
+      console.log('✅ [LOGIN] Saved to AsyncStorage');
+      
+      // Verificar se foi salvo corretamente
+      const savedToken = await AsyncStorage.getItem('gymToken');
+      console.log('🔍 [LOGIN] Verification - Token saved:', !!savedToken);
       
       Alert.alert(
         'Login Realizado! ✅',
-        `Bem-vindo ao sistema ${gym_info.name}!\n\nVocê agora pode validar tokens de clientes.\n\nDEBUG: Navegando para /gym/validation`,
+        `Bem-vindo ao sistema ${gym_info.name}!\n\nVocê agora pode validar tokens de clientes.`,
         [
           {
             text: 'Continuar',
             onPress: () => {
-              console.log('🚀 [DEBUG] Navigating to /gym/validation...');
-              router.replace('/gym/validation');
-              console.log('✅ [DEBUG] Navigation command sent');
+              console.log('🚀 [LOGIN] Navigating to /gym/validation...');
+              // Use router.push instead of replace to ensure navigation
+              router.push('/gym/validation');
+              console.log('✅ [LOGIN] Navigation command sent');
             }
           }
         ]
       );
     } catch (error: any) {
-      console.error('❌ [DEBUG] Login error:', error);
-      console.error('❌ [DEBUG] Error details:', error.response?.data);
-      console.error('❌ [DEBUG] Error status:', error.response?.status);
+      console.error('❌ [LOGIN] Login error:', error);
+      console.error('❌ [LOGIN] Error details:', error.response?.data);
+      console.error('❌ [LOGIN] Error status:', error.response?.status);
       
       Alert.alert(
         'Erro de Login ❌', 
