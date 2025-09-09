@@ -1074,6 +1074,58 @@ async def set_gym_password(gym_id: str, password_data: dict):
         "message": "Senha definida com sucesso"
     }
 
+# Debug endpoint to check gym data
+@api_router.post("/gym/auth/debug")
+async def gym_authenticate_debug(credentials: dict):
+    login = credentials.get("login")
+    password = credentials.get("password")
+    
+    print(f"🔍 DEBUG - Login attempt: {login}")
+    
+    # Find gym by login_credentials.username
+    gym = await db.gyms.find_one({"login_credentials.username": login})
+    
+    if not gym:
+        print(f"❌ DEBUG - Gym not found with username: {login}")
+        # Try to find any gym with this login in any field
+        alt_gym = await db.gyms.find_one({"$or": [
+            {"login": login},
+            {"login_credentials.username": login}
+        ]})
+        if alt_gym:
+            print(f"✅ DEBUG - Found gym with alternative search: {alt_gym.get('name')}")
+            print(f"🔑 DEBUG - Alt gym credentials: {alt_gym.get('login_credentials')}")
+        return {"error": "Gym not found", "searched_login": login}
+    
+    print(f"✅ DEBUG - Found gym: {gym.get('name')}")
+    print(f"🔑 DEBUG - Stored credentials: {gym.get('login_credentials')}")
+    
+    stored_password_hash = gym.get("login_credentials", {}).get("password_hash")
+    print(f"🔒 DEBUG - Password hash exists: {bool(stored_password_hash)}")
+    
+    if stored_password_hash:
+        from passlib.context import CryptContext
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        
+        password_valid = pwd_context.verify(password, stored_password_hash)
+        print(f"🔐 DEBUG - Password verification result: {password_valid}")
+        
+        return {
+            "gym_found": True,
+            "gym_name": gym.get("name"),
+            "username": login,
+            "password_hash_exists": True,
+            "password_valid": password_valid,
+            "gym_status": gym.get("status")
+        }
+    
+    return {
+        "gym_found": True,
+        "gym_name": gym.get("name"),
+        "username": login,
+        "password_hash_exists": False
+    }
+
 # Gym authentication endpoint for validation system
 @api_router.post("/gym/auth")
 async def gym_authenticate(credentials: dict):
