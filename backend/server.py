@@ -1017,8 +1017,8 @@ async def reset_gym_password(gym_id: str):
     return {
         "success": True,
         "new_password": new_password,
-        "login": gym.get("login_credentials", {}).get("username", f"gym_{gym_id[:8]}"),
-        "message": "Nova senha gerada com sucesso"
+        "login": existing_username,
+        "message": f"Nova senha gerada para {current_gym.get('name', 'Academia')}"
     }
 
 @api_router.put("/admin/gyms/{gym_id}/set-password")
