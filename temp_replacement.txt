@@ -1,0 +1,75 @@
+        )}
+
+        {/* Scheduled Appointments Section */}
+        {stats.recent_appointments && stats.recent_appointments.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>📅 Consultas Agendadas</Text>
+              <TouchableOpacity onPress={() => console.log('Ver todos agendamentos')}>
+                <Text style={styles.seeAllText}>Ver todas</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.appointmentsList}>
+              {stats.recent_appointments.slice(0, 5).map((appointment) => (
+                <View key={appointment.id} style={styles.appointmentCard}>
+                  <View style={styles.appointmentHeader}>
+                    <View style={styles.appointmentIcon}>
+                      <Ionicons 
+                        name={appointment.appointment_type === 'nutritionist' ? 'restaurant' : 'fitness'} 
+                        size={20} 
+                        color={appointment.appointment_type === 'nutritionist' ? '#22C55E' : '#8B5CF6'} 
+                      />
+                    </View>
+                    <View style={styles.appointmentInfo}>
+                      <Text style={styles.appointmentUser}>{appointment.user_name}</Text>
+                      <Text style={styles.appointmentType}>
+                        {appointment.appointment_type === 'nutritionist' ? 'Nutricionista' : 'Personal Trainer'}
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.appointmentStatusBadge,
+                      { backgroundColor: appointment.status === 'scheduled' ? '#3B82F6' : 
+                                       appointment.status === 'completed' ? '#22C55E' : '#EF4444' }
+                    ]}>
+                      <Text style={styles.appointmentStatusText}>
+                        {appointment.status === 'scheduled' ? 'Agendado' : 
+                         appointment.status === 'completed' ? 'Concluído' : 'Cancelado'}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.appointmentDetails}>
+                    <View style={styles.appointmentDetail}>
+                      <Ionicons name="calendar" size={14} color="#94A3B8" />
+                      <Text style={styles.appointmentDetailText}>
+                        {new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às{' '}
+                        {new Date(appointment.appointment_date).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.appointmentDetail}>
+                      <Ionicons name="person" size={14} color="#94A3B8" />
+                      <Text style={styles.appointmentDetailText}>
+                        Plano {appointment.user_plan === 'basic' ? 'Básico' : 
+                              appointment.user_plan === 'premium' ? 'Premium' : 'VIP'}
+                      </Text>
+                    </View>
+                    
+                    {appointment.notes && (
+                      <View style={styles.appointmentDetail}>
+                        <Ionicons name="document-text" size={14} color="#94A3B8" />
+                        <Text style={styles.appointmentDetailText}>{appointment.notes}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Revenue Chart */}
