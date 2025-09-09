@@ -76,8 +76,18 @@ export default function ClientLogin() {
       console.log('🔄 LOGIN INICIADO!');
       
       if (!email || !password) {
-        console.error('❌ Credenciais faltando');
-        Alert.alert('Erro', 'Por favor, preencha todos os campos');
+        Alert.alert(
+          'Campos Obrigatórios ⚠️',
+          'Por favor, preencha email e senha para continuar.'
+        );
+        return;
+      }
+
+      if (!email.includes('@')) {
+        Alert.alert(
+          'Email Inválido ❌',
+          'Por favor, digite um email válido (exemplo: cliente@luxepass.com).'
+        );
         return;
       }
 
@@ -108,7 +118,33 @@ export default function ClientLogin() {
       if (!response.ok) {
         const errorData = await response.text();
         console.error('❌ Response not ok:', errorData);
-        throw new Error(`HTTP ${response.status}: ${errorData}`);
+        
+        let title = 'Erro no Login ❌';
+        let message = 'Não foi possível realizar o login.';
+
+        if (response.status === 401) {
+          title = 'Credenciais Inválidas ❌';
+          message = 'Email ou senha incorretos. Verifique seus dados e tente novamente.\n\n💡 Credenciais padrão:\nEmail: cliente@luxepass.com\nSenha: cliente123';
+        } else if (response.status === 400) {
+          title = 'Dados Inválidos ❌';
+          message = 'Email e senha são obrigatórios. Verifique se preencheu todos os campos corretamente.';
+        } else if (response.status === 403) {
+          title = 'Acesso Negado ❌';
+          message = 'Sua conta pode estar bloqueada. Entre em contato com o suporte.';
+        } else if (response.status >= 500) {
+          title = 'Erro do Servidor ❌';
+          message = 'Erro interno do servidor. Tente novamente em alguns minutos.';
+        } else {
+          try {
+            const errorJson = JSON.parse(errorData);
+            message = errorJson.detail || message;
+          } catch (e) {
+            message = errorData || message;
+          }
+        }
+        
+        Alert.alert(title, message);
+        return;
       }
       
       const data = await response.json();
@@ -117,7 +153,11 @@ export default function ClientLogin() {
       const { access_token } = data;
       
       if (!access_token) {
-        throw new Error('No access token received');
+        Alert.alert(
+          'Erro de Resposta ❌',
+          'Token de acesso não foi recebido. Tente novamente.'
+        );
+        return;
       }
       
       console.log('💾 Salvando token...');
