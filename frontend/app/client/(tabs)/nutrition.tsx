@@ -8,8 +8,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
-  ProgressBarAndroid,
-  ProgressViewIOS,
   Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,148 +16,181 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
 
-const ProgressBar = Platform.OS === 'ios' ? ProgressViewIOS : ProgressBarAndroid;
-
-interface NutritionPlan {
+interface SupplementLog {
   id: string;
-  daily_calories: number;
-  daily_protein: number;
-  daily_carbs: number;
-  daily_fats: number;
-  meals: any[];
+  supplement_name: string;
+  scheduled_time: string;
+  status: 'pending' | 'taken' | 'missed';
+  taken_at?: string;
+}
+
+interface SupplementPlan {
+  id: string;
   supplements: any[];
+  start_date: string;
+  created_at: string;
+}
+
+interface AppointmentSlot {
+  id: string;
+  date: string;
+  professional_type: string;
 }
 
 export default function Nutrition() {
-  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
+  const [supplementPlan, setSupplementPlan] = useState<SupplementPlan | null>(null);
+  const [todaySupplements, setTodaySupplements] = useState<SupplementLog[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<AppointmentSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [consumedCalories, setConsumedCalories] = useState(1847);
-  const [waterIntake, setWaterIntake] = useState(2.1);
+  const [userPlan, setUserPlan] = useState('basic');
+  
+  const router = useRouter();
 
   useEffect(() => {
-    loadNutritionPlan();
+    loadSupplementPlan();
+    loadAvailableSlots();
   }, []);
 
-  const loadNutritionPlan = async () => {
+  const loadSupplementPlan = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        router.replace('/client/login');
+        return;
+      }
 
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_URL}/api/nutrition/plan`, { headers });
       
-      if (response.data.message) {
-        // Create mock nutrition plan
-        const mockPlan = {
-          id: '1',
-          daily_calories: 2150,
-          daily_protein: 160,
-          daily_carbs: 215,
-          daily_fats: 72,
-          meals: [
-            {
-              name: 'Café da manhã',
-              calories: 485,
-              completed: true,
-              time: '07:00',
-              foods: ['Aveia com frutas', 'Iogurte grego', 'Castanhas']
-            },
-            {
-              name: 'Almoço',
-              calories: 672,
-              completed: true,
-              time: '12:30',
-              foods: ['Peito de frango grelhado', 'Arroz integral', 'Brócolis', 'Salada']
-            },
-            {
-              name: 'Lanche da tarde',
-              calories: 287,
-              completed: true,
-              time: '15:30',
-              foods: ['Shake de proteína', 'Banana', 'Amendoim']
-            },
-            {
-              name: 'Jantar',
-              calories: 403,
-              completed: false,
-              time: '19:00',
-              foods: ['Salmão grelhado', 'Batata doce', 'Aspargos']
-            }
-          ],
-          supplements: [
-            { name: 'Whey Protein', dosage: '30g', time: 'Pós-treino', completed: true },
-            { name: 'Vitamina D3', dosage: '2000 UI', time: 'Manhã', completed: true },
-            { name: 'Ferro + Vitamina C', dosage: '1 cápsula', time: 'Almoço', completed: false },
-            { name: 'Ômega 3', dosage: '1000mg', time: 'Jantar', completed: false }
-          ]
-        };
-        setNutritionPlan(mockPlan);
-      } else {
-        setNutritionPlan(response.data);
+      // Get user profile to check plan
+      const profileResponse = await axios.get(`${API_URL}/users/profile`, { headers });
+      const currentPlan = profileResponse.data.plan || 'basic';
+      setUserPlan(currentPlan);
+
+      // Get supplement plan
+      const response = await axios.get(`${API_URL}/supplements/user/plan`, { headers });
+      
+      if (response.data.plan) {
+        setSupplementPlan(response.data.plan);
+        setTodaySupplements(response.data.today_supplements || []);
       }
-    } catch (error) {
-      console.error('Error loading nutrition plan:', error);
+      
+    } catch (error: any) {
+      console.error('Error loading supplement plan:', error);
+      if (error.response?.status === 401) {
+        router.replace('/client/login');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
+  const loadAvailableSlots = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/appointments/available-slots?professional_type=nutritionist`, { headers });
+      
+      setAvailableSlots(response.data.slots || []);
+    } catch (error: any) {
+      console.error('Error loading slots:', error);
+      // Don't show error for basic plan users
+      if (error.response?.status !== 403) {
+        console.error('Unexpected error:', error);
+      }
+    }
+  };
+
+  const markSupplementTaken = async (logId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      await axios.post(`${API_URL}/supplements/log/${logId}/take`, {}, { headers });
+      
+      // Update local state
+      setTodaySupplements(prev => 
+        prev.map(supplement => 
+          supplement.id === logId 
+            ? { ...supplement, status: 'taken', taken_at: new Date().toISOString() }
+            : supplement
+        )
+      );
+      
+      Alert.alert('✅ Suplemento Registrado', 'Suplemento marcado como tomado!');
+    } catch (error: any) {
+      console.error('Error marking supplement:', error);
+      Alert.alert('Erro', 'Não foi possível registrar o suplemento');
+    }
+  };
+
+  const scheduleAppointment = async (slotId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const slot = availableSlots.find(s => s.id === slotId);
+      if (!slot) return;
+
+      const appointmentData = {
+        appointment_type: 'nutritionist',
+        appointment_date: slot.date,
+        notes: 'Consulta nutricional agendada via app'
+      };
+
+      await axios.post(`${API_URL}/appointments/request`, appointmentData, { headers });
+      
+      Alert.alert(
+        '📅 Consulta Agendada!', 
+        `Sua consulta com a nutricionista foi agendada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${new Date(slot.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+      );
+      
+      // Reload slots
+      loadAvailableSlots();
+    } catch (error: any) {
+      console.error('Error scheduling appointment:', error);
+      if (error.response?.status === 400) {
+        Alert.alert('Erro', error.response.data.detail);
+      } else {
+        Alert.alert('Erro', 'Não foi possível agendar a consulta');
+      }
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
-    loadNutritionPlan();
+    loadSupplementPlan();
+    loadAvailableSlots();
   };
 
-  const markMealAsCompleted = (mealIndex: number) => {
-    if (!nutritionPlan) return;
+  const getSupplementsForToday = () => {
+    const now = new Date();
+    const today = now.toDateString();
     
-    const updatedMeals = [...nutritionPlan.meals];
-    updatedMeals[mealIndex].completed = true;
-    
-    setNutritionPlan({
-      ...nutritionPlan,
-      meals: updatedMeals
+    return todaySupplements.filter(supplement => {
+      const supplementDate = new Date(supplement.scheduled_time).toDateString();
+      return supplementDate === today;
     });
+  };
+
+  const getSupplementStatus = (supplement: SupplementLog) => {
+    const now = new Date();
+    const scheduledTime = new Date(supplement.scheduled_time);
     
-    const newConsumedCalories = consumedCalories + updatedMeals[mealIndex].calories;
-    setConsumedCalories(newConsumedCalories);
-    
-    Alert.alert('Refeição Registrada!', 'Refeição marcada como concluída.');
-  };
-
-  const addWater = () => {
-    setWaterIntake(prev => Math.min(prev + 0.25, 4.0));
-  };
-
-  const getCaloriesProgress = () => {
-    if (!nutritionPlan) return 0;
-    return (consumedCalories / nutritionPlan.daily_calories) * 100;
-  };
-
-  const getProteinProgress = () => {
-    if (!nutritionPlan) return 0;
-    const consumedProtein = 142; // Mock data
-    return (consumedProtein / nutritionPlan.daily_protein) * 100;
-  };
-
-  const getCarbsProgress = () => {
-    if (!nutritionPlan) return 0;
-    const consumedCarbs = 198; // Mock data
-    return (consumedCarbs / nutritionPlan.daily_carbs) * 100;
-  };
-
-  const getFatsProgress = () => {
-    if (!nutritionPlan) return 0;
-    const consumedFats = 67; // Mock data
-    return (consumedFats / nutritionPlan.daily_fats) * 100;
-  };
-
-  const getWaterProgress = () => {
-    return (waterIntake / 3.0) * 100;
+    if (supplement.status === 'taken') {
+      return { color: '#22C55E', text: 'Tomado', icon: 'checkmark-circle' };
+    } else if (now > scheduledTime) {
+      return { color: '#EF4444', text: 'Atrasado', icon: 'alert-circle' };
+    } else {
+      return { color: '#F59E0B', text: 'Pendente', icon: 'time' };
+    }
   };
 
   if (loading) {
