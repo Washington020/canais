@@ -1459,7 +1459,11 @@ class FitPassTester:
         
         response = self.make_request("POST", "/payments/pagarme/checkout/session", checkout_data)
         
-        if response and response.status_code == 200:
+        if response is None:
+            self.log_test("Pagar.me Checkout Session", False, "No response received from server")
+            return False
+        
+        if response.status_code == 200:
             data = response.json()
             required_fields = ["order_id", "status", "payment_method", "plan_name", "amount", "currency"]
             
@@ -1479,7 +1483,7 @@ class FitPassTester:
             else:
                 missing = [f for f in required_fields if f not in data]
                 self.log_test("Pagar.me Checkout Session", False, f"Missing fields: {missing}")
-        elif response and response.status_code == 500:
+        elif response.status_code == 500:
             # Check if it's a Pagar.me API issue (common in test environments)
             error_detail = ""
             try:
@@ -1500,23 +1504,12 @@ class FitPassTester:
                 self.log_test("Pagar.me Checkout Session", False, f"Unexpected server error: {error_detail}")
         else:
             error_detail = ""
-            if response:
-                try:
-                    error_detail = response.json().get("detail", response.text)
-                except:
-                    error_detail = response.text
+            try:
+                error_detail = response.json().get("detail", response.text)
+            except:
+                error_detail = response.text
                     
-                # Check if it's the expected Pagar.me error even if response is not properly parsed
-                if "Erro ao processar pagamento" in str(error_detail):
-                    self.log_test("Pagar.me Checkout Session", True, "Endpoint structure correct - Pagar.me API error expected in test environment")
-                    print(f"   ✅ Endpoint accepts correct request format")
-                    print(f"   ✅ Returns proper error handling for API issues")
-                    print(f"   ⚠️  Pagar.me API unavailable (expected in test environment)")
-                    # Set a mock order ID for the next test
-                    self.pagarme_order_id = "test_order_12345"
-                    return True
-                    
-            self.log_test("Pagar.me Checkout Session", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            self.log_test("Pagar.me Checkout Session", False, f"Status: {response.status_code}, Error: {error_detail}")
             
         return False
 
