@@ -3049,13 +3049,16 @@ class FitPassTester:
 if __name__ == "__main__":
     tester = FitPassTester()
     
-    # Run the payment system test as requested in review
-    print("💳 Running LuxePass Payment System Tests...")
-    success = tester.test_payment_system_flow()
+    # Run the specific Pagar.me tests as requested in the review
+    print("🎯 RUNNING PAGAR.ME PAYMENT ENDPOINTS TESTS AS REQUESTED")
+    print("="*70)
+    success = tester.run_pagarme_tests()
     
     if success:
-        print("\n🎉 ALL PAYMENT SYSTEM TESTS PASSED!")
-        print("The payment endpoints are working correctly.")
+        print("\n🎉 ALL PAGAR.ME TESTS PASSED!")
+        print("The Pagar.me payment integration is fully functional.")
     else:
-        print("\n⚠️  Some payment system issues found that need attention.")
-        print("Please review the failed tests above.")
+        print("\n⚠️  SOME PAGAR.ME TESTS FAILED")
+        print("Check the detailed output above for specific issues.")
+    
+    exit(0 if success else 1)
