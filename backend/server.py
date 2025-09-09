@@ -927,8 +927,10 @@ async def register_gym(gym_data: dict):
             "politicas_cancelamento": gym_data.get("politicas_cancelamento", ""),
             "observacoes_qualidade": gym_data.get("observacoes_qualidade", "")
         },
-        "login": login,
-        "hashed_password": hashed_password,
+        "login_credentials": {
+            "username": login,
+            "password_hash": hashed_password
+        },
         "status": "pending",  # pending, analyzing, approved, rejected
         "created_at": datetime.now(timezone.utc),
         "approved_at": None
