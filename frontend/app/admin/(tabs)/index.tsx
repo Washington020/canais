@@ -114,49 +114,56 @@ export default function AdminDashboard() {
         return;
       }
 
-      console.log('📡 Fazendo requisição para dashboard admin integrado');
+      console.log('📡 Fazendo requisições para dashboard com novos endpoints');
       const headers = { Authorization: `Bearer ${token}` };
       
       // Fazer chamadas em paralelo com timeout para evitar loops
-      const dashboardPromise = axios.get(`${API_URL}/api/integration/admin/dashboard`, { 
+      const statsPromise = axios.get(`${API_URL}/api/admin/dashboard/stats`, { 
         headers,
         timeout: 10000 
       });
       
-      const usersPromise = axios.get(`${API_URL}/api/integration/admin/users?limit=10`, { 
+      const usersPromise = axios.get(`${API_URL}/api/admin/dashboard/recent-users?limit=5`, { 
         headers,
         timeout: 10000 
       });
       
-      const gymsPromise = axios.get(`${API_URL}/api/integration/admin/gyms`, { 
+      const gymsPromise = axios.get(`${API_URL}/api/admin/dashboard/gym-performance?limit=5`, { 
         headers,
         timeout: 10000 
       });
       
-      const tokensPromise = axios.get(`${API_URL}/api/integration/admin/tokens?limit=5`, { 
+      const tokensPromise = axios.get(`${API_URL}/api/admin/dashboard/recent-tokens?limit=5`, { 
+        headers,
+        timeout: 10000 
+      });
+
+      const appointmentsPromise = axios.get(`${API_URL}/api/admin/dashboard/appointments?limit=10`, { 
         headers,
         timeout: 10000 
       });
 
       // Executar em paralelo com timeout geral
       const results = await Promise.allSettled([
-        dashboardPromise,
+        statsPromise,
         usersPromise, 
         gymsPromise,
-        tokensPromise
+        tokensPromise,
+        appointmentsPromise
       ]);
 
       // Processar resultados de forma segura
-      const [dashboardResult, usersResult, gymsResult, tokensResult] = results;
+      const [statsResult, usersResult, gymsResult, tokensResult, appointmentsResult] = results;
       
-      let dashboardData = null;
+      let dashboardStats = null;
       let usersData = [];
       let gymsData = [];
       let tokensData = [];
+      let appointmentsData = [];
 
-      if (dashboardResult.status === 'fulfilled') {
-        dashboardData = dashboardResult.value.data;
-        console.log('✅ Dashboard stats carregado:', dashboardData);
+      if (statsResult.status === 'fulfilled') {
+        dashboardStats = statsResult.value.data;
+        console.log('✅ Dashboard stats carregado:', dashboardStats);
       }
 
       if (usersResult.status === 'fulfilled') {
@@ -174,56 +181,28 @@ export default function AdminDashboard() {
         console.log('✅ Tokens carregados:', tokensData.length);
       }
 
-      // Atualizar estado uma única vez
+      if (appointmentsResult.status === 'fulfilled') {
+        appointmentsData = appointmentsResult.value.data.appointments || [];
+        console.log('✅ Agendamentos carregados:', appointmentsData.length);
+      }
+
+      // Atualizar estado uma única vez com dados reais ou fallback
       const combinedStats = {
-        ...(dashboardData || {
-          total_users: 2847,
-          active_users: 2234,
-          total_gyms: 156,
-          active_gyms: 143,
-          monthly_revenue: 85420.50,
-          tokens_generated_month: 1423,
-          checkins_month: 892,
-          conversion_rate: 78.4
+        ...(dashboardStats || {
+          total_users: 0,
+          active_users: 0,
+          total_gyms: 0,
+          active_gyms: 0,
+          monthly_revenue: 0,
+          tokens_generated_month: 0,
+          checkins_month: 0,
+          conversion_rate: 0,
+          appointments_month: 0
         }),
-        recent_users: usersData.length > 0 ? usersData : [
-          {
-            id: '1',
-            full_name: 'Maria Silva Santos',
-            email: 'maria@email.com',
-            plan_type: 'intermediario',
-            status: 'active',
-            created_at: new Date().toISOString(),
-            subscription: { monthly_amount: 99.90, status: 'active' }
-          },
-          {
-            id: '2', 
-            full_name: 'João Pedro Oliveira',
-            email: 'joao@email.com',
-            plan_type: 'basico',
-            status: 'active',
-            created_at: new Date(Date.now() - 86400000).toISOString(),
-            subscription: { monthly_amount: 59.90, status: 'active' }
-          }
-        ],
-        recent_gyms: gymsData.length > 0 ? gymsData : [
-          {
-            id: '1',
-            name: 'SmartFit Vila Madalena',
-            status: 'active',
-            monthly_checkins: 245,
-            monthly_revenue: 1225.50
-          }
-        ],
-        recent_tokens: tokensData.length > 0 ? tokensData : [
-          {
-            token_code: 'A5B2C9',
-            token_type: 'gym',
-            created_at: new Date().toISOString(),
-            user_id: '1',
-            status: 'active'
-          }
-        ]
+        recent_users: usersData,
+        recent_gyms: gymsData,
+        recent_tokens: tokensData,
+        recent_appointments: appointmentsData
       };
 
       setStats(combinedStats);
@@ -239,17 +218,19 @@ export default function AdminDashboard() {
       } else {
         // Use fallback data em caso de erro
         setStats({
-          total_users: 2847,
-          active_users: 2234,
-          total_gyms: 156,
-          active_gyms: 143,
-          monthly_revenue: 85420.50,
-          tokens_generated_month: 1423,
-          checkins_month: 892,
-          conversion_rate: 78.4,
+          total_users: 0,
+          active_users: 0,
+          total_gyms: 0,
+          active_gyms: 0,
+          monthly_revenue: 0,
+          tokens_generated_month: 0,
+          checkins_month: 0,
+          conversion_rate: 0,
+          appointments_month: 0,
           recent_users: [],
           recent_gyms: [],
-          recent_tokens: []
+          recent_tokens: [],
+          recent_appointments: []
         });
       }
     } finally {
