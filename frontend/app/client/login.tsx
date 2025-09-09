@@ -24,7 +24,7 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 
 const { width, height } = Dimensions.get('window');
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'https://premium-fitness-4.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'https://gym-integration.preview.emergentagent.com';
 
 export default function ClientLogin() {
   const [email, setEmail] = useState('cliente@luxepass.com');

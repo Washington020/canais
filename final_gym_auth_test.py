@@ -9,7 +9,7 @@ import json
 import os
 
 # Get backend URL from environment
-BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://premium-fitness-4.preview.emergentagent.com')
+BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://gym-integration.preview.emergentagent.com')
 API_BASE = f"{BACKEND_URL}/api"
 
 def test_gym_authentication_comprehensive():
