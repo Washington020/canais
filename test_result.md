@@ -363,6 +363,54 @@ backend:
           agent: "testing"
           comment: "✅ PUT /api/admin/gyms/{gym_id}/reset-password endpoint working correctly. Successfully tested complete flow: 1) Created test gym 'Academia Reset Password Test' with original credentials (gym_academia_r_6189/1Tv0HfRk), 2) Reset password endpoint generated new password (YzkY64Lk64), 3) Verified all required fields returned: success, new_password, login, message, 4) Confirmed login remains same while password changes, 5) Portuguese message 'Nova senha gerada para Academia Reset Password Test' working correctly. Complete gym credential management system operational."
 
+  - task: "Payment Plans API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ GET /api/payments/plans endpoint working correctly. Returns all 3 payment plans (basic, premium, vip) with complete structure including id, name, price, currency, duration_days, features, token_limit, and description. Plan details: Basic (R$ 29.90, 10 tokens), Premium (R$ 59.90, 60 tokens), VIP (R$ 99.90, unlimited tokens)."
+
+  - task: "Checkout Session Creation API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ POST /api/payments/checkout/session endpoint working correctly. Successfully creates Stripe checkout sessions with authentication using cliente@luxepass.com/cliente123. Tested with plan_id='premium', origin_url='https://test.com', payment_method='stripe'. Returns session_id and valid Stripe checkout URL. Stripe integration fully functional."
+
+  - task: "User Transactions API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ GET /api/payments/user/transactions endpoint working correctly. Lists user payment transactions with all required fields including plan_id, plan_name, amount, currency, payment_status, payment_method, created_at, and session_id. Fixed missing plan_id field in response structure."
+
+  - task: "Checkout Status API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ GET /api/payments/checkout/status/{session_id} endpoint working correctly. Retrieves payment status from Stripe with all required fields including status, payment_status, plan_id, plan_name, amount_total, and currency. Successfully tested with real Stripe session IDs."
+
   - task: "Gym Authentication API"
     implemented: true
     working: true
