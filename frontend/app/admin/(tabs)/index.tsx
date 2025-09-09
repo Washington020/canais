@@ -1210,4 +1210,64 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 12,
   },
-});
+  appointmentsList: {
+    gap: 12,
+  },
+  appointmentCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  appointmentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  appointmentIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  appointmentInfo: {
+    flex: 1,
+  },
+  appointmentUser: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  appointmentType: {
+    color: '#94A3B8',
+    fontSize: 14,
+  },
+  appointmentStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  appointmentStatusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  appointmentDetails: {
+    gap: 8,
+  },
+  appointmentDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  appointmentDetailText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    flex: 1,
+  },
+  });
