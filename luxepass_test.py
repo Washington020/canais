@@ -283,6 +283,8 @@ class LuxePassTester:
         print(f"   DEBUG: Response is None: {response is None}")
         if response:
             print(f"   DEBUG: Response status: {response.status_code}")
+            print(f"   DEBUG: Status code type: {type(response.status_code)}")
+            print(f"   DEBUG: Status code == 401: {response.status_code == 401}")
         
         if response and response.status_code == 401:
             try:
