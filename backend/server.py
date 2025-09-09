@@ -2382,6 +2382,426 @@ async def get_user_scheduled_notifications(current_user: User = Depends(get_curr
         logger.error(f"Erro ao buscar notificações agendadas: {e}")
         raise HTTPException(status_code=500, detail="Erro ao buscar notificações")
 
+# Appointment System Endpoints
+@api_router.post("/appointments/request")
+async def request_appointment(
+    appointment: AppointmentRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Request an appointment with nutritionist or personal trainer"""
+    try:
+        # Check user plan permissions
+        user_plan = current_user.plan_type if hasattr(current_user, 'plan_type') else 'basic'
+        
+        if user_plan == 'basic':
+            raise HTTPException(
+                status_code=403, 
+                detail="Agendamentos disponíveis apenas para planos Premium e VIP. Faça upgrade para acessar."
+            )
+        
+        # Check monthly appointment limit (2 per month for premium/vip)
+        current_month = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        existing_appointments = await db.appointments.count_documents({
+            "user_id": str(current_user.id),
+            "appointment_date": {"$gte": current_month},
+            "status": {"$in": ["scheduled", "completed"]}
+        })
+        
+        if existing_appointments >= 2:
+            raise HTTPException(
+                status_code=400,
+                detail="Limite de 2 agendamentos por mês atingido. Aguarde o próximo mês."
+            )
+        
+        # Check if slot is available
+        available_slot = await db.appointment_slots.find_one({
+            "professional_type": appointment.appointment_type,
+            "date": appointment.appointment_date,
+            "available": True
+        })
+        
+        if not available_slot:
+            raise HTTPException(
+                status_code=400,
+                detail="Horário não disponível. Escolha outro horário."
+            )
+        
+        # Create appointment
+        appointment_data = {
+            "user_id": str(current_user.id),
+            "professional_type": appointment.appointment_type,
+            "appointment_date": appointment.appointment_date,
+            "status": "scheduled",
+            "notes": appointment.notes or "",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+        
+        result = await db.appointments.insert_one(appointment_data)
+        
+        # Mark slot as unavailable
+        await db.appointment_slots.update_one(
+            {"_id": available_slot["_id"]},
+            {"$set": {"available": False}}
+        )
+        
+        return {
+            "id": str(result.inserted_id),
+            "message": f"Agendamento com {appointment.appointment_type} confirmado!",
+            "appointment_date": appointment.appointment_date.isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao agendar consulta: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao processar agendamento")
+
+@api_router.get("/appointments/available-slots")
+async def get_available_slots(
+    professional_type: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get available appointment slots"""
+    try:
+        # Check user plan
+        user_plan = getattr(current_user, 'plan_type', 'basic')
+        if user_plan == 'basic':
+            raise HTTPException(
+                status_code=403,
+                detail="Agendamentos disponíveis apenas para planos Premium e VIP"
+            )
+        
+        # Get available slots for next 30 days
+        today = datetime.now(timezone.utc)
+        end_date = today + timedelta(days=30)
+        
+        slots = await db.appointment_slots.find({
+            "professional_type": professional_type,
+            "date": {"$gte": today, "$lte": end_date},
+            "available": True
+        }).sort("date", 1).to_list(50)
+        
+        result = []
+        for slot in slots:
+            result.append({
+                "id": str(slot["_id"]),
+                "date": slot["date"].isoformat(),
+                "professional_type": slot["professional_type"]
+            })
+        
+        return {"slots": result}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao buscar horários: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar horários")
+
+@api_router.get("/appointments/user")
+async def get_user_appointments(current_user: User = Depends(get_current_user)):
+    """Get user's appointments"""
+    try:
+        appointments = await db.appointments.find({
+            "user_id": str(current_user.id)
+        }).sort("appointment_date", -1).to_list(20)
+        
+        result = []
+        for appointment in appointments:
+            result.append({
+                "id": str(appointment["_id"]),
+                "professional_type": appointment["professional_type"],
+                "appointment_date": appointment["appointment_date"].isoformat(),
+                "status": appointment["status"],
+                "notes": appointment.get("notes", ""),
+                "created_at": appointment["created_at"].isoformat()
+            })
+        
+        return {"appointments": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar agendamentos do usuário: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar agendamentos")
+
+# Admin Appointment Management
+@api_router.post("/admin/appointment-slots")
+async def create_appointment_slot(slot: AppointmentSlot):
+    """Create available appointment slot (admin only)"""
+    try:
+        slot_data = {
+            "professional_type": slot.professional_type,
+            "date": slot.date,
+            "available": True,
+            "created_by": "admin",  # In real app, get from current admin user
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        result = await db.appointment_slots.insert_one(slot_data)
+        
+        return {
+            "id": str(result.inserted_id),
+            "message": "Horário disponibilizado com sucesso"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar slot de agendamento: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar horário")
+
+@api_router.get("/admin/appointments")
+async def get_all_appointments(limit: int = 50):
+    """Get all appointments for admin"""
+    try:
+        appointments = await db.appointments.find({}).sort("appointment_date", 1).limit(limit).to_list(limit)
+        
+        result = []
+        for appointment in appointments:
+            # Get user details
+            user = await db.users.find_one({"_id": ObjectId(appointment["user_id"])})
+            
+            result.append({
+                "id": str(appointment["_id"]),
+                "user_name": user.get("full_name", "Usuário") if user else "Usuário",
+                "user_email": user.get("email", "") if user else "",
+                "user_plan": user.get("plan_type", "basic") if user else "basic",
+                "professional_type": appointment["professional_type"],
+                "appointment_date": appointment["appointment_date"].isoformat(),
+                "status": appointment["status"],
+                "notes": appointment.get("notes", ""),
+                "created_at": appointment["created_at"].isoformat()
+            })
+        
+        return {"appointments": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar todos os agendamentos: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar agendamentos")
+
+@api_router.put("/admin/appointments/{appointment_id}/status")
+async def update_appointment_status(appointment_id: str, status: str):
+    """Update appointment status"""
+    try:
+        result = await db.appointments.update_one(
+            {"_id": ObjectId(appointment_id)},
+            {
+                "$set": {
+                    "status": status,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Agendamento não encontrado")
+        
+        return {"message": "Status atualizado com sucesso"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao atualizar status do agendamento: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao atualizar agendamento")
+
+# Supplement System Endpoints
+@api_router.post("/admin/supplements/plan")
+async def create_supplement_plan(plan: SupplementPlan):
+    """Create supplement plan for user (nutritionist admin)"""
+    try:
+        plan_data = {
+            "user_id": plan.user_id,
+            "supplements": plan.supplements,
+            "created_by": "nutritionist_admin",  # In real app, get from current admin user
+            "created_at": datetime.now(timezone.utc),
+            "start_date": plan.start_date,
+            "end_date": plan.end_date,
+            "active": True
+        }
+        
+        result = await db.supplement_plans.insert_one(plan_data)
+        
+        # Create daily supplement logs for the plan duration
+        await create_supplement_logs_for_plan(str(result.inserted_id), plan)
+        
+        return {
+            "id": str(result.inserted_id),
+            "message": "Plano de suplementação criado com sucesso"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar plano de suplementação: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar plano")
+
+async def create_supplement_logs_for_plan(plan_id: str, plan: SupplementPlan):
+    """Create daily supplement logs for a plan"""
+    try:
+        current_date = plan.start_date
+        end_date = plan.end_date or (plan.start_date + timedelta(days=30))
+        
+        logs_to_create = []
+        
+        while current_date <= end_date:
+            for supplement in plan.supplements:
+                # Create log entry for each supplement timing
+                for timing in supplement.get('timings', ['morning']):
+                    scheduled_time = current_date.replace(
+                        hour=8 if timing == 'morning' else 14 if timing == 'afternoon' else 20,
+                        minute=0, second=0, microsecond=0
+                    )
+                    
+                    log_data = {
+                        "user_id": plan.user_id,
+                        "supplement_plan_id": plan_id,
+                        "supplement_name": supplement['name'],
+                        "scheduled_time": scheduled_time,
+                        "status": "pending",
+                        "created_at": datetime.now(timezone.utc)
+                    }
+                    logs_to_create.append(log_data)
+            
+            current_date += timedelta(days=1)
+        
+        if logs_to_create:
+            await db.supplement_logs.insert_many(logs_to_create)
+            
+    except Exception as e:
+        logger.error(f"Erro ao criar logs de suplementação: {e}")
+
+@api_router.get("/supplements/user/plan")
+async def get_user_supplement_plan(current_user: User = Depends(get_current_user)):
+    """Get user's current supplement plan"""
+    try:
+        plan = await db.supplement_plans.find_one({
+            "user_id": str(current_user.id),
+            "active": True
+        })
+        
+        if not plan:
+            return {"plan": None, "message": "Nenhum plano de suplementação ativo"}
+        
+        # Get today's supplement logs
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow = today + timedelta(days=1)
+        
+        today_logs = await db.supplement_logs.find({
+            "user_id": str(current_user.id),
+            "supplement_plan_id": str(plan["_id"]),
+            "scheduled_time": {"$gte": today, "$lt": tomorrow}
+        }).to_list(20)
+        
+        return {
+            "plan": {
+                "id": str(plan["_id"]),
+                "supplements": plan["supplements"],
+                "start_date": plan["start_date"].isoformat(),
+                "created_at": plan["created_at"].isoformat()
+            },
+            "today_supplements": [
+                {
+                    "id": str(log["_id"]),
+                    "supplement_name": log["supplement_name"],
+                    "scheduled_time": log["scheduled_time"].isoformat(),
+                    "status": log["status"],
+                    "taken_at": log.get("taken_at").isoformat() if log.get("taken_at") else None
+                }
+                for log in today_logs
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar plano de suplementação: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar plano")
+
+@api_router.post("/supplements/log/{log_id}/take")
+async def mark_supplement_taken(log_id: str, current_user: User = Depends(get_current_user)):
+    """Mark supplement as taken"""
+    try:
+        result = await db.supplement_logs.update_one(
+            {
+                "_id": ObjectId(log_id),
+                "user_id": str(current_user.id),
+                "status": "pending"
+            },
+            {
+                "$set": {
+                    "status": "taken",
+                    "taken_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Suplemento não encontrado ou já tomado")
+        
+        return {"message": "Suplemento marcado como tomado!"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao marcar suplemento: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao atualizar suplemento")
+
+# Workout System Endpoints
+@api_router.post("/admin/workouts/plan")
+async def create_workout_plan(plan: WorkoutPlan):
+    """Create workout plan for user (personal trainer admin)"""
+    try:
+        plan_data = {
+            "user_id": plan.user_id,
+            "workout_name": plan.workout_name,
+            "exercises": plan.exercises,
+            "created_by": "personal_admin",  # In real app, get from current admin user
+            "created_at": datetime.now(timezone.utc),
+            "start_date": plan.start_date,
+            "end_date": plan.end_date,
+            "active": True
+        }
+        
+        result = await db.workout_plans.insert_one(plan_data)
+        
+        return {
+            "id": str(result.inserted_id),
+            "message": "Plano de treino criado com sucesso"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar plano de treino: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar treino")
+
+@api_router.get("/workouts/user/plan")
+async def get_user_workout_plan(current_user: User = Depends(get_current_user)):
+    """Get user's current workout plan"""
+    try:
+        # Check user plan
+        user_plan = getattr(current_user, 'plan_type', 'basic')
+        if user_plan == 'basic':
+            return {
+                "plan": None,
+                "message": "Treinos personalizados disponíveis apenas para planos Premium e VIP",
+                "upgrade_required": True
+            }
+        
+        plan = await db.workout_plans.find_one({
+            "user_id": str(current_user.id),
+            "active": True
+        })
+        
+        if not plan:
+            return {"plan": None, "message": "Nenhum plano de treino ativo"}
+        
+        return {
+            "plan": {
+                "id": str(plan["_id"]),
+                "workout_name": plan["workout_name"],
+                "exercises": plan["exercises"],
+                "start_date": plan["start_date"].isoformat(),
+                "end_date": plan.get("end_date").isoformat() if plan.get("end_date") else None,
+                "created_at": plan["created_at"].isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar plano de treino: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar treino")
+
 @api_router.delete("/notifications/scheduled/{notification_id}")
 async def cancel_scheduled_notification(
     notification_id: str,
