@@ -2407,7 +2407,17 @@ class FitPassTester:
         # Test token validation at gym
         print("\n   3b. Validating client token at gym...")
         if hasattr(self, 'generated_token'):
-            gym_id = "test-gym-luxepass"
+            # Get a valid gym ID from the database
+            gyms_response = self.make_request("GET", "/admin/gyms", auth_required=False)
+            gym_id = "68be45560d9598a3dd0e779a"  # Use a valid ObjectId format
+            
+            if gyms_response and gyms_response.status_code == 200:
+                gyms_data = gyms_response.json()
+                gyms_list = gyms_data if isinstance(gyms_data, list) else gyms_data.get("gyms", [])
+                if gyms_list and len(gyms_list) > 0:
+                    gym_id = gyms_list[0].get("id", gym_id)
+                    print(f"   Using gym ID: {gym_id}")
+            
             response = self.make_request("POST", f"/tokens/validate/{self.generated_token}?gym_id={gym_id}", 
                                        auth_required=False)
             
