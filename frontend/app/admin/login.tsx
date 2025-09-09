@@ -10,7 +10,6 @@ import {
   Platform,
   ScrollView,
   Alert,
-  Image,
   Animated,
   Dimensions
 } from 'react-native';
@@ -21,56 +20,57 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import Constants from 'expo-constants';
 
 const { width, height } = Dimensions.get('window');
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'https://gym-integration.preview.emergentagent.com';
+const API_URL = '/api';
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState('admin@luxepass.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  // Animações
+  // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const bounceAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Animação de entrada
+    // Entry animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 1000,
+        duration: 1200,
         useNativeDriver: true,
       }),
-      Animated.timing(slideAnim, {
+      Animated.spring(slideAnim, {
         toValue: 0,
-        duration: 800,
+        tension: 50,
+        friction: 8,
         useNativeDriver: true,
       }),
-      Animated.timing(scaleAnim, {
+      Animated.spring(bounceAnim, {
         toValue: 1,
-        duration: 600,
+        tension: 80,
+        friction: 4,
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Animação contínua de rotação para elementos decorativos
-    const createRotateAnimation = () => {
+    // Continuous rotation animation
+    const startRotation = () => {
       Animated.timing(rotateAnim, {
         toValue: 1,
         duration: 10000,
         useNativeDriver: true,
       }).start(() => {
         rotateAnim.setValue(0);
-        createRotateAnimation();
+        startRotation();
       });
     };
-    createRotateAnimation();
+    startRotation();
   }, []);
 
   const handleLogin = async () => {
@@ -92,7 +92,7 @@ export default function AdminLogin() {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/api/auth/login`, {
+      const response = await axios.post(`${API_URL}/auth/login`, {
         email,
         password
       });
@@ -163,74 +163,70 @@ export default function AdminLogin() {
             showsVerticalScrollIndicator={false}
           >
             {/* Header */}
-            <Animated.View 
-              style={[
-                styles.header,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }]
-                }
-              ]}
-            >
+            <View style={styles.header}>
               <TouchableOpacity 
                 style={styles.backButton}
                 onPress={() => router.replace('/')}
               >
                 <LinearGradient
-                  colors={['rgba(245, 158, 11, 0.3)', 'rgba(245, 158, 11, 0.1)']}
+                  colors={['rgba(139, 92, 246, 0.3)', 'rgba(139, 92, 246, 0.1)']}
                   style={styles.backButtonGradient}
                 >
                   <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
                 </LinearGradient>
               </TouchableOpacity>
+            </View>
 
-              {/* Logo with Admin Badge */}
-              <Animated.View 
-                style={[
-                  styles.logoContainer,
-                  { transform: [{ scale: scaleAnim }] }
-                ]}
-              >
+            {/* Logo and Title */}
+            <Animated.View 
+              style={[
+                styles.logoSection,
+                {
+                  opacity: fadeAnim,
+                  transform: [
+                    { translateY: slideAnim },
+                    { scale: bounceAnim }
+                  ]
+                }
+              ]}
+            >
+              <View style={styles.logoContainer}>
                 <LinearGradient
-                  colors={['#F59E0B', '#F97316', '#EF4444']}
+                  colors={['#8B5CF6', '#A855F7', '#C084FC']}
                   style={styles.logoGradient}
                 >
-                  <Image 
-                    source={{ uri: 'https://customer-assets.emergentagent.com/job_fitness-token-app/artifacts/8gnzidak_IMG_0187.png' }}
-                    style={styles.logoImage}
-                    resizeMode="contain"
-                  />
+                  <Ionicons name="shield-checkmark" size={40} color="#FFFFFF" />
                   <View style={styles.adminBadge}>
-                    <Ionicons name="shield-checkmark" size={16} color="#FFFFFF" />
+                    <Ionicons name="star" size={16} color="#FFFFFF" />
                   </View>
                 </LinearGradient>
-                <View style={styles.logoGlow} />
-              </Animated.View>
+                <Animated.View style={[styles.logoGlow, { opacity: fadeAnim }]} />
+              </View>
 
-              <Text style={styles.title}>
-                🔐 Painel Administrativo
-              </Text>
-              <Text style={styles.subtitle}>
-                Acesso restrito - LuxePass Admin
-              </Text>
+              <Text style={styles.title}>🛡️ LuxePass Admin</Text>
+              <Text style={styles.subtitle}>Painel de Controle Executivo</Text>
 
-              {/* Security indicators */}
-              <View style={styles.securityBadges}>
-                <View style={styles.securityBadge}>
-                  <Ionicons name="lock-closed" size={12} color="#22C55E" />
-                  <Text style={styles.securityText}>Criptografado</Text>
+              {/* Status Indicators */}
+              <View style={styles.statusIndicators}>
+                <View style={styles.statusItem}>
+                  <View style={styles.statusDot} />
+                  <Text style={styles.statusText}>Sistema Online</Text>
                 </View>
-                <View style={styles.securityBadge}>
-                  <Ionicons name="shield" size={12} color="#3B82F6" />
-                  <Text style={styles.securityText}>Autenticado</Text>
+                <View style={styles.statusItem}>
+                  <Ionicons name="shield-checkmark" size={12} color="#22C55E" />
+                  <Text style={styles.statusText}>Seguro</Text>
+                </View>
+                <View style={styles.statusItem}>
+                  <Ionicons name="flash" size={12} color="#F59E0B" />
+                  <Text style={styles.statusText}>Rápido</Text>
                 </View>
               </View>
             </Animated.View>
 
-            {/* Admin Form Card */}
+            {/* Login Form */}
             <Animated.View 
               style={[
-                styles.formCard,
+                styles.formContainer,
                 {
                   opacity: fadeAnim,
                   transform: [{ translateY: slideAnim }]
@@ -238,28 +234,35 @@ export default function AdminLogin() {
               ]}
             >
               <LinearGradient
-                colors={['rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0.08)']}
+                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.06)']}
                 style={styles.formGradient}
               >
                 {/* Form Header */}
                 <View style={styles.formHeader}>
-                  <Ionicons name="person-circle" size={32} color="#F59E0B" />
-                  <Text style={styles.formTitle}>Login Administrativo</Text>
+                  <LinearGradient
+                    colors={['#8B5CF6', '#A855F7']}
+                    style={styles.formHeaderIcon}
+                  >
+                    <Ionicons name="key" size={24} color="#FFFFFF" />
+                  </LinearGradient>
+                  <Text style={styles.formTitle}>Acesso Administrativo</Text>
                 </View>
 
                 {/* Email Input */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>
-                    <Ionicons name="mail" size={16} color="#F59E0B" /> Email Administrativo
+                  <Text style={styles.inputLabel}>
+                    <Ionicons name="mail-outline" size={16} color="#8B5CF6" /> Email Administrativo
                   </Text>
                   <View style={styles.inputContainer}>
                     <LinearGradient
-                      colors={['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.08)']}
+                      colors={['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0.08)']}
                       style={styles.inputGradient}
                     >
-                      <Ionicons name="shield-outline" size={20} color="#F59E0B" />
+                      <View style={styles.inputIconContainer}>
+                        <Ionicons name="mail" size={20} color="#8B5CF6" />
+                      </View>
                       <TextInput
-                        style={styles.input}
+                        style={styles.textInput}
                         value={email}
                         onChangeText={setEmail}
                         placeholder="admin@luxepass.com"
@@ -274,54 +277,60 @@ export default function AdminLogin() {
 
                 {/* Password Input */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>
-                    <Ionicons name="key" size={16} color="#F59E0B" /> Senha Mestre
+                  <Text style={styles.inputLabel}>
+                    <Ionicons name="key-outline" size={16} color="#8B5CF6" /> Senha de Acesso
                   </Text>
                   <View style={styles.inputContainer}>
                     <LinearGradient
-                      colors={['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.08)']}
+                      colors={['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0.08)']}
                       style={styles.inputGradient}
                     >
-                      <Ionicons name="lock-closed-outline" size={20} color="#F59E0B" />
+                      <View style={styles.inputIconContainer}>
+                        <Ionicons name="key" size={20} color="#8B5CF6" />
+                      </View>
                       <TextInput
-                        style={styles.input}
+                        style={styles.textInput}
                         value={password}
                         onChangeText={setPassword}
-                        placeholder="Digite sua senha administrativa"
+                        placeholder="Digite sua senha"
                         placeholderTextColor="#64748B"
                         secureTextEntry={!showPassword}
                         autoCapitalize="none"
+                        autoCorrect={false}
                       />
-                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                      <TouchableOpacity 
+                        onPress={() => setShowPassword(!showPassword)}
+                        style={styles.eyeButton}
+                      >
                         <Ionicons 
-                          name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                          name={showPassword ? "eye-off" : "eye"} 
                           size={20} 
-                          color="#F59E0B" 
+                          color="#8B5CF6" 
                         />
                       </TouchableOpacity>
                     </LinearGradient>
                   </View>
                 </View>
 
-                {/* Admin Login Button */}
-                <TouchableOpacity 
+                {/* Login Button */}
+                <TouchableOpacity
                   style={[styles.loginButton, loading && styles.loginButtonDisabled]}
                   onPress={handleLogin}
                   disabled={loading}
                 >
                   <LinearGradient
-                    colors={loading ? ['#64748B', '#475569'] : ['#F59E0B', '#F97316', '#EF4444']}
+                    colors={loading ? ['#64748B', '#475569'] : ['#8B5CF6', '#A855F7', '#C084FC']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.loginButtonGradient}
                   >
                     {loading ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
+                      <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
                       <>
-                        <Ionicons name="rocket-outline" size={20} color="#FFFFFF" />
+                        <Ionicons name="shield-checkmark" size={20} color="#FFFFFF" />
                         <Text style={styles.loginButtonText}>Acessar Painel</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+                        <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
                       </>
                     )}
                   </LinearGradient>
@@ -329,35 +338,7 @@ export default function AdminLogin() {
               </LinearGradient>
             </Animated.View>
 
-            {/* Demo Credentials Card */}
-            <Animated.View 
-              style={[
-                styles.demoCard,
-                {
-                  opacity: fadeAnim,
-                }
-              ]}
-            >
-              <LinearGradient
-                colors={['rgba(245, 158, 11, 0.2)', 'rgba(245, 158, 11, 0.1)']}
-                style={styles.demoGradient}
-              >
-                <View style={styles.demoHeader}>
-                  <Ionicons name="key" size={24} color="#F59E0B" />
-                  <Text style={styles.demoTitle}>🔑 Credenciais de Acesso</Text>
-                </View>
-                <View style={styles.demoRow}>
-                  <Text style={styles.demoLabel}>Email:</Text>
-                  <Text style={styles.demoValue}>admin@luxepass.com</Text>
-                </View>
-                <View style={styles.demoRow}>
-                  <Text style={styles.demoLabel}>Senha:</Text>
-                  <Text style={styles.demoValue}>admin123</Text>
-                </View>
-              </LinearGradient>
-            </Animated.View>
-
-            {/* Admin Features */}
+            {/* Features Card */}
             <Animated.View 
               style={[
                 styles.featuresContainer,
@@ -368,62 +349,76 @@ export default function AdminLogin() {
             >
               <Text style={styles.featuresTitle}>Recursos Administrativos</Text>
               <View style={styles.featuresGrid}>
-                <View style={styles.featureItem}>
+                <View style={styles.feature}>
+                  <LinearGradient
+                    colors={['rgba(139, 92, 246, 0.2)', 'rgba(139, 92, 246, 0.1)']}
+                    style={styles.featureIconContainer}
+                  >
+                    <Text style={styles.featureEmoji}>👥</Text>
+                  </LinearGradient>
+                  <Text style={styles.featureText}>Gestão de Usuários</Text>
+                </View>
+                <View style={styles.feature}>
                   <LinearGradient
                     colors={['rgba(34, 197, 94, 0.2)', 'rgba(34, 197, 94, 0.1)']}
                     style={styles.featureIconContainer}
                   >
-                    <Ionicons name="people" size={24} color="#22C55E" />
+                    <Text style={styles.featureEmoji}>🏋️</Text>
                   </LinearGradient>
-                  <Text style={styles.featureText}>Gestão de Usuários</Text>
+                  <Text style={styles.featureText}>Controle Academias</Text>
                 </View>
-                <View style={styles.featureItem}>
-                  <LinearGradient
-                    colors={['rgba(59, 130, 246, 0.2)', 'rgba(59, 130, 246, 0.1)']}
-                    style={styles.featureIconContainer}
-                  >
-                    <Ionicons name="business" size={24} color="#3B82F6" />
-                  </LinearGradient>
-                  <Text style={styles.featureText}>Controle de Academias</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <LinearGradient
-                    colors={['rgba(168, 85, 247, 0.2)', 'rgba(168, 85, 247, 0.1)']}
-                    style={styles.featureIconContainer}
-                  >
-                    <Ionicons name="analytics" size={24} color="#A855F7" />
-                  </LinearGradient>
-                  <Text style={styles.featureText}>Analytics Avançado</Text>
-                </View>
-                <View style={styles.featureItem}>
+                <View style={styles.feature}>
                   <LinearGradient
                     colors={['rgba(245, 158, 11, 0.2)', 'rgba(245, 158, 11, 0.1)']}
                     style={styles.featureIconContainer}
                   >
-                    <Ionicons name="card" size={24} color="#F59E0B" />
+                    <Text style={styles.featureEmoji}>💰</Text>
                   </LinearGradient>
-                  <Text style={styles.featureText}>Relatórios Financeiros</Text>
+                  <Text style={styles.featureText}>Financeiro</Text>
+                </View>
+                <View style={styles.feature}>
+                  <LinearGradient
+                    colors={['rgba(239, 68, 68, 0.2)', 'rgba(239, 68, 68, 0.1)']}
+                    style={styles.featureIconContainer}
+                  >
+                    <Text style={styles.featureEmoji}>🎫</Text>
+                  </LinearGradient>
+                  <Text style={styles.featureText}>Tokens</Text>
                 </View>
               </View>
             </Animated.View>
 
-            {/* Security Notice */}
+            {/* Credentials Info */}
             <Animated.View 
               style={[
-                styles.securityNotice,
+                styles.credentialsContainer,
                 {
                   opacity: fadeAnim,
                 }
               ]}
             >
               <LinearGradient
-                colors={['rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.08)']}
-                style={styles.securityGradient}
+                colors={['rgba(59, 130, 246, 0.15)', 'rgba(59, 130, 246, 0.08)']}
+                style={styles.credentialsGradient}
               >
-                <Ionicons name="warning" size={20} color="#EF4444" />
-                <Text style={styles.securityNoticeText}>
-                  Acesso monitorado e registrado para segurança
-                </Text>
+                <View style={styles.credentialsHeader}>
+                  <LinearGradient
+                    colors={['#3B82F6', '#1D4ED8']}
+                    style={styles.credentialsIcon}
+                  >
+                    <Ionicons name="information-circle" size={20} color="#FFFFFF" />
+                  </LinearGradient>
+                  <Text style={styles.credentialsTitle}>Credenciais de Demonstração</Text>
+                </View>
+                
+                <View style={styles.credentialsContent}>
+                  <Text style={styles.credentialsText}>
+                    <Text style={styles.credentialsLabel}>Email:</Text> admin@luxepass.com
+                  </Text>
+                  <Text style={styles.credentialsText}>
+                    <Text style={styles.credentialsLabel}>Senha:</Text> admin123
+                  </Text>
+                </View>
               </LinearGradient>
             </Animated.View>
           </ScrollView>
@@ -441,54 +436,48 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
   },
-  // Elementos animados de fundo
   backgroundShape1: {
     position: 'absolute',
-    top: 120,
-    right: 40,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    opacity: 0.6,
-  },
-  backgroundShape2: {
-    position: 'absolute',
-    top: 300,
-    left: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    opacity: 0.4,
-  },
-  backgroundShape3: {
-    position: 'absolute',
-    bottom: 200,
+    top: 150,
     right: 30,
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    opacity: 0.3,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+  },
+  backgroundShape2: {
+    position: 'absolute',
+    bottom: 300,
+    left: 20,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(168, 85, 247, 0.08)',
+  },
+  backgroundShape3: {
+    position: 'absolute',
+    top: 300,
+    right: 60,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(192, 132, 252, 0.06)',
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
     paddingBottom: 40,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 24,
     paddingTop: 20,
-    paddingBottom: 40,
   },
   backButton: {
-    position: 'absolute',
-    left: 0,
-    top: 20,
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -499,91 +488,97 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  logoSection: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+  },
   logoContainer: {
     position: 'relative',
     marginBottom: 24,
   },
   logoGradient: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#F59E0B',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 15,
     position: 'relative',
   },
   logoGlow: {
     position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    top: -15,
-    left: -15,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+    top: -20,
+    left: -20,
     zIndex: -1,
-  },
-  logoImage: {
-    width: 65,
-    height: 65,
   },
   adminBadge: {
     position: 'absolute',
     bottom: -5,
     right: -5,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#22C55E',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F59E0B',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
     borderColor: '#FFFFFF',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 8,
+    fontSize: 32,
+    fontWeight: 'bold',
     textAlign: 'center',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
     color: '#94A3B8',
+    fontSize: 18,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  securityBadges: {
+  statusIndicators: {
     flexDirection: 'row',
     gap: 12,
   },
-  securityBadge: {
+  statusItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
-    gap: 6,
+    gap: 4,
   },
-  securityText: {
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#22C55E',
+  },
+  statusText: {
     color: '#94A3B8',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
   },
-  formCard: {
+  formContainer: {
+    paddingHorizontal: 24,
     marginBottom: 32,
-    borderRadius: 24,
-    overflow: 'hidden',
   },
   formGradient: {
-    padding: 24,
     borderRadius: 24,
+    padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.2)',
+    borderColor: 'rgba(139, 92, 246, 0.2)',
   },
   formHeader: {
     flexDirection: 'row',
@@ -592,18 +587,25 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 12,
   },
+  formHeaderIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   formTitle: {
-    fontSize: 18,
-    fontWeight: '600',
     color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
   },
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  label: {
+  inputLabel: {
+    color: '#E2E8F0',
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: '500',
     marginBottom: 12,
   },
   inputContainer: {
@@ -613,24 +615,38 @@ const styles = StyleSheet.create({
   inputGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
   },
-  input: {
+  inputIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textInput: {
     flex: 1,
-    fontSize: 16,
     color: '#FFFFFF',
+    fontSize: 16,
     marginLeft: 12,
+    marginRight: 12,
+  },
+  eyeButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loginButton: {
     borderRadius: 16,
     overflow: 'hidden',
-    marginTop: 8,
-    shadowColor: '#F59E0B',
+    shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 10,
   },
@@ -646,97 +662,85 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  demoCard: {
-    marginBottom: 32,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  demoGradient: {
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-  },
-  demoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    gap: 8,
-  },
-  demoTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  demoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  demoLabel: {
-    color: '#94A3B8',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  demoValue: {
-    color: '#F59E0B',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
   },
   featuresContainer: {
+    paddingHorizontal: 24,
     marginBottom: 32,
   },
   featuresTitle: {
-    fontSize: 20,
-    fontWeight: '600',
     color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 16,
   },
-  featureItem: {
+  feature: {
     alignItems: 'center',
-    width: '48%',
+    width: '22%',
+    marginBottom: 16,
   },
   featureIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  featureEmoji: {
+    fontSize: 24,
   },
   featureText: {
-    fontSize: 13,
     color: '#94A3B8',
+    fontSize: 12,
     textAlign: 'center',
     fontWeight: '500',
   },
-  securityNotice: {
+  credentialsContainer: {
+    marginHorizontal: 24,
     borderRadius: 16,
     overflow: 'hidden',
   },
-  securityGradient: {
+  credentialsGradient: {
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+  },
+  credentialsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
+    marginBottom: 12,
     gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
-  securityNoticeText: {
-    color: '#EF4444',
+  credentialsIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  credentialsTitle: {
+    color: '#3B82F6',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  credentialsContent: {
+    gap: 6,
+  },
+  credentialsText: {
+    color: '#E2E8F0',
     fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'center',
+    lineHeight: 18,
+  },
+  credentialsLabel: {
+    color: '#3B82F6',
+    fontWeight: '600',
   },
 });

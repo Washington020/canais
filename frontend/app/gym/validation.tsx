@@ -16,9 +16,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import Constants from 'expo-constants';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL;
+const API_URL = '/api';
 
 export default function TokenValidation() {
   const [tokenCode, setTokenCode] = useState('');
@@ -104,7 +103,7 @@ export default function TokenValidation() {
       };
       
       const response = await axios.post(
-        `${API_URL}/api/tokens/validate/${tokenCode}?gym_id=${gym.id}`,
+        `${API_URL}/tokens/validate/${tokenCode}?gym_id=${gym.id}`,
         {},
         { headers, timeout: 15000 }
       );

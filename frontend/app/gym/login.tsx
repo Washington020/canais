@@ -21,10 +21,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import Constants from 'expo-constants';
 
 const { width, height } = Dimensions.get('window');
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_URL = '/api';
 
 export default function GymLogin() {
   const [login, setLogin] = useState('');
@@ -90,7 +89,7 @@ export default function GymLogin() {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/api/gym/auth`, {
+      const response = await axios.post(`${API_URL}/gym/auth`, {
         login,
         password
       });
