@@ -18,6 +18,7 @@ import secrets
 import qrcode
 from io import BytesIO
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
+from pagarme_service import pagarme_service
 
 # Import the advanced token system
 from token_system import token_manager, AdvancedToken, TokenAuditLog, TokenSystemManager
