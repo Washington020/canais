@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -8,7 +8,9 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
-  Modal
+  Modal,
+  Linking,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -16,98 +18,215 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
 
-interface Plan {
+interface PaymentPlan {
   id: string;
   name: string;
   price: number;
+  currency: string;
+  duration_days: number;
   features: string[];
-  popular?: boolean;
+  token_limit: number;
+  description: string;
+}
+
+interface Transaction {
+  id: string;
+  plan_id: string;
+  plan_name: string;
+  amount: number;
+  currency: string;
+  payment_status: string;
+  payment_method: string;
+  created_at: string;
+  session_id: string;
+}
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  plan: string;
+  status: string;
+  subscription_end?: string;
 }
 
 export default function Financial() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showPlansModal, setShowPlansModal] = useState(false);
-  const [currentPlan, setCurrentPlan] = useState('premium');
+  const [plans, setPlans] = useState<PaymentPlan[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  
+  const router = useRouter();
+  const params = useLocalSearchParams();
 
-  const plans: Plan[] = [
-    {
-      id: 'basic',
-      name: 'Básico',
-      price: 90.00,
-      features: [
-        '1 token de academia por dia',
-        'Acesso a academias básicas',
-        'App móvel',
-        'Suporte básico'
-      ]
-    },
-    {
-      id: 'intermediate',
-      name: 'Intermediário',
-      price: 120.00,
-      features: [
-        '1 token de academia por dia',
-        'Acesso a todas as academias',
-        '1 consulta nutricional por mês',
-        'App móvel com estatísticas',
-        'Suporte prioritário'
-      ]
-    },
-    {
-      id: 'premium',
-      name: 'Premium',
-      price: 149.90,
-      popular: true,
-      features: [
-        '2 tokens por dia (academia + nutricionista)',
-        'Acesso a todas as academias',
-        'Consultas nutricionais ilimitadas',
-        'Personal trainer com IA',
-        'App móvel completo',
-        'Suporte 24/7',
-        'Relatórios detalhados'
-      ]
+  // Check for payment return (from Stripe)
+  useEffect(() => {
+    if (params.session_id) {
+      checkPaymentStatus(params.session_id as string);
     }
-  ];
+  }, [params.session_id]);
 
-  const paymentHistory = [
-    {
-      id: '1',
-      date: '2025-01-20',
-      amount: 149.90,
-      plan: 'Premium',
-      status: 'completed',
-      method: 'Cartão **** 4532'
-    },
-    {
-      id: '2',
-      date: '2024-12-20',
-      amount: 149.90,
-      plan: 'Premium',
-      status: 'completed',
-      method: 'Cartão **** 4532'
-    },
-    {
-      id: '3',
-      date: '2024-11-20',
-      amount: 149.90,
-      plan: 'Premium',
-      status: 'completed',
-      method: 'Cartão **** 4532'
-    },
-    {
-      id: '4',
-      date: '2024-10-20',
-      amount: 149.90,
-      plan: 'Premium',
-      status: 'completed',
-      method: 'Cartão **** 4532'
+  const loadData = useCallback(async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        router.replace('/client/login');
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Load payment plans
+      const plansResponse = await axios.get(`${API_URL}/payments/plans`, { headers });
+      setPlans(plansResponse.data || []);
+
+      // Load user transactions
+      const transactionsResponse = await axios.get(`${API_URL}/payments/user/transactions`, { headers });
+      setTransactions(transactionsResponse.data || []);
+
+      // Load user profile
+      const profileResponse = await axios.get(`${API_URL}/users/profile`, { headers });
+      setUserProfile(profileResponse.data);
+
+    } catch (error: any) {
+      console.error('Erro ao carregar dados financeiros:', error);
+      if (error.response?.status === 401) {
+        router.replace('/client/login');
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  ];
+  }, [router]);
+
+  const checkPaymentStatus = useCallback(async (sessionId: string) => {
+    if (checkingPayment) return;
+    
+    setCheckingPayment(true);
+    let attempts = 0;
+    const maxAttempts = 10;
+    const pollInterval = 2000; // 2 seconds
+
+    const pollStatus = async () => {
+      if (attempts >= maxAttempts) {
+        setCheckingPayment(false);
+        Alert.alert(
+          'Verificação de Pagamento',
+          'Não foi possível verificar o status do pagamento. Por favor, verifique seu histórico de transações.',
+          [{ text: 'OK', onPress: () => loadData() }]
+        );
+        return;
+      }
+
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+        
+        const response = await axios.get(`${API_URL}/payments/checkout/status/${sessionId}`, { headers });
+        const data = response.data;
+
+        if (data.payment_status === 'paid') {
+          setCheckingPayment(false);
+          Alert.alert(
+            '🎉 Pagamento Confirmado!',
+            `Sua assinatura do ${data.plan_name} foi ativada com sucesso!`,
+            [{ text: 'Excelente!', onPress: () => loadData() }]
+          );
+          return;
+        } else if (data.status === 'expired') {
+          setCheckingPayment(false);
+          Alert.alert(
+            'Pagamento Expirado',
+            'A sessão de pagamento expirou. Tente novamente.',
+            [{ text: 'OK', onPress: () => loadData() }]
+          );
+          return;
+        }
+
+        // Continue polling if still pending
+        attempts++;
+        setTimeout(pollStatus, pollInterval);
+      } catch (error) {
+        console.error('Erro ao verificar status do pagamento:', error);
+        attempts++;
+        setTimeout(pollStatus, pollInterval);
+      }
+    };
+
+    pollStatus();
+  }, [checkingPayment, loadData]);
+
+  const subscribeToPlan = useCallback(async (planId: string) => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Get origin URL for success/cancel redirects
+      const originUrl = Platform.OS === 'web' 
+        ? window.location.origin 
+        : 'https://luxepass-app.com'; // fallback for mobile
+
+      const checkoutData = {
+        plan_id: planId,
+        origin_url: originUrl,
+        payment_method: 'stripe'
+      };
+
+      const response = await axios.post(
+        `${API_URL}/payments/checkout/session`,
+        checkoutData,
+        { headers }
+      );
+
+      const { url, plan_name } = response.data;
+
+      Alert.alert(
+        'Confirmar Assinatura',
+        `Você será redirecionado para completar o pagamento do ${plan_name}.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Continuar',
+            onPress: () => {
+              if (Platform.OS === 'web') {
+                window.location.href = url;
+              } else {
+                Linking.openURL(url);
+              }
+              setShowPlansModal(false);
+            }
+          }
+        ]
+      );
+
+    } catch (error: any) {
+      console.error('Erro ao criar sessão de checkout:', error);
+      Alert.alert(
+        'Erro no Pagamento',
+        error.response?.data?.detail || 'Não foi possível processar o pagamento. Tente novamente.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadData();
+  }, [loadData]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -122,38 +241,41 @@ export default function Financial() {
 
   const getPlanColor = (planId: string) => {
     switch (planId) {
-      case 'premium': return '#FFD700';
-      case 'intermediate': return '#8B5CF6';
+      case 'vip': return '#FFD700';
+      case 'premium': return '#8B5CF6';
       default: return '#22C55E';
     }
   };
 
-  const calculateSavings = () => {
-    // Assume traditional gym costs around R$ 120/month + nutritionist R$ 200/month
-    const traditionalCost = 320;
-    const fitpassCost = 149.90;
-    const monthlySavings = traditionalCost - fitpassCost;
-    const totalSavings = monthlySavings * 8; // 8 months as client
-    return totalSavings;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid': return '#22C55E';
+      case 'pending': return '#F59E0B';
+      case 'failed': return '#EF4444';
+      default: return '#94A3B8';
+    }
   };
 
-  const changePlan = (newPlanId: string) => {
-    Alert.alert(
-      'Alterar Plano',
-      `Deseja alterar para o plano ${plans.find(p => p.id === newPlanId)?.name}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: () => {
-            setCurrentPlan(newPlanId);
-            setShowPlansModal(false);
-            Alert.alert('Sucesso', 'Plano alterado com sucesso! A cobrança será ajustada no próximo ciclo.');
-          }
-        }
-      ]
-    );
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'paid': return 'Pago';
+      case 'pending': return 'Pendente';
+      case 'failed': return 'Falhou';
+      default: return 'Desconhecido';
+    }
   };
+
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#8B5CF6" />
+          <Text style={styles.loadingText}>Carregando dados financeiros...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -168,7 +290,7 @@ export default function Financial() {
       <ScrollView 
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => {}} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {/* Current Plan Overview */}
@@ -178,12 +300,24 @@ export default function Financial() {
           <View style={styles.planCard}>
             <View style={styles.planHeader}>
               <View style={styles.planInfo}>
-                <Text style={styles.planName}>Plano Premium</Text>
-                <Text style={styles.planPrice}>R$ 149,90/mês</Text>
+                <Text style={styles.planName}>
+                  Plano {userProfile?.plan === 'vip' ? 'VIP' : 
+                         userProfile?.plan === 'premium' ? 'Premium' : 'Básico'}
+                </Text>
+                <Text style={styles.planPrice}>
+                  {plans.find(p => p.id === userProfile?.plan)?.price ? 
+                    formatCurrency(plans.find(p => p.id === userProfile?.plan)!.price) : 
+                    'R$ 0,00'
+                  }/mês
+                </Text>
               </View>
-              <View style={[styles.planBadge, { backgroundColor: `${getPlanColor('premium')}20` }]}>
-                <Text style={[styles.planBadgeText, { color: getPlanColor('premium') }]}>
-                  ATIVO
+              <View style={[styles.planBadge, { 
+                backgroundColor: `${getPlanColor(userProfile?.plan || 'basic')}20` 
+              }]}>
+                <Text style={[styles.planBadgeText, { 
+                  color: getPlanColor(userProfile?.plan || 'basic') 
+                }]}>
+                  {userProfile?.status === 'active' ? 'ATIVO' : 'INATIVO'}
                 </Text>
               </View>
             </View>
@@ -191,15 +325,23 @@ export default function Financial() {
             <View style={styles.planDetails}>
               <View style={styles.planDetail}>
                 <Ionicons name="card" size={16} color="#8B5CF6" />
-                <Text style={styles.planDetailText}>Status: Em dia</Text>
+                <Text style={styles.planDetailText}>
+                  Status: {userProfile?.status === 'active' ? 'Em dia' : 'Pendente'}
+                </Text>
               </View>
+              {userProfile?.subscription_end && (
+                <View style={styles.planDetail}>
+                  <Ionicons name="calendar" size={16} color="#8B5CF6" />
+                  <Text style={styles.planDetailText}>
+                    Próximo vencimento: {formatDate(userProfile.subscription_end)}
+                  </Text>
+                </View>
+              )}
               <View style={styles.planDetail}>
-                <Ionicons name="calendar" size={16} color="#8B5CF6" />
-                <Text style={styles.planDetailText}>Próximo vencimento: 25/02/2025</Text>
-              </View>
-              <View style={styles.planDetail}>
-                <Ionicons name="time" size={16} color="#8B5CF6" />
-                <Text style={styles.planDetailText}>Cliente há 8 meses</Text>
+                <Ionicons name="person" size={16} color="#8B5CF6" />
+                <Text style={styles.planDetailText}>
+                  {userProfile?.name || 'Usuário LuxePass'}
+                </Text>
               </View>
             </View>
 
@@ -207,112 +349,89 @@ export default function Financial() {
               style={styles.changePlanButton}
               onPress={() => setShowPlansModal(true)}
             >
-              <Text style={styles.changePlanButtonText}>Alterar Plano</Text>
+              <Text style={styles.changePlanButtonText}>
+                {userProfile?.plan ? 'Alterar Plano' : 'Escolher Plano'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Payment Method */}
-        <View style={styles.paymentContainer}>
-          <Text style={styles.sectionTitle}>Forma de Pagamento</Text>
-          
-          <View style={styles.paymentCard}>
-            <View style={styles.creditCard}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardType}>VISA</Text>
-                <Ionicons name="card" size={24} color="#FFFFFF" />
-              </View>
-              <Text style={styles.cardNumber}>**** **** **** 4532</Text>
-              <View style={styles.cardFooter}>
-                <Text style={styles.cardHolder}>João Silva</Text>
-                <Text style={styles.cardExpiry}>12/27</Text>
-              </View>
-            </View>
-            
-            <View style={styles.paymentActions}>
-              <TouchableOpacity style={styles.paymentActionButton}>
-                <Ionicons name="card-outline" size={16} color="#8B5CF6" />
-                <Text style={styles.paymentActionText}>Alterar Cartão</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.paymentActionButton}>
-                <Ionicons name="document-text-outline" size={16} color="#8B5CF6" />
-                <Text style={styles.paymentActionText}>Ver Histórico</Text>
-              </TouchableOpacity>
+        {/* Payment Status */}
+        {checkingPayment && (
+          <View style={styles.paymentStatusContainer}>
+            <View style={styles.paymentStatusCard}>
+              <ActivityIndicator size="small" color="#8B5CF6" />
+              <Text style={styles.paymentStatusText}>
+                Verificando status do pagamento...
+              </Text>
             </View>
           </View>
-        </View>
-
-        {/* Savings */}
-        <View style={styles.savingsContainer}>
-          <Text style={styles.sectionTitle}>Sua Economia</Text>
-          
-          <View style={styles.savingsCard}>
-            <View style={styles.savingsHeader}>
-              <Ionicons name="trending-down" size={24} color="#22C55E" />
-              <Text style={styles.savingsTitle}>Total Economizado</Text>
-            </View>
-            
-            <Text style={styles.savingsAmount}>
-              {formatCurrency(calculateSavings())}
-            </Text>
-            
-            <Text style={styles.savingsDescription}>
-              em 8 meses comparado com academia tradicional + nutricionista
-            </Text>
-            
-            <View style={styles.savingsBreakdown}>
-              <View style={styles.savingsItem}>
-                <Text style={styles.savingsItemLabel}>Academia tradicional:</Text>
-                <Text style={styles.savingsItemValue}>R$ 120/mês</Text>
-              </View>
-              <View style={styles.savingsItem}>
-                <Text style={styles.savingsItemLabel}>Nutricionista:</Text>
-                <Text style={styles.savingsItemValue}>R$ 200/mês</Text>
-              </View>
-              <View style={styles.savingsItem}>
-                <Text style={styles.savingsItemLabel}>FitPass Premium:</Text>
-                <Text style={[styles.savingsItemValue, { color: '#22C55E' }]}>R$ 149,90/mês</Text>
-              </View>
-            </View>
-          </View>
-        </View>
+        )}
 
         {/* Payment History */}
         <View style={styles.historyContainer}>
           <Text style={styles.sectionTitle}>Histórico de Pagamentos</Text>
           
-          {paymentHistory.map((payment) => (
-            <View key={payment.id} style={styles.historyItem}>
-              <View style={styles.historyInfo}>
-                <Text style={styles.historyDate}>{formatDate(payment.date)}</Text>
-                <Text style={styles.historyPlan}>Plano {payment.plan}</Text>
-                <Text style={styles.historyMethod}>{payment.method}</Text>
-              </View>
-              
-              <View style={styles.historyAmount}>
-                <Text style={styles.historyAmountText}>{formatCurrency(payment.amount)}</Text>
-                <View style={[
-                  styles.historyStatus,
-                  { backgroundColor: payment.status === 'completed' ? '#22C55E20' : '#EF444420' }
-                ]}>
-                  <Text style={[
-                    styles.historyStatusText,
-                    { color: payment.status === 'completed' ? '#22C55E' : '#EF4444' }
-                  ]}>
-                    {payment.status === 'completed' ? 'Pago' : 'Pendente'}
+          {transactions.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="card-outline" size={48} color="#64748B" />
+              <Text style={styles.emptyText}>Nenhuma transação encontrada</Text>
+              <Text style={styles.emptySubtext}>
+                Suas transações aparecerão aqui após a primeira compra
+              </Text>
+            </View>
+          ) : (
+            transactions.map((transaction) => (
+              <View key={transaction.id} style={styles.historyItem}>
+                <View style={styles.historyInfo}>
+                  <Text style={styles.historyDate}>
+                    {formatDate(transaction.created_at)}
+                  </Text>
+                  <Text style={styles.historyPlan}>
+                    {transaction.plan_name}
+                  </Text>
+                  <Text style={styles.historyMethod}>
+                    {transaction.payment_method === 'stripe' ? 'Cartão de Crédito' : 'PIX'}
                   </Text>
                 </View>
+                
+                <View style={styles.historyAmount}>
+                  <Text style={styles.historyAmountText}>
+                    {formatCurrency(transaction.amount)}
+                  </Text>
+                  <View style={[
+                    styles.historyStatus,
+                    { backgroundColor: `${getStatusColor(transaction.payment_status)}20` }
+                  ]}>
+                    <Text style={[
+                      styles.historyStatusText,
+                      { color: getStatusColor(transaction.payment_status) }
+                    ]}>
+                      {getStatusText(transaction.payment_status)}
+                    </Text>
+                  </View>
+                </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
-        {/* Invoice Download */}
-        <View style={styles.invoiceContainer}>
-          <TouchableOpacity style={styles.invoiceButton}>
-            <Ionicons name="download" size={20} color="#8B5CF6" />
-            <Text style={styles.invoiceButtonText}>Baixar Comprovante</Text>
+        {/* Quick Actions */}
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => setShowPlansModal(true)}
+          >
+            <Ionicons name="card" size={20} color="#8B5CF6" />
+            <Text style={styles.actionButtonText}>Ver Planos</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => loadData()}
+          >
+            <Ionicons name="refresh" size={20} color="#22C55E" />
+            <Text style={styles.actionButtonText}>Atualizar</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -342,21 +461,29 @@ export default function Financial() {
                   key={plan.id}
                   style={[
                     styles.modalPlanCard,
-                    plan.id === currentPlan && styles.modalPlanCardCurrent,
-                    plan.popular && styles.modalPlanCardPopular
+                    plan.id === userProfile?.plan && styles.modalPlanCardCurrent,
+                    plan.id === 'premium' && styles.modalPlanCardPopular
                   ]}
-                  onPress={() => changePlan(plan.id)}
-                  disabled={plan.id === currentPlan}
+                  onPress={() => {
+                    if (plan.id !== userProfile?.plan) {
+                      subscribeToPlan(plan.id);
+                    }
+                  }}
                 >
-                  {plan.popular && (
+                  {plan.id === 'premium' && (
                     <View style={styles.popularBadge}>
-                      <Text style={styles.popularBadgeText}>MAIS POPULAR</Text>
+                      <Text style={styles.popularBadgeText}>RECOMENDADO</Text>
                     </View>
                   )}
                   
                   <View style={styles.modalPlanHeader}>
                     <Text style={styles.modalPlanName}>{plan.name}</Text>
-                    <Text style={styles.modalPlanPrice}>{formatCurrency(plan.price)}/mês</Text>
+                    <Text style={styles.modalPlanPrice}>
+                      {formatCurrency(plan.price)}/mês
+                    </Text>
+                    <Text style={styles.modalPlanDescription}>
+                      {plan.description}
+                    </Text>
                   </View>
                   
                   <View style={styles.modalPlanFeatures}>
@@ -368,9 +495,15 @@ export default function Financial() {
                     ))}
                   </View>
                   
-                  {plan.id === currentPlan && (
+                  {plan.id === userProfile?.plan ? (
                     <View style={styles.currentPlanIndicator}>
                       <Text style={styles.currentPlanText}>Plano Atual</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.selectPlanButton}>
+                      <Text style={styles.selectPlanText}>
+                        Assinar por {formatCurrency(plan.price)}/mês
+                      </Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -380,10 +513,11 @@ export default function Financial() {
         </View>
       </Modal>
 
+      {/* Loading Overlay */}
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Processando...</Text>
+          <Text style={styles.loadingText}>Processando pagamento...</Text>
         </View>
       )}
     </SafeAreaView>
@@ -394,6 +528,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0B0D17',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: 'center',
   },
   header: {
     paddingHorizontal: 24,
@@ -480,129 +625,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  paymentContainer: {
+  paymentStatusContainer: {
     paddingHorizontal: 24,
     marginBottom: 24,
   },
-  paymentCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  paymentStatusCard: {
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
     borderRadius: 12,
-    padding: 20,
-  },
-  creditCard: {
-    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    backgroundColor: '#8B5CF6',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  cardType: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cardNumber: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    letterSpacing: 2,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardHolder: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  cardExpiry: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  paymentActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  paymentActionButton: {
-    flex: 1,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    paddingVertical: 10,
-    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
   },
-  paymentActionText: {
+  paymentStatusText: {
     color: '#8B5CF6',
     fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  savingsContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  savingsCard: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
-  },
-  savingsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  savingsTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  savingsAmount: {
-    color: '#22C55E',
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  savingsDescription: {
-    color: '#94A3B8',
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  savingsBreakdown: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    paddingTop: 16,
-  },
-  savingsItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  savingsItemLabel: {
-    color: '#94A3B8',
-    fontSize: 14,
-  },
-  savingsItemValue: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
+    marginLeft: 12,
   },
   historyContainer: {
     paddingHorizontal: 24,
     marginBottom: 24,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    color: '#64748B',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
   },
   historyItem: {
     flexDirection: 'row',
@@ -649,11 +708,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
-  invoiceContainer: {
+  actionsContainer: {
     paddingHorizontal: 24,
     marginBottom: 40,
+    flexDirection: 'row',
+    gap: 12,
   },
-  invoiceButton: {
+  actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -661,11 +723,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#8B5CF6',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
   },
-  invoiceButtonText: {
+  actionButtonText: {
     color: '#8B5CF6',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     marginLeft: 8,
   },
@@ -678,7 +740,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E293B',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '80%',
+    maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -742,6 +804,11 @@ const styles = StyleSheet.create({
     color: '#8B5CF6',
     fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  modalPlanDescription: {
+    color: '#94A3B8',
+    fontSize: 12,
   },
   modalPlanFeatures: {
     marginBottom: 16,
@@ -768,6 +835,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  selectPlanButton: {
+    backgroundColor: '#8B5CF6',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  selectPlanText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   loadingOverlay: {
     position: 'absolute',
     top: 0,
@@ -777,10 +855,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginTop: 16,
   },
 });
