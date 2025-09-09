@@ -15,210 +15,156 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
 
-interface Workout {
+interface WorkoutPlan {
   id: string;
-  name: string;
-  difficulty: string;
-  duration_minutes: number;
+  workout_name: string;
   exercises: any[];
-  target_muscle_groups: string[];
-  completed?: boolean;
-  scheduled_date?: string;
+  start_date: string;
+  end_date?: string;
+  created_at: string;
+}
+
+interface AppointmentSlot {
+  id: string;
+  date: string;
+  professional_type: string;
 }
 
 export default function Workouts() {
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [userWorkouts, setUserWorkouts] = useState<any[]>([]);
+  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
+  const [availableSlots, setAvailableSlots] = useState<AppointmentSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<string>('all');
+  const [userPlan, setUserPlan] = useState('basic');
+  
+  const router = useRouter();
 
   useEffect(() => {
-    loadWorkouts();
+    loadWorkoutPlan();
+    loadAvailableSlots();
   }, []);
 
-  const loadWorkouts = async () => {
+  const loadWorkoutPlan = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        router.replace('/client/login');
+        return;
+      }
 
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [workoutsResponse, userWorkoutsResponse] = await Promise.all([
-        axios.get(`${API_URL}/api/workouts`, { headers }),
-        axios.get(`${API_URL}/api/workouts/user`, { headers })
-      ]);
+      // Get user profile to check plan
+      const profileResponse = await axios.get(`${API_URL}/users/profile`, { headers });
+      const currentPlan = profileResponse.data.plan || 'basic';
+      setUserPlan(currentPlan);
 
-      // If no workouts from API, create mock data
-      if (workoutsResponse.data.length === 0) {
-        const mockWorkouts = [
-          {
-            id: '1',
-            name: 'Treino de Peito',
-            difficulty: 'intermediate',
-            duration_minutes: 45,
-            exercises: [
-              { name: 'Supino Reto', sets: 4, reps: 10 },
-              { name: 'Supino Inclinado', sets: 3, reps: 12 },
-              { name: 'Crucifixo', sets: 3, reps: 15 },
-              { name: 'Flexão', sets: 3, reps: 15 }
-            ],
-            target_muscle_groups: ['Peito', 'Tríceps'],
-            completed: true,
-            scheduled_date: '2025-01-20'
-          },
-          {
-            id: '2',
-            name: 'Treino de Costas',
-            difficulty: 'advanced',
-            duration_minutes: 50,
-            exercises: [
-              { name: 'Puxada Frente', sets: 4, reps: 10 },
-              { name: 'Remada Baixa', sets: 4, reps: 12 },
-              { name: 'Barra Fixa', sets: 3, reps: 8 },
-              { name: 'Remada Unilateral', sets: 3, reps: 12 }
-            ],
-            target_muscle_groups: ['Costas', 'Bíceps'],
-            completed: false,
-            scheduled_date: '2025-01-21'
-          },
-          {
-            id: '3',
-            name: 'Treino de Pernas',
-            difficulty: 'intermediate',
-            duration_minutes: 60,
-            exercises: [
-              { name: 'Agachamento', sets: 4, reps: 12 },
-              { name: 'Leg Press', sets: 4, reps: 15 },
-              { name: 'Extensão de Pernas', sets: 3, reps: 15 },
-              { name: 'Mesa Flexora', sets: 3, reps: 12 }
-            ],
-            target_muscle_groups: ['Quadríceps', 'Glúteos', 'Panturrilha'],
-            completed: true,
-            scheduled_date: '2025-01-19'
-          },
-          {
-            id: '4',
-            name: 'Treino de Ombros',
-            difficulty: 'beginner',
-            duration_minutes: 40,
-            exercises: [
-              { name: 'Desenvolvimento', sets: 4, reps: 10 },
-              { name: 'Elevação Lateral', sets: 3, reps: 12 },
-              { name: 'Elevação Frontal', sets: 3, reps: 12 },
-              { name: 'Encolhimento', sets: 3, reps: 15 }
-            ],
-            target_muscle_groups: ['Ombros', 'Trapézio'],
-            completed: false,
-            scheduled_date: '2025-01-22'
-          }
-        ];
-        setWorkouts(mockWorkouts);
-        setUserWorkouts(mockWorkouts);
-      } else {
-        setWorkouts(workoutsResponse.data);
-        setUserWorkouts(userWorkoutsResponse.data);
+      // Get workout plan
+      const response = await axios.get(`${API_URL}/workouts/user/plan`, { headers });
+      
+      if (response.data.plan) {
+        setWorkoutPlan(response.data.plan);
+      } else if (response.data.upgrade_required) {
+        // User has basic plan, no access to workouts
+        setWorkoutPlan(null);
       }
-    } catch (error) {
-      console.error('Error loading workouts:', error);
-      Alert.alert('Erro', 'Erro ao carregar treinos');
+      
+    } catch (error: any) {
+      console.error('Error loading workout plan:', error);
+      if (error.response?.status === 401) {
+        router.replace('/client/login');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadWorkouts();
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'beginner': return '#22C55E';
-      case 'intermediate': return '#F59E0B';
-      case 'advanced': return '#EF4444';
-      default: return '#94A3B8';
-    }
-  };
-
-  const getDifficultyText = (difficulty: string) => {
-    switch (difficulty) {
-      case 'beginner': return 'Iniciante';
-      case 'intermediate': return 'Intermediário';
-      case 'advanced': return 'Avançado';
-      default: return 'Desconhecido';
-    }
-  };
-
-  const markWorkoutAsCompleted = async (workoutId: string) => {
+  const loadAvailableSlots = async () => {
     try {
-      // Update local state
-      setUserWorkouts(prev => 
-        prev.map(workout => 
-          workout.id === workoutId 
-            ? { ...workout, completed: true }
-            : workout
-        )
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/appointments/available-slots?professional_type=personal`, { headers });
+      
+      setAvailableSlots(response.data.slots || []);
+    } catch (error: any) {
+      console.error('Error loading slots:', error);
+      // Don't show error for basic plan users
+      if (error.response?.status !== 403) {
+        console.error('Unexpected error:', error);
+      }
+    }
+  };
+
+  const schedulePersonalTraining = async (slotId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const slot = availableSlots.find(s => s.id === slotId);
+      if (!slot) return;
+
+      const appointmentData = {
+        appointment_type: 'personal',
+        appointment_date: slot.date,
+        notes: 'Consulta com personal trainer agendada via app'
+      };
+
+      await axios.post(`${API_URL}/appointments/request`, appointmentData, { headers });
+      
+      Alert.alert(
+        '💪 Personal Training Agendado!', 
+        `Sua sessão com o personal trainer foi agendada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${new Date(slot.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
       );
       
-      Alert.alert('Parabéns!', 'Treino marcado como concluído!');
-    } catch (error) {
-      console.error('Error completing workout:', error);
-      Alert.alert('Erro', 'Erro ao marcar treino como concluído');
+      // Reload slots
+      loadAvailableSlots();
+    } catch (error: any) {
+      console.error('Error scheduling appointment:', error);
+      if (error.response?.status === 400) {
+        Alert.alert('Erro', error.response.data.detail);
+      } else {
+        Alert.alert('Erro', 'Não foi possível agendar a sessão');
+      }
     }
   };
 
-  const startWorkout = (workout: Workout) => {
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadWorkoutPlan();
+    loadAvailableSlots();
+  };
+
+  const startWorkout = () => {
+    if (!workoutPlan) return;
+    
     Alert.alert(
-      'Iniciar Treino',
-      `Você está pronto para iniciar o ${workout.name}?\nDuração estimada: ${workout.duration_minutes} min`,
+      '🏋️ Iniciar Treino',
+      `Você está pronto para iniciar "${workoutPlan.workout_name}"?\n\n${workoutPlan.exercises.length} exercícios programados.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Iniciar',
           onPress: () => {
-            Alert.alert('Treino Iniciado!', 'Bom treino! Lembre-se de manter a forma correta.');
+            Alert.alert('💪 Treino Iniciado!', 'Bom treino! Mantenha o foco e a forma correta.');
           }
         }
       ]
     );
   };
 
-  const filteredWorkouts = userWorkouts.filter(workout => {
-    switch (filter) {
-      case 'completed':
-        return workout.completed;
-      case 'pending':
-        return !workout.completed;
-      case 'favorites':
-        // Mock favorites logic
-        return ['1', '3'].includes(workout.id);
-      default:
-        return true;
-    }
-  });
-
-  // Weekly schedule mock data
-  const weeklySchedule = [
-    { day: 'S', name: 'Peito', completed: true, isToday: false },
-    { day: 'T', name: 'Costas', completed: true, isToday: false },
-    { day: 'Q', name: 'Pernas', completed: true, isToday: false },
-    { day: 'Q', name: 'Ombros', completed: false, isToday: true },
-    { day: 'S', name: 'Braços', completed: false, isToday: false },
-    { day: 'S', name: 'Cardio', completed: false, isToday: false },
-    { day: 'D', name: 'Descanso', completed: false, isToday: false }
-  ];
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Carregando treinos...</Text>
+          <Text style={styles.loadingText}>Carregando plano de treino...</Text>
         </View>
       </SafeAreaView>
     );
@@ -231,7 +177,7 @@ export default function Workouts() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Treinos</Text>
-        <Text style={styles.subtitle}>Seu plano de exercícios personalizado</Text>
+        <Text style={styles.subtitle}>Seu plano de treino personalizado</Text>
       </View>
 
       <ScrollView 
@@ -240,217 +186,215 @@ export default function Workouts() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Weekly Schedule */}
-        <View style={styles.scheduleContainer}>
-          <Text style={styles.sectionTitle}>Cronograma Semanal</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.scheduleRow}>
-              {weeklySchedule.map((day, index) => (
-                <View key={index} style={[
-                  styles.scheduleDay,
-                  day.completed && styles.scheduleDayCompleted,
-                  day.isToday && styles.scheduleDayToday
-                ]}>
-                  <Text style={[
-                    styles.scheduleDayText,
-                    day.completed && styles.scheduleDayTextCompleted,
-                    day.isToday && styles.scheduleDayTextToday
-                  ]}>
-                    {day.day}
+        {/* Current Workout Plan */}
+        <View style={styles.workoutPlanContainer}>
+          <Text style={styles.sectionTitle}>🏋️ Plano de Treino Atual</Text>
+          
+          {!workoutPlan && userPlan === 'basic' ? (
+            <View style={styles.upgradeCard}>
+              <Ionicons name="fitness-outline" size={48} color="#64748B" />
+              <Text style={styles.upgradeTitle}>Treinos Personalizados</Text>
+              <Text style={styles.upgradeText}>
+                Treinos personalizados estão disponíveis apenas para usuários Premium e VIP. 
+                Faça upgrade para ter acesso a planos criados pelo nosso personal trainer.
+              </Text>
+              <TouchableOpacity 
+                style={styles.upgradeButton}
+                onPress={() => router.push('/client/(tabs)/financial')}
+              >
+                <Ionicons name="arrow-up-circle" size={16} color="#FFFFFF" />
+                <Text style={styles.upgradeButtonText}>Upgrade para Premium/VIP</Text>
+              </TouchableOpacity>
+            </View>
+          ) : !workoutPlan ? (
+            <View style={styles.noWorkoutCard}>
+              <Ionicons name="barbell-outline" size={48} color="#64748B" />
+              <Text style={styles.noWorkoutTitle}>Nenhum Treino Ativo</Text>
+              <Text style={styles.noWorkoutText}>
+                Você ainda não possui um plano de treino personalizado. Agende uma sessão com nosso personal trainer.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.workoutPlanCard}>
+              <View style={styles.workoutPlanHeader}>
+                <View style={styles.workoutPlanInfo}>
+                  <Text style={styles.workoutPlanName}>{workoutPlan.workout_name}</Text>
+                  <Text style={styles.workoutPlanMeta}>
+                    {workoutPlan.exercises.length} exercícios • Criado em {new Date(workoutPlan.created_at).toLocaleDateString('pt-BR')}
                   </Text>
-                  <Text style={[
-                    styles.scheduleWorkoutText,
-                    day.completed && styles.scheduleWorkoutTextCompleted,
-                    day.isToday && styles.scheduleWorkoutTextToday
-                  ]}>
-                    {day.name}
-                  </Text>
-                  {day.completed && (
-                    <View style={styles.checkmarkContainer}>
-                      <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                    </View>
+                  {workoutPlan.end_date && (
+                    <Text style={styles.workoutPlanDuration}>
+                      Válido até: {new Date(workoutPlan.end_date).toLocaleDateString('pt-BR')}
+                    </Text>
                   )}
                 </View>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>5</Text>
-            <Text style={styles.statLabel}>Treinos Ativos</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>28</Text>
-            <Text style={styles.statLabel}>Concluídos</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>52</Text>
-            <Text style={styles.statLabel}>Min Médio</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>92%</Text>
-            <Text style={styles.statLabel}>Taxa Conclusão</Text>
-          </View>
-        </View>
-
-        {/* Filters */}
-        <View style={styles.filtersContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <TouchableOpacity 
-              style={[styles.filterButton, filter === 'all' && styles.filterButtonActive]}
-              onPress={() => setFilter('all')}
-            >
-              <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
-                Todos ({userWorkouts.length})
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.filterButton, filter === 'pending' && styles.filterButtonActive]}
-              onPress={() => setFilter('pending')}
-            >
-              <Text style={[styles.filterText, filter === 'pending' && styles.filterTextActive]}>
-                Pendentes ({userWorkouts.filter(w => !w.completed).length})
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.filterButton, filter === 'completed' && styles.filterButtonActive]}
-              onPress={() => setFilter('completed')}
-            >
-              <Text style={[styles.filterText, filter === 'completed' && styles.filterTextActive]}>
-                Concluídos ({userWorkouts.filter(w => w.completed).length})
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.filterButton, filter === 'favorites' && styles.filterButtonActive]}
-              onPress={() => setFilter('favorites')}
-            >
-              <Text style={[styles.filterText, filter === 'favorites' && styles.filterTextActive]}>
-                Favoritos (2)
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-
-        {/* Workouts List */}
-        <View style={styles.workoutsContainer}>
-          {filteredWorkouts.map((workout) => (
-            <View key={workout.id} style={styles.workoutCard}>
-              <View style={styles.workoutHeader}>
-                <View style={styles.workoutInfo}>
-                  <Text style={styles.workoutName}>{workout.name}</Text>
-                  <View style={styles.workoutMeta}>
-                    <View style={[
-                      styles.difficultyBadge,
-                      { backgroundColor: `${getDifficultyColor(workout.difficulty)}20` }
-                    ]}>
-                      <Text style={[
-                        styles.difficultyText,
-                        { color: getDifficultyColor(workout.difficulty) }
-                      ]}>
-                        {getDifficultyText(workout.difficulty)}
-                      </Text>
-                    </View>
-                    <Text style={styles.durationText}>{workout.duration_minutes} min</Text>
-                  </View>
-                </View>
                 <TouchableOpacity style={styles.favoriteButton}>
-                  <Ionicons 
-                    name={['1', '3'].includes(workout.id) ? 'heart' : 'heart-outline'} 
-                    size={20} 
-                    color={['1', '3'].includes(workout.id) ? '#EF4444' : '#94A3B8'} 
-                  />
+                  <Ionicons name="heart" size={20} color="#EF4444" />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.workoutDetails}>
-                <Text style={styles.exercisesCount}>
-                  {workout.exercises.length} exercícios
-                </Text>
-                <Text style={styles.targetMuscles}>
-                  {workout.target_muscle_groups.join(', ')}
-                </Text>
-              </View>
-
-              {/* Progress Bar */}
-              <View style={styles.progressContainer}>
-                <View style={styles.progressBar}>
-                  <View style={[
-                    styles.progressFill,
-                    { 
-                      width: workout.completed ? '100%' : '0%',
-                      backgroundColor: workout.completed ? '#22C55E' : '#8B5CF6'
-                    }
-                  ]} />
-                </View>
-                <Text style={styles.progressText}>
-                  {workout.completed ? 'Concluído' : 'Não iniciado'}
-                </Text>
+              {/* Exercises List */}
+              <View style={styles.exercisesList}>
+                <Text style={styles.exercisesTitle}>Exercícios:</Text>
+                {workoutPlan.exercises.slice(0, 5).map((exercise, index) => (
+                  <View key={index} style={styles.exerciseItem}>
+                    <Text style={styles.exerciseName}>
+                      {index + 1}. {exercise.name || `Exercício ${index + 1}`}
+                    </Text>
+                    <Text style={styles.exerciseDetails}>
+                      {exercise.sets || 3} séries x {exercise.reps || 10} repetições
+                      {exercise.weight && ` • ${exercise.weight}kg`}
+                    </Text>
+                  </View>
+                ))}
+                {workoutPlan.exercises.length > 5 && (
+                  <Text style={styles.moreExercises}>
+                    +{workoutPlan.exercises.length - 5} exercícios adicionais
+                  </Text>
+                )}
               </View>
 
               {/* Action Buttons */}
               <View style={styles.workoutActions}>
-                {!workout.completed ? (
-                  <>
-                    <TouchableOpacity 
-                      style={styles.startButton}
-                      onPress={() => startWorkout(workout)}
-                    >
-                      <Ionicons name="play" size={16} color="#FFFFFF" />
-                      <Text style={styles.startButtonText}>Iniciar</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity style={styles.detailsButton}>
-                      <Ionicons name="eye" size={16} color="#8B5CF6" />
-                      <Text style={styles.detailsButtonText}>Detalhes</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <TouchableOpacity style={styles.completedButton} disabled>
-                    <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
-                    <Text style={styles.completedButtonText}>Concluído</Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity 
+                  style={styles.startWorkoutButton}
+                  onPress={startWorkout}
+                >
+                  <Ionicons name="play" size={16} color="#FFFFFF" />
+                  <Text style={styles.startWorkoutText}>Iniciar Treino</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.detailsButton}>
+                  <Ionicons name="eye" size={16} color="#8B5CF6" />
+                  <Text style={styles.detailsButtonText}>Ver Detalhes</Text>
+                </TouchableOpacity>
               </View>
-
-              {workout.completed && (
-                <View style={styles.completedInfo}>
-                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
-                  <Text style={styles.completedText}>
-                    Treino concluído em {new Date(workout.scheduled_date || '').toLocaleDateString('pt-BR')}
-                  </Text>
-                </View>
-              )}
             </View>
-          ))}
+          )}
         </View>
 
-        {/* Create New Workout Button */}
-        <TouchableOpacity style={styles.createButton}>
-          <Ionicons name="add" size={24} color="#FFFFFF" />
-          <Text style={styles.createButtonText}>Criar Novo Treino</Text>
-        </TouchableOpacity>
+        {/* Personal Trainer Section */}
+        <View style={styles.personalTrainerContainer}>
+          <Text style={styles.sectionTitle}>👨‍💼 Personal Trainer</Text>
+          
+          <View style={styles.personalTrainerCard}>
+            <View style={styles.trainerHeader}>
+              <View style={styles.trainerAvatar}>
+                <Text style={styles.trainerAvatarText}>PT</Text>
+              </View>
+              <View style={styles.trainerInfo}>
+                <Text style={styles.trainerName}>Prof. Carlos Silva</Text>
+                <Text style={styles.trainerTitle}>Personal Trainer - CREF 12345-G/SP</Text>
+              </View>
+            </View>
+            
+            <View style={styles.trainerMessage}>
+              <Text style={styles.messageText}>
+                "Para ter um treino personalizado e eficiente, é importante avaliar suas condições físicas e objetivos. 
+                Agende uma sessão para criarmos seu plano ideal!"
+              </Text>
+            </View>
+            
+            {userPlan === 'basic' ? (
+              <View style={styles.upgradeSection}>
+                <Text style={styles.upgradeText}>
+                  Personal training disponível para planos Premium e VIP
+                </Text>
+                <TouchableOpacity 
+                  style={styles.upgradeButton}
+                  onPress={() => router.push('/client/(tabs)/financial')}
+                >
+                  <Ionicons name="arrow-up-circle" size={16} color="#FFFFFF" />
+                  <Text style={styles.upgradeButtonText}>Fazer Upgrade</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.appointmentSection}>
+                <Text style={styles.appointmentTitle}>Agendar Sessão</Text>
+                
+                {availableSlots.length === 0 ? (
+                  <Text style={styles.noSlotsText}>
+                    Nenhum horário disponível no momento. Tente novamente mais tarde.
+                  </Text>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slotsScroll}>
+                    {availableSlots.slice(0, 5).map((slot) => (
+                      <TouchableOpacity 
+                        key={slot.id}
+                        style={styles.slotCard}
+                        onPress={() => schedulePersonalTraining(slot.id)}
+                      >
+                        <Text style={styles.slotDate}>
+                          {new Date(slot.date).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: 'short'
+                          })}
+                        </Text>
+                        <Text style={styles.slotTime}>
+                          {new Date(slot.date).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+                
+                <TouchableOpacity style={styles.messageTrainerButton}>
+                  <Ionicons name="chatbubble" size={16} color="#8B5CF6" />
+                  <Text style={styles.messageTrainerText}>Enviar Mensagem</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Workout Stats */}
+        {workoutPlan && (
+          <View style={styles.statsContainer}>
+            <Text style={styles.sectionTitle}>📊 Estatísticas</Text>
+            
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>{workoutPlan.exercises.length}</Text>
+                <Text style={styles.statLabel}>Exercícios</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>0</Text>
+                <Text style={styles.statLabel}>Concluídos</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>~45</Text>
+                <Text style={styles.statLabel}>Min Médio</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>0%</Text>
+                <Text style={styles.statLabel}>Progresso</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Tips */}
         <View style={styles.tipsContainer}>
-          <Text style={styles.sectionTitle}>Dicas de Treino</Text>
+          <Text style={styles.sectionTitle}>💡 Dicas de Treino</Text>
           <View style={styles.tipsCard}>
             <View style={styles.tip}>
               <Ionicons name="water" size={20} color="#3B82F6" />
-              <Text style={styles.tipText}>Mantenha-se hidratado durante o treino</Text>
+              <Text style={styles.tipText}>Mantenha-se hidratado durante todo o treino</Text>
             </View>
             <View style={styles.tip}>
               <Ionicons name="time" size={20} color="#8B5CF6" />
-              <Text style={styles.tipText}>Respeite o tempo de descanso entre séries</Text>
+              <Text style={styles.tipText}>Respeite o intervalo entre séries (30-90s)</Text>
             </View>
             <View style={styles.tip}>
               <Ionicons name="body" size={20} color="#22C55E" />
               <Text style={styles.tipText}>Foque na execução correta dos movimentos</Text>
+            </View>
+            <View style={styles.tip}>
+              <Ionicons name="calendar" size={20} color="#F59E0B" />
+              <Text style={styles.tipText}>Mantenha consistência na frequência semanal</Text>
             </View>
           </View>
         </View>
@@ -462,7 +406,7 @@ export default function Workouts() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0D17',
+    backgroundColor: '#0F172A',
   },
   loadingContainer: {
     flex: 1,
@@ -470,312 +414,357 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: '#E2E8F0',
     marginTop: 16,
+    fontSize: 16,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
   },
   title: {
-    color: '#FFFFFF',
     fontSize: 28,
     fontWeight: 'bold',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   subtitle: {
-    color: '#94A3B8',
     fontSize: 16,
+    color: '#94A3B8',
   },
   scrollView: {
     flex: 1,
   },
-  scheduleContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
+  workoutPlanContainer: {
+    padding: 20,
   },
   sectionTitle: {
-    color: '#FFFFFF',
     fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  upgradeCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  upgradeTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  upgradeText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  upgradeButton: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  upgradeButtonText: {
+    color: '#FFFFFF',
     fontWeight: '600',
-    marginBottom: 16,
-  },
-  scheduleRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  scheduleDay: {
-    width: 70,
-    height: 80,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  scheduleDayCompleted: {
-    backgroundColor: '#22C55E',
-  },
-  scheduleDayToday: {
-    backgroundColor: '#8B5CF6',
-    borderWidth: 2,
-    borderColor: '#A855F7',
-  },
-  scheduleDayText: {
-    color: '#94A3B8',
     fontSize: 14,
+  },
+  noWorkoutCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  noWorkoutTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  scheduleDayTextCompleted: {
     color: '#FFFFFF',
-  },
-  scheduleDayTextToday: {
-    color: '#FFFFFF',
-  },
-  scheduleWorkoutText: {
-    color: '#94A3B8',
-    fontSize: 10,
+    marginTop: 16,
+    marginBottom: 8,
     textAlign: 'center',
   },
-  scheduleWorkoutTextCompleted: {
-    color: '#FFFFFF',
-  },
-  scheduleWorkoutTextToday: {
-    color: '#FFFFFF',
-  },
-  checkmarkContainer: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 16,
-    height: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    marginHorizontal: 4,
-  },
-  statNumber: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  statLabel: {
-    color: '#94A3B8',
-    fontSize: 10,
-    textAlign: 'center',
-  },
-  filtersContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginRight: 8,
-  },
-  filterButtonActive: {
-    backgroundColor: '#8B5CF6',
-  },
-  filterText: {
-    color: '#94A3B8',
+  noWorkoutText: {
     fontSize: 14,
-    fontWeight: '500',
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 20,
   },
-  filterTextActive: {
-    color: '#FFFFFF',
+  workoutPlanCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
-  workoutsContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  workoutCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  workoutHeader: {
+  workoutPlanHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  workoutInfo: {
-    flex: 1,
-  },
-  workoutName: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  workoutMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  difficultyBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  difficultyText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  durationText: {
-    color: '#94A3B8',
-    fontSize: 12,
-  },
-  favoriteButton: {
-    padding: 4,
-  },
-  workoutDetails: {
-    marginBottom: 12,
-  },
-  exercisesCount: {
-    color: '#94A3B8',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  targetMuscles: {
-    color: '#A1A1AA',
-    fontSize: 12,
-  },
-  progressContainer: {
     marginBottom: 16,
   },
-  progressBar: {
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 2,
+  workoutPlanInfo: {
+    flex: 1,
+  },
+  workoutPlanName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  workoutPlanMeta: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginBottom: 4,
+  },
+  workoutPlanDuration: {
+    fontSize: 12,
+    color: '#F59E0B',
+  },
+  favoriteButton: {
+    padding: 8,
+  },
+  exercisesList: {
+    marginBottom: 20,
+  },
+  exercisesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 12,
+  },
+  exerciseItem: {
     marginBottom: 8,
   },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
+  exerciseName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#E2E8F0',
+    marginBottom: 2,
   },
-  progressText: {
-    color: '#94A3B8',
+  exerciseDetails: {
     fontSize: 12,
+    color: '#94A3B8',
+  },
+  moreExercises: {
+    fontSize: 12,
+    color: '#8B5CF6',
+    fontStyle: 'italic',
+    marginTop: 4,
   },
   workoutActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
   },
-  startButton: {
+  startWorkoutButton: {
     flex: 1,
+    backgroundColor: '#22C55E',
+    paddingVertical: 12,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#8B5CF6',
-    paddingVertical: 10,
-    borderRadius: 8,
+    gap: 8,
   },
-  startButtonText: {
+  startWorkoutText: {
     color: '#FFFFFF',
-    fontSize: 14,
     fontWeight: '600',
-    marginLeft: 4,
+    fontSize: 14,
   },
   detailsButton: {
     flex: 1,
+    backgroundColor: 'transparent',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#8B5CF6',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#8B5CF6',
+    gap: 8,
   },
   detailsButtonText: {
     color: '#8B5CF6',
-    fontSize: 14,
     fontWeight: '600',
-    marginLeft: 4,
-  },
-  completedButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  completedButtonText: {
-    color: '#22C55E',
     fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 4,
   },
-  completedInfo: {
+  personalTrainerContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  personalTrainerCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  trainerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 16,
   },
-  completedText: {
-    color: '#22C55E',
-    fontSize: 12,
-    marginLeft: 8,
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  trainerAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#8B5CF6',
-    paddingVertical: 16,
-    marginHorizontal: 24,
-    borderRadius: 12,
-    marginBottom: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  createButtonText: {
+  trainerAvatarText: {
     color: '#FFFFFF',
+    fontWeight: 'bold',
     fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
   },
-  tipsContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 40,
+  trainerInfo: {
+    flex: 1,
   },
-  tipsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  trainerName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  trainerTitle: {
+    fontSize: 12,
+    color: '#94A3B8',
+  },
+  trainerMessage: {
+    backgroundColor: '#0F172A',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 16,
+  },
+  messageText: {
+    fontSize: 14,
+    color: '#E2E8F0',
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  upgradeSection: {
+    alignItems: 'center',
+  },
+  appointmentSection: {
+    gap: 16,
+  },
+  appointmentTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  noSlotsText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    textAlign: 'center',
+    padding: 20,
+  },
+  slotsScroll: {
+    marginBottom: 16,
+  },
+  slotCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 12,
+    minWidth: 100,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  slotDate: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginBottom: 4,
+  },
+  slotTime: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  messageTrainerButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#8B5CF6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  messageTrainerText: {
+    color: '#8B5CF6',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  statsContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#8B5CF6',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+  },
+  tipsContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  tipsCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: 16,
   },
   tip: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: 12,
   },
   tipText: {
-    color: '#94A3B8',
-    fontSize: 14,
-    marginLeft: 12,
     flex: 1,
+    fontSize: 14,
+    color: '#E2E8F0',
+    lineHeight: 20,
   },
 });
