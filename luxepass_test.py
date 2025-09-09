@@ -60,8 +60,17 @@ class LuxePassTester:
                 
             print(f"Response status: {response.status_code}")
             return response
+        except requests.exceptions.Timeout as e:
+            print(f"Request timeout: {e}")
+            return None
+        except requests.exceptions.ConnectionError as e:
+            print(f"Connection error: {e}")
+            return None
         except requests.exceptions.RequestException as e:
             print(f"Request failed: {e}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error: {e}")
             return None
 
     def test_complete_luxepass_system(self):
