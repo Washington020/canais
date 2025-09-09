@@ -3542,16 +3542,31 @@ class FitPassTester:
 if __name__ == "__main__":
     tester = FitPassTester()
     
-    # Run the specific Pagar.me tests as requested in the review
-    print("🎯 RUNNING PAGAR.ME PAYMENT ENDPOINTS TESTS AS REQUESTED")
-    print("="*70)
-    success = tester.run_pagarme_tests()
-    
-    if success:
-        print("\n🎉 ALL PAGAR.ME TESTS PASSED!")
-        print("The Pagar.me payment integration is fully functional.")
+    # Check if specific test is requested
+    import sys
+    if len(sys.argv) > 1:
+        test_type = sys.argv[1].lower()
+        
+        if test_type == "admin":
+            success = tester.run_admin_tests()
+        elif test_type == "token":
+            success = tester.test_token_system_flow()
+        elif test_type == "gym":
+            success = tester.test_gym_authentication()
+        elif test_type == "reset":
+            success = tester.test_gym_password_reset_flow()
+        elif test_type == "specific":
+            success = tester.test_specific_problematic_endpoints()
+        elif test_type == "pagarme":
+            success = tester.run_pagarme_tests()
+        elif test_type == "luxepass" or test_type == "new":
+            success = tester.run_luxepass_new_endpoints_test()
+        else:
+            success = tester.run_all_tests()
     else:
-        print("\n⚠️  SOME PAGAR.ME TESTS FAILED")
-        print("Check the detailed output above for specific issues.")
+        # Default to testing the NEW endpoints as requested in review
+        print("🎯 RUNNING LUXEPASS NEW ENDPOINTS TESTS AS REQUESTED")
+        print("="*70)
+        success = tester.run_luxepass_new_endpoints_test()
     
     exit(0 if success else 1)
