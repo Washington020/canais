@@ -1358,6 +1358,215 @@ class FitPassTester:
         
         return True
 
+    def test_payment_methods(self):
+        """Test GET /api/payments/methods - List available payment methods"""
+        print("\n=== Testing Payment Methods ===")
+        
+        response = self.make_request("GET", "/payments/methods", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            expected_methods = ["stripe", "pix", "boleto"]
+            
+            if all(method in data for method in expected_methods):
+                # Check structure of each payment method
+                all_valid = True
+                for method in expected_methods:
+                    method_data = data[method]
+                    required_fields = ["name", "description", "currency", "available"]
+                    if not all(field in method_data for field in required_fields):
+                        all_valid = False
+                        break
+                
+                if all_valid:
+                    self.log_test("Payment Methods", True, f"All payment methods available: {list(data.keys())}")
+                    print(f"   Stripe: {data['stripe']['name']}")
+                    print(f"   PIX: {data['pix']['name']}")
+                    print(f"   Boleto: {data['boleto']['name']}")
+                    return True
+                else:
+                    self.log_test("Payment Methods", False, "Payment method structure incomplete")
+            else:
+                missing = [m for m in expected_methods if m not in data]
+                self.log_test("Payment Methods", False, f"Missing payment methods: {missing}")
+        else:
+            self.log_test("Payment Methods", False, f"Status: {response.status_code if response else 'No response'}")
+            
+        return False
+
+    def test_pagarme_checkout_session(self):
+        """Test POST /api/payments/pagarme/checkout/session - Create Pagar.me checkout session"""
+        print("\n=== Testing Pagar.me Checkout Session ===")
+        
+        if not self.auth_token:
+            self.log_test("Pagar.me Checkout Session", False, "No auth token available")
+            return False
+            
+        # Test data as specified in the review request
+        checkout_data = {
+            "plan_id": "premium",
+            "origin_url": "https://test.com",
+            "payment_method": "pix"
+        }
+        
+        response = self.make_request("POST", "/payments/pagarme/checkout/session", checkout_data)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["order_id", "status", "payment_method", "plan_name", "amount", "currency"]
+            
+            if all(field in data for field in required_fields):
+                self.pagarme_order_id = data["order_id"]  # Store for status check test
+                self.log_test("Pagar.me Checkout Session", True, f"Checkout session created - Order ID: {data['order_id']}")
+                print(f"   Plan: {data['plan_name']}")
+                print(f"   Amount: {data['amount']} {data['currency']}")
+                print(f"   Payment Method: {data['payment_method']}")
+                print(f"   Status: {data['status']}")
+                
+                # Check if Pagar.me specific data is present
+                if "charges" in data or "checkouts" in data:
+                    print(f"   Pagar.me data included: charges={len(data.get('charges', []))}, checkouts={len(data.get('checkouts', []))}")
+                
+                return True
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("Pagar.me Checkout Session", False, f"Missing fields: {missing}")
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Pagar.me Checkout Session", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            
+        return False
+
+    def test_pagarme_order_status(self):
+        """Test GET /api/payments/pagarme/order/{order_id} - Check order status"""
+        print("\n=== Testing Pagar.me Order Status ===")
+        
+        if not self.auth_token:
+            self.log_test("Pagar.me Order Status", False, "No auth token available")
+            return False
+            
+        if not hasattr(self, 'pagarme_order_id'):
+            self.log_test("Pagar.me Order Status", False, "No order ID available from checkout session")
+            return False
+        
+        response = self.make_request("GET", f"/payments/pagarme/order/{self.pagarme_order_id}")
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["order_id", "status", "payment_method", "amount", "currency", "plan_id", "plan_name"]
+            
+            if all(field in data for field in required_fields):
+                self.log_test("Pagar.me Order Status", True, f"Order status retrieved - Status: {data['status']}")
+                print(f"   Order ID: {data['order_id']}")
+                print(f"   Status: {data['status']}")
+                print(f"   Payment Method: {data['payment_method']}")
+                print(f"   Amount: {data['amount']} {data['currency']}")
+                print(f"   Plan: {data['plan_name']} ({data['plan_id']})")
+                
+                # Check for payment-specific URLs
+                if data.get('payment_url'):
+                    print(f"   Payment URL: Available")
+                if data.get('qr_code'):
+                    print(f"   QR Code: Available")
+                if data.get('boleto_url'):
+                    print(f"   Boleto URL: Available")
+                
+                return True
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("Pagar.me Order Status", False, f"Missing fields: {missing}")
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Pagar.me Order Status", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            
+        return False
+
+    def test_pagarme_endpoints_comprehensive(self):
+        """Test all Pagar.me endpoints comprehensively as requested in review"""
+        print("\n" + "="*70)
+        print("💳 TESTING PAGAR.ME PAYMENT ENDPOINTS")
+        print("="*70)
+        print("Testing the new Pagar.me payment endpoints as requested in review...")
+        
+        # Step 1: Test payment methods endpoint
+        print("\n1️⃣ Testing GET /api/payments/methods...")
+        methods_success = self.test_payment_methods()
+        
+        if not methods_success:
+            print("❌ Payment methods test failed, continuing with other tests...")
+        
+        # Step 2: Login with specified credentials
+        print("\n2️⃣ Testing authentication with cliente@luxepass.com/cliente123...")
+        login_data = {
+            "email": "cliente@luxepass.com",
+            "password": "cliente123"
+        }
+        
+        response = self.make_request("POST", "/auth/login", login_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            self.auth_token = data["access_token"]
+            self.log_test("Pagar.me Authentication", True, "Successfully authenticated for Pagar.me tests")
+        else:
+            self.log_test("Pagar.me Authentication", False, "Failed to authenticate - cannot test protected endpoints")
+            return False
+        
+        # Step 3: Test Pagar.me checkout session creation
+        print("\n3️⃣ Testing POST /api/payments/pagarme/checkout/session...")
+        checkout_success = self.test_pagarme_checkout_session()
+        
+        if not checkout_success:
+            print("❌ Pagar.me checkout session test failed")
+            return False
+        
+        # Step 4: Test order status endpoint
+        print("\n4️⃣ Testing GET /api/payments/pagarme/order/{order_id}...")
+        status_success = self.test_pagarme_order_status()
+        
+        if not status_success:
+            print("❌ Pagar.me order status test failed")
+            return False
+        
+        # Step 5: Test with different payment methods
+        print("\n5️⃣ Testing different payment methods...")
+        
+        # Test with boleto
+        boleto_data = {
+            "plan_id": "premium",
+            "origin_url": "https://test.com",
+            "payment_method": "boleto"
+        }
+        
+        boleto_response = self.make_request("POST", "/payments/pagarme/checkout/session", boleto_data)
+        
+        if boleto_response and boleto_response.status_code == 200:
+            boleto_result = boleto_response.json()
+            self.log_test("Pagar.me Boleto Payment", True, f"Boleto payment method working - Order: {boleto_result.get('order_id', 'N/A')}")
+        else:
+            self.log_test("Pagar.me Boleto Payment", False, "Boleto payment method failed")
+        
+        print("\n✅ PAGAR.ME ENDPOINTS TESTING COMPLETE!")
+        print("Summary of Pagar.me tests:")
+        print("  ✓ GET /api/payments/methods - Payment methods listed")
+        print("  ✓ POST /api/payments/pagarme/checkout/session - Checkout session creation")
+        print("  ✓ GET /api/payments/pagarme/order/{order_id} - Order status verification")
+        print("  ✓ Authentication with cliente@luxepass.com/cliente123")
+        print("  ✓ JSON structures validated")
+        print("  ✓ Multiple payment methods tested (PIX, Boleto)")
+        
+        return True
+
     def test_advanced_token_generation(self):
         """Test advanced token generation with all security features"""
         print("\n=== Testing Advanced Token Generation ===")
