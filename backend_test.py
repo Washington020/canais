@@ -1529,7 +1529,11 @@ class FitPassTester:
         
         response = self.make_request("GET", f"/payments/pagarme/order/{test_order_id}")
         
-        if response and response.status_code == 200:
+        if response is None:
+            self.log_test("Pagar.me Order Status", False, "No response received from server")
+            return False
+        
+        if response.status_code == 200:
             data = response.json()
             required_fields = ["order_id", "status", "payment_method", "amount", "currency", "plan_id", "plan_name"]
             
@@ -1553,13 +1557,13 @@ class FitPassTester:
             else:
                 missing = [f for f in required_fields if f not in data]
                 self.log_test("Pagar.me Order Status", False, f"Missing fields: {missing}")
-        elif response and response.status_code == 404:
+        elif response.status_code == 404:
             # Expected for test order ID
             self.log_test("Pagar.me Order Status", True, "Endpoint structure correct - 404 expected for test order ID")
             print(f"   ✅ Endpoint accepts correct URL format")
             print(f"   ✅ Returns proper 404 for non-existent orders")
             return True
-        elif response and response.status_code == 500:
+        elif response.status_code == 500:
             # Check if it's a Pagar.me API issue
             error_detail = ""
             try:
@@ -1571,17 +1575,17 @@ class FitPassTester:
                 self.log_test("Pagar.me Order Status", True, "Endpoint structure correct - Pagar.me API error expected in test environment")
                 print(f"   ✅ Endpoint accepts correct request format")
                 print(f"   ✅ Returns proper error handling for API issues")
+                print(f"   ⚠️  Pagar.me API unavailable (expected in test environment)")
                 return True
             else:
                 self.log_test("Pagar.me Order Status", False, f"Unexpected server error: {error_detail}")
         else:
             error_detail = ""
-            if response:
-                try:
-                    error_detail = response.json().get("detail", response.text)
-                except:
-                    error_detail = response.text
-            self.log_test("Pagar.me Order Status", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            try:
+                error_detail = response.json().get("detail", response.text)
+            except:
+                error_detail = response.text
+            self.log_test("Pagar.me Order Status", False, f"Status: {response.status_code}, Error: {error_detail}")
             
         return False
 
