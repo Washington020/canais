@@ -949,6 +949,60 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  paymentMethodsContainer: {
+    marginTop: 8,
+  },
+  paymentMethodsTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  paymentMethodButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  paymentMethodContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  paymentMethodText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  paymentMethodName: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  paymentMethodDesc: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  paymentMethodPrice: {
+    color: '#8B5CF6',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  pixIcon: {
+    backgroundColor: '#32BCAD',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  pixText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   loadingOverlay: {
     position: 'absolute',
     top: 0,
