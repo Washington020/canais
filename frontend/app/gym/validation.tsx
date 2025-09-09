@@ -6,17 +6,19 @@ import {
   TouchableOpacity, 
   TextInput,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL;
 
 export default function TokenValidation() {
   const [tokenCode, setTokenCode] = useState('');
@@ -28,28 +30,44 @@ export default function TokenValidation() {
   const handleLogout = useCallback(async () => {
     Alert.alert(
       'Sair do Sistema',
-      'Deseja realmente sair?',
+      'Deseja realmente sair do sistema da academia?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Sair',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.clear();
-            router.replace('/academia');
+            try {
+              // Limpar todos os dados da academia
+              await AsyncStorage.removeItem('gymToken');
+              await AsyncStorage.removeItem('gymInfo');
+              
+              Alert.alert(
+                'Logout Realizado ✅',
+                'Você foi desconectado do sistema com sucesso.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => router.replace('/academia')
+                  }
+                ]
+              );
+            } catch (error) {
+              console.error('Erro ao fazer logout:', error);
+              router.replace('/academia');
+            }
           }
         }
       ]
     );
   }, [router]);
 
-  const goBack = useCallback(() => {
-    router.back();
-  }, [router]);
-
   const validateToken = useCallback(async () => {
     if (!tokenCode.trim()) {
-      Alert.alert('Erro', 'Digite o código do token');
+      Alert.alert(
+        'Campo Obrigatório ⚠️',
+        'Por favor, digite o código do token para validar.'
+      );
       return;
     }
 
@@ -57,8 +75,11 @@ export default function TokenValidation() {
     try {
       const gymToken = await AsyncStorage.getItem('gymToken');
       if (!gymToken) {
-        Alert.alert('Erro', 'Você não está autenticado. Faça login primeiro.');
-        router.replace('/gym/login');
+        Alert.alert(
+          'Sessão Expirada ❌',
+          'Você não está autenticado. Faça login novamente.',
+          [{ text: 'OK', onPress: () => router.replace('/gym/login') }]
+        );
         return;
       }
 
@@ -66,8 +87,11 @@ export default function TokenValidation() {
       const gym = gymData ? JSON.parse(gymData) : null;
 
       if (!gym?.id) {
-        Alert.alert('Erro', 'Informações da academia não encontradas');
-        router.replace('/gym/login');
+        Alert.alert(
+          'Erro de Configuração ❌',
+          'Informações da academia não encontradas. Faça login novamente.',
+          [{ text: 'OK', onPress: () => router.replace('/gym/login') }]
+        );
         return;
       }
 
@@ -82,33 +106,59 @@ export default function TokenValidation() {
       const response = await axios.post(
         `${API_URL}/api/tokens/validate/${tokenCode}?gym_id=${gym.id}`,
         {},
-        { headers, timeout: 10000 }
+        { headers, timeout: 15000 }
       );
 
-      console.log('✅ Token válido:', response.data);
+      console.log('✅ Token validado com sucesso:', response.data);
+
+      const userData = response.data.user || response.data;
+      const clientName = userData.full_name || userData.name || 'Cliente';
 
       Alert.alert(
-        'Token Válido! ✅',
-        `Cliente: ${response.data.user.full_name}\nCheck-in realizado com sucesso!\n\nToken usado em: ${gym.name}`,
-        [{ text: 'OK', onPress: () => setTokenCode('') }]
+        '✅ TOKEN VALIDADO COM SUCESSO!',
+        `🎯 Cliente: ${clientName}\n🏋️ Academia: ${gym.name}\n⏰ Check-in realizado com sucesso!\n\n✅ Token utilizado e registrado no sistema.`,
+        [{ 
+          text: 'Validar Outro Token', 
+          onPress: () => setTokenCode('') 
+        }]
       );
 
     } catch (error: any) {
-      console.error('❌ Erro na validação:', error);
+      console.error('❌ Erro na validação do token:', error);
       
+      let title = 'Erro na Validação ❌';
+      let message = 'Não foi possível validar o token.';
+
       if (error.response?.status === 401) {
-        Alert.alert('Sessão Expirada', 'Faça login novamente');
-        router.replace('/gym/login');
+        title = 'Sessão Expirada ❌';
+        message = 'Sua sessão expirou. Faça login novamente.';
+        setTimeout(() => router.replace('/gym/login'), 2000);
       } else if (error.response?.status === 404) {
-        Alert.alert('Token Inválido ❌', 'Token não encontrado ou já foi usado');
+        title = 'Token Não Encontrado ❌';
+        message = 'O código do token digitado não existe no sistema ou já foi utilizado.';
       } else if (error.response?.status === 400) {
-        Alert.alert('Token Inválido ❌', 'Token expirado ou já utilizado');
+        const detail = error.response.data?.detail || '';
+        if (detail.includes('expirado')) {
+          title = 'Token Expirado ❌';
+          message = 'Este token já expirou. O cliente precisa gerar um novo token.';
+        } else if (detail.includes('já foi utilizado')) {
+          title = 'Token Já Utilizado ❌';
+          message = 'Este token já foi usado anteriormente. Cada token só pode ser usado uma vez.';
+        } else {
+          title = 'Token Inválido ❌';
+          message = detail || 'O token não é válido para uso.';
+        }
+      } else if (error.code === 'ECONNABORTED') {
+        title = 'Timeout ❌';
+        message = 'A validação demorou muito. Verifique sua conexão e tente novamente.';
+      } else if (error.response?.status >= 500) {
+        title = 'Erro do Servidor ❌';
+        message = 'Erro interno do servidor. Tente novamente em alguns minutos.';
       } else {
-        Alert.alert(
-          'Erro na Validação ❌',
-          error.response?.data?.detail || 'Não foi possível validar o token'
-        );
+        message = error.response?.data?.detail || error.message || 'Erro desconhecido na validação.';
       }
+
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }
@@ -126,11 +176,12 @@ export default function TokenValidation() {
       }
 
       if (gymData) {
-        setGymInfo(JSON.parse(gymData));
+        const gym = JSON.parse(gymData);
+        setGymInfo(gym);
+        console.log('✅ Academia autenticada:', gym.name);
       }
       
       setIsAuthenticated(true);
-      console.log('✅ Academia autenticada');
     } catch (error) {
       console.error('Erro ao verificar autenticação:', error);
       router.replace('/gym/login');
@@ -156,93 +207,177 @@ export default function TokenValidation() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Header with Navigation */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Validação de Tokens</Text>
-        </View>
-        
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out" size={24} color="#FF4444" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.content}>
-        {/* Gym Info */}
-        {gymInfo && (
-          <View style={styles.gymInfoCard}>
-            <Ionicons name="business" size={24} color="#22C55E" />
-            <Text style={styles.gymName}>{gymInfo.name}</Text>
-            <Text style={styles.gymStatus}>✅ Academia Autenticada</Text>
-          </View>
-        )}
-
-        {/* Validation Form */}
-        <View style={styles.validationCard}>
-          <Text style={styles.cardTitle}>Validar Token do Cliente</Text>
+      <LinearGradient
+        colors={['#0B0D17', '#1E1A3C', '#2A1B4A']}
+        style={styles.backgroundGradient}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <LinearGradient
+              colors={['rgba(139, 92, 246, 0.3)', 'rgba(139, 92, 246, 0.1)']}
+              style={styles.backButtonGradient}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </LinearGradient>
+          </TouchableOpacity>
           
-          <View style={styles.inputContainer}>
-            <Ionicons name="qr-code" size={20} color="#94A3B8" />
-            <TextInput
-              style={styles.tokenInput}
-              placeholder="Digite o código do token"
-              placeholderTextColor="#64748B"
-              value={tokenCode}
-              onChangeText={setTokenCode}
-              autoCapitalize="characters"
-            />
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Validação de Tokens</Text>
+            <Text style={styles.headerSubtitle}>{gymInfo?.name || 'Academia'}</Text>
+          </View>
+          
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <LinearGradient
+              colors={['rgba(239, 68, 68, 0.3)', 'rgba(239, 68, 68, 0.1)']}
+              style={styles.logoutButtonGradient}
+            >
+              <Ionicons name="log-out" size={24} color="#EF4444" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.content}>
+          {/* Validation Form */}
+          <View style={styles.validationContainer}>
+            <LinearGradient
+              colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.06)']}
+              style={styles.formGradient}
+            >
+              <View style={styles.formHeader}>
+                <LinearGradient
+                  colors={['#22C55E', '#16A34A']}
+                  style={styles.formHeaderIcon}
+                >
+                  <Ionicons name="qr-code" size={32} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={styles.formTitle}>Validar Token do Cliente</Text>
+                <Text style={styles.formSubtitle}>Digite ou escaneie o código do token</Text>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  <Ionicons name="ticket-outline" size={16} color="#22C55E" /> Código do Token
+                </Text>
+                <View style={styles.inputContainer}>
+                  <LinearGradient
+                    colors={['rgba(34, 197, 94, 0.15)', 'rgba(34, 197, 94, 0.08)']}
+                    style={styles.inputGradient}
+                  >
+                    <View style={styles.inputIconContainer}>
+                      <Ionicons name="ticket" size={20} color="#22C55E" />
+                    </View>
+                    <TextInput
+                      style={styles.textInput}
+                      value={tokenCode}
+                      onChangeText={setTokenCode}
+                      placeholder="Ex: ABC123DEF456"
+                      placeholderTextColor="#64748B"
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                    />
+                  </LinearGradient>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.validateButton, loading && styles.validateButtonDisabled]}
+                onPress={validateToken}
+                disabled={loading}
+              >
+                <LinearGradient
+                  colors={loading ? ['#64748B', '#475569'] : ['#22C55E', '#16A34A', '#15803D']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.validateButtonGradient}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                      <Text style={styles.validateButtonText}>Validar Token</Text>
+                      <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </LinearGradient>
           </View>
 
-          <TouchableOpacity 
-            style={[styles.validateButton, loading && styles.validateButtonDisabled]}
-            onPress={validateToken}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                <Text style={styles.validateButtonText}>Validar Token</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
+          {/* Instructions */}
+          <View style={styles.instructionsContainer}>
+            <LinearGradient
+              colors={['rgba(59, 130, 246, 0.15)', 'rgba(59, 130, 246, 0.08)']}
+              style={styles.instructionsGradient}
+            >
+              <View style={styles.instructionHeader}>
+                <LinearGradient
+                  colors={['#3B82F6', '#1D4ED8']}
+                  style={styles.instructionIcon}
+                >
+                  <Ionicons name="information-circle" size={20} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={styles.instructionTitle}>Como Validar Tokens</Text>
+              </View>
+              
+              <View style={styles.instructionSteps}>
+                <View style={styles.instructionStep}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>1</Text>
+                  </View>
+                  <Text style={styles.instructionText}>
+                    Cliente gera token no <Text style={styles.highlightText}>App Cliente</Text>
+                  </Text>
+                </View>
+                <View style={styles.instructionStep}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>2</Text>
+                  </View>
+                  <Text style={styles.instructionText}>
+                    Cliente apresenta o <Text style={styles.highlightText}>código do token</Text>
+                  </Text>
+                </View>
+                <View style={styles.instructionStep}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>3</Text>
+                  </View>
+                  <Text style={styles.instructionText}>
+                    Digite o código no campo acima e clique <Text style={styles.highlightText}>Validar</Text>
+                  </Text>
+                </View>
+                <View style={styles.instructionStep}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>4</Text>
+                  </View>
+                  <Text style={styles.instructionText}>
+                    Sistema confirma se token é <Text style={styles.highlightText}>válido ou inválido</Text>
+                  </Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
 
-        {/* Instructions */}
-        <View style={styles.instructionsCard}>
-          <Text style={styles.instructionsTitle}>Como usar:</Text>
-          <Text style={styles.instructionsText}>
-            1. Cliente mostra o código do token{'\n'}
-            2. Digite o código no campo acima{'\n'}
-            3. Clique em "Validar Token"{'\n'}
-            4. Sistema confirma se é válido e registra check-in
-          </Text>
-        </View>
-
-        {/* Security Info */}
-        <View style={styles.securityCard}>
-          <Text style={styles.securityTitle}>🔒 Sistema Seguro:</Text>
-          <Text style={styles.securityText}>
-            • Você está logado como: {gymInfo?.name}{'\n'}
-            • Tokens são únicos e de uso único{'\n'}
-            • Cada validação é registrada no sistema{'\n'}
-            • Todas as ações são auditadas
-          </Text>
-        </View>
-
-        {/* Logout Section */}
-        <View style={styles.logoutSection}>
-          <TouchableOpacity style={styles.logoutFullButton} onPress={handleLogout}>
-            <Ionicons name="log-out" size={20} color="#FFFFFF" />
-            <Text style={styles.logoutFullText}>Sair do Sistema</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+          {/* Status Info */}
+          <View style={styles.statusContainer}>
+            <Text style={styles.statusTitle}>Status do Sistema</Text>
+            <View style={styles.statusItems}>
+              <View style={styles.statusItem}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusText}>Sistema Online</Text>
+              </View>
+              <View style={styles.statusItem}>
+                <Ionicons name="shield-checkmark" size={16} color="#22C55E" />
+                <Text style={styles.statusText}>Validação Segura</Text>
+              </View>
+              <View style={styles.statusItem}>
+                <Ionicons name="time" size={16} color="#F59E0B" />
+                <Text style={styles.statusText}>Tokens Únicos</Text>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -250,7 +385,9 @@ export default function TokenValidation() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0D17',
+  },
+  backgroundGradient: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -259,13 +396,12 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: '#FFFFFF',
-    marginTop: 16,
     fontSize: 16,
+    marginTop: 16,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 1,
@@ -274,7 +410,10 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 22,
+  },
+  backButtonGradient: {
+    flex: 1,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
@@ -286,143 +425,213 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
+  },
+  headerSubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
   },
   logoutButton: {
     width: 44,
     height: 44,
-    backgroundColor: 'rgba(255, 68, 68, 0.1)',
+    borderRadius: 22,
+  },
+  logoutButtonGradient: {
+    flex: 1,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
     flex: 1,
-    padding: 24,
+    paddingHorizontal: 24,
   },
-  gymInfoCard: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
+  validationContainer: {
+    marginTop: 32,
     marginBottom: 24,
+  },
+  formGradient: {
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
+  },
+  formHeader: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  formHeaderIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  formTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  formSubtitle: {
+    color: '#94A3B8',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    color: '#E2E8F0',
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 12,
+  },
+  inputContainer: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  inputGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
     borderWidth: 1,
     borderColor: 'rgba(34, 197, 94, 0.3)',
   },
-  gymName: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 8,
-  },
-  gymStatus: {
-    color: '#22C55E',
-    fontSize: 14,
-    marginTop: 4,
-  },
-  validationCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  cardTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  inputIconContainer: {
+    width: 48,
+    height: 48,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    marginBottom: 20,
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  tokenInput: {
+  textInput: {
     flex: 1,
     color: '#FFFFFF',
     fontSize: 16,
-    paddingVertical: 16,
-    paddingLeft: 12,
+    marginLeft: 12,
+    marginRight: 12,
   },
   validateButton: {
-    backgroundColor: '#22C55E',
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  validateButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 18,
     gap: 8,
   },
   validateButtonDisabled: {
-    backgroundColor: '#64748B',
+    opacity: 0.6,
   },
   validateButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
-  instructionsCard: {
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+  instructionsContainer: {
+    marginBottom: 24,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  instructionsGradient: {
+    padding: 20,
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.3)',
   },
-  instructionsTitle: {
+  instructionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  instructionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  instructionTitle: {
     color: '#3B82F6',
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 8,
   },
-  instructionsText: {
-    color: '#E2E8F0',
-    fontSize: 14,
-    lineHeight: 20,
+  instructionSteps: {
+    gap: 12,
   },
-  securityCard: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
-  },
-  securityTitle: {
-    color: '#22C55E',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  securityText: {
-    color: '#E2E8F0',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  logoutSection: {
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  logoutFullButton: {
+  instructionStep: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FF4444',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    gap: 8,
+    gap: 12,
   },
-  logoutFullText: {
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepNumberText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '600',
+  },
+  instructionText: {
+    color: '#E2E8F0',
+    fontSize: 14,
+    lineHeight: 20,
+    flex: 1,
+  },
+  highlightText: {
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  statusContainer: {
+    marginBottom: 32,
+  },
+  statusTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  statusItems: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  statusItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#22C55E',
+  },
+  statusText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

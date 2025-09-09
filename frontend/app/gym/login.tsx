@@ -81,7 +81,10 @@ export default function GymLogin() {
 
   const handleLogin = async () => {
     if (!login || !password) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      Alert.alert(
+        'Campos Obrigatórios ⚠️',
+        'Por favor, preencha o login e a senha para continuar.'
+      );
       return;
     }
 
@@ -95,7 +98,10 @@ export default function GymLogin() {
       const { access_token, gym_info } = response.data;
       
       if (!access_token || !gym_info) {
-        Alert.alert('Erro', 'Resposta inválida do servidor. Tente novamente.');
+        Alert.alert(
+          'Erro de Resposta ❌',
+          'Resposta inválida do servidor. Tente novamente em alguns instantes.'
+        );
         return;
       }
       
@@ -103,11 +109,11 @@ export default function GymLogin() {
       await AsyncStorage.setItem('gymInfo', JSON.stringify(gym_info));
       
       Alert.alert(
-        'Login Realizado! ✅',
-        `Bem-vindo ao sistema ${gym_info.name}!\n\nVocê agora pode validar tokens de clientes.`,
+        '✅ LOGIN REALIZADO COM SUCESSO!',
+        `🎯 Bem-vindo ao sistema ${gym_info.name}!\n\n🏋️ Você agora pode validar tokens de clientes e gerenciar check-ins.\n\n✅ Sistema pronto para uso!`,
         [
           {
-            text: 'Continuar',
+            text: 'Acessar Sistema',
             onPress: () => {
               router.push('/gym/validation');
             }
@@ -116,10 +122,31 @@ export default function GymLogin() {
       );
     } catch (error: any) {
       console.error('Login error:', error);
-      Alert.alert(
-        'Erro de Login ❌', 
-        error.response?.data?.detail || 'Credenciais inválidas. Verifique seu login e senha.'
-      );
+      
+      let title = 'Erro de Login ❌';
+      let message = 'Não foi possível realizar o login.';
+
+      if (error.response?.status === 401) {
+        const detail = error.response.data?.detail || '';
+        title = 'Credenciais Inválidas ❌';
+        message = 'Login ou senha incorretos. Verifique suas credenciais e tente novamente.\n\n💡 Dica: Entre em contato com o administrador para obter ou resetar suas credenciais.';
+      } else if (error.response?.status === 400) {
+        title = 'Dados Inválidos ❌';
+        message = 'Login e senha são obrigatórios. Verifique se preencheu todos os campos.';
+      } else if (error.response?.status === 403) {
+        title = 'Academia Não Aprovada ❌';
+        message = 'Sua academia ainda não foi aprovada pelo administrador. Entre em contato para ativação.';
+      } else if (error.code === 'ECONNABORTED') {
+        title = 'Timeout ❌';
+        message = 'A conexão demorou muito. Verifique sua internet e tente novamente.';
+      } else if (error.response?.status >= 500) {
+        title = 'Erro do Servidor ❌';
+        message = 'Erro interno do servidor. Tente novamente em alguns minutos.';
+      } else {
+        message = error.response?.data?.detail || error.message || 'Erro desconhecido ao fazer login.';
+      }
+      
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }
@@ -127,9 +154,9 @@ export default function GymLogin() {
 
   const handleForgotPassword = () => {
     Alert.alert(
-      'Recuperar Senha',
-      'Entre em contato com o administrador do LuxePass para redefinir sua senha.\n\nTelefone: (11) 99999-9999\nEmail: suporte@luxepass.com',
-      [{ text: 'OK' }]
+      'Recuperar Senha 🔑',
+      'Para recuperar ou redefinir sua senha:\n\n1. Entre em contato com o administrador do LuxePass\n2. Solicite um reset de credenciais\n3. Use as novas credenciais fornecidas\n\n📞 Telefone: (11) 99999-9999\n📧 Email: suporte@luxepass.com',
+      [{ text: 'Entendi' }]
     );
   };
 
@@ -259,7 +286,7 @@ export default function GymLogin() {
                         style={styles.textInput}
                         value={login}
                         onChangeText={setLogin}
-                        placeholder="gym_academia_nome_1234"
+                        placeholder="academia_teste"
                         placeholderTextColor="#64748B"
                         autoCapitalize="none"
                         autoCorrect={false}
@@ -285,7 +312,7 @@ export default function GymLogin() {
                         style={styles.textInput}
                         value={password}
                         onChangeText={setPassword}
-                        placeholder="Digite sua senha"
+                        placeholder="123456"
                         placeholderTextColor="#64748B"
                         secureTextEntry={!showPassword}
                         autoCapitalize="none"
