@@ -7,7 +7,7 @@ export default function GymLayout() {
   const segments = useSegments();
 
   useEffect(() => {
-    // Verificar autenticação da academia
+    // Verificar autenticação da academia SEMPRE
     const checkGymAuth = async () => {
       try {
         const gymToken = await AsyncStorage.getItem('gymToken');
@@ -16,13 +16,14 @@ export default function GymLayout() {
         console.log('🔍 [GYM_LAYOUT] Current path:', currentPath);
         console.log('🔍 [GYM_LAYOUT] Gym token exists:', !!gymToken);
         
-        // Se não está na página de login e não tem token, redirecionar
-        if (!gymToken && !currentPath.includes('login')) {
-          console.log('❌ [GYM_LAYOUT] Token da academia não encontrado, redirecionando para login');
+        // FORÇAR LOGIN: Se não tem token, sempre redirecionar para login
+        if (!gymToken) {
+          console.log('❌ [GYM_LAYOUT] Token da academia não encontrado, FORÇANDO login');
           router.replace('/gym/login');
           return;
         }
         
+        // Se tem token e está na página de login, ir para validação
         if (gymToken && currentPath.includes('login')) {
           console.log('✅ [GYM_LAYOUT] Academia já autenticada, redirecionando para validação');
           router.replace('/gym/validation');
@@ -34,12 +35,26 @@ export default function GymLayout() {
         }
       } catch (error) {
         console.error('❌ [GYM_LAYOUT] Erro ao verificar autenticação da academia:', error);
+        // EM CASO DE ERRO, FORÇAR LOGIN
         router.replace('/gym/login');
       }
     };
 
     checkGymAuth();
   }, [router, segments]);
+
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="index" />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="validation" />
+    </Stack>
+  );
+}
 
   return (
     <Stack
