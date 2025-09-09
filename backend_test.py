@@ -60,6 +60,15 @@ class FitPassTester:
                 raise ValueError(f"Unsupported method: {method}")
                 
             print(f"Response status: {response.status_code}")
+            
+            # Log response content for debugging server errors
+            if response.status_code >= 500:
+                try:
+                    error_content = response.json()
+                    print(f"Server error response: {error_content}")
+                except:
+                    print(f"Server error response (text): {response.text[:200]}...")
+            
             return response
         except requests.exceptions.RequestException as e:
             print(f"Request failed: {e}")
