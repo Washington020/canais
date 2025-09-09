@@ -59,6 +59,7 @@ class LuxePassTester:
                 raise ValueError(f"Unsupported method: {method}")
                 
             print(f"Response status: {response.status_code}")
+            print(f"About to return response: {response}")
             return response
         except requests.exceptions.Timeout as e:
             print(f"Request timeout: {e}")
