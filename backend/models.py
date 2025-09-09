@@ -181,6 +181,63 @@ class ScheduledNotification(BaseModel):
     sent: bool = False
     created_at: Optional[datetime] = None
 
+# Appointment System Models
+class AppointmentRequest(BaseModel):
+    appointment_type: str  # "nutritionist" or "personal"
+    appointment_date: datetime
+    notes: Optional[str] = None
+
+class AppointmentSlot(BaseModel):
+    id: Optional[str] = None
+    professional_type: str  # "nutritionist" or "personal"
+    date: datetime
+    available: bool = True
+    created_by: str  # admin user id
+    created_at: Optional[datetime] = None
+
+class Appointment(BaseModel):
+    id: Optional[str] = None
+    user_id: str
+    professional_type: str  # "nutritionist" or "personal"
+    appointment_date: datetime
+    status: str = "scheduled"  # scheduled, completed, cancelled
+    notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+# Supplement System Models  
+class SupplementPlan(BaseModel):
+    id: Optional[str] = None
+    user_id: str
+    supplements: List[Dict[str, Any]]  # List of supplements with dosage and timing
+    created_by: str  # nutritionist admin id
+    created_at: Optional[datetime] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    active: bool = True
+
+class SupplementLog(BaseModel):
+    id: Optional[str] = None
+    user_id: str
+    supplement_plan_id: str
+    supplement_name: str
+    scheduled_time: datetime
+    taken_at: Optional[datetime] = None
+    status: str = "pending"  # pending, taken, missed
+    created_at: Optional[datetime] = None
+
+# Workout System Models
+class WorkoutPlan(BaseModel):
+    id: Optional[str] = None
+    user_id: str
+    workout_name: str
+    exercises: List[Dict[str, Any]]  # List of exercises with sets, reps, etc
+    created_by: str  # personal trainer admin id
+    created_at: Optional[datetime] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    active: bool = True
+
 # Admin Models
 class AdminStats(BaseModel):
     total_users: int
