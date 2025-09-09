@@ -1,35 +1,45 @@
 import React, { useEffect } from 'react';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function GymLayout() {
   const router = useRouter();
+  const segments = useSegments();
 
   useEffect(() => {
     // Verificar autenticação da academia
     const checkGymAuth = async () => {
       try {
         const gymToken = await AsyncStorage.getItem('gymToken');
-        const currentPath = window.location.pathname;
+        const currentPath = segments.join('/');
+        
+        console.log('🔍 [GYM_LAYOUT] Current path:', currentPath);
+        console.log('🔍 [GYM_LAYOUT] Gym token exists:', !!gymToken);
         
         // Se não está na página de login e não tem token, redirecionar
-        if (!gymToken && !currentPath.includes('/gym/login')) {
-          console.log('❌ Token da academia não encontrado, redirecionando para login');
+        if (!gymToken && !currentPath.includes('login')) {
+          console.log('❌ [GYM_LAYOUT] Token da academia não encontrado, redirecionando para login');
           router.replace('/gym/login');
           return;
         }
         
+        if (gymToken && currentPath.includes('login')) {
+          console.log('✅ [GYM_LAYOUT] Academia já autenticada, redirecionando para validação');
+          router.replace('/gym/validation');
+          return;
+        }
+        
         if (gymToken) {
-          console.log('✅ Academia autenticada');
+          console.log('✅ [GYM_LAYOUT] Academia autenticada');
         }
       } catch (error) {
-        console.error('Erro ao verificar autenticação da academia:', error);
+        console.error('❌ [GYM_LAYOUT] Erro ao verificar autenticação da academia:', error);
         router.replace('/gym/login');
       }
     };
 
     checkGymAuth();
-  }, [router]);
+  }, [router, segments]);
 
   return (
     <Stack
