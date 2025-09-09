@@ -106,13 +106,103 @@ export default function Financial() {
     }
   }, [router]);
 
-  const checkPaymentStatus = useCallback(async (sessionId: string) => {
+  const subscribeToPlan = useCallback(async (planId: string, paymentMethod: string = 'stripe') => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Get origin URL for success/cancel redirects
+      const originUrl = Platform.OS === 'web' 
+        ? window.location.origin 
+        : 'https://luxepass-app.com'; // fallback for mobile
+
+      const checkoutData = {
+        plan_id: planId,
+        origin_url: originUrl,
+        payment_method: paymentMethod
+      };
+
+      let response;
+      
+      if (paymentMethod === 'stripe') {
+        // Use Stripe for international payments
+        response = await axios.post(
+          `${API_URL}/payments/checkout/session`,
+          checkoutData,
+          { headers }
+        );
+        
+        const { url, plan_name } = response.data;
+
+        Alert.alert(
+          'Confirmar Assinatura',
+          `Você será redirecionado para completar o pagamento do ${plan_name} via cartão de crédito.`,
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Continuar',
+              onPress: () => {
+                if (Platform.OS === 'web') {
+                  window.location.href = url;
+                } else {
+                  Linking.openURL(url);
+                }
+                setShowPlansModal(false);
+              }
+            }
+          ]
+        );
+      } else {
+        // Use Pagar.me for Brazilian payments (PIX, Boleto)
+        response = await axios.post(
+          `${API_URL}/payments/pagarme/checkout/session`,
+          checkoutData,
+          { headers }
+        );
+        
+        const { order_id, plan_name, payment_method: method } = response.data;
+        
+        // Show success message and handle different payment methods
+        let message = '';
+        if (method === 'pix') {
+          message = `Pagamento PIX criado para ${plan_name}. Use o código QR ou chave PIX para finalizar o pagamento.`;
+        } else if (method === 'boleto') {
+          message = `Boleto gerado para ${plan_name}. Você pode pagar em qualquer banco ou lotérica.`;
+        }
+
+        Alert.alert(
+          '🇧🇷 Pagamento Brasileiro',
+          message,
+          [
+            { text: 'OK', onPress: () => {
+              setShowPlansModal(false);
+              // Start polling for payment status
+              checkPaymentStatus(order_id, true); // true for Pagar.me
+            }}
+          ]
+        );
+      }
+
+    } catch (error: any) {
+      console.error('Erro ao criar sessão de checkout:', error);
+      Alert.alert(
+        'Erro no Pagamento',
+        error.response?.data?.detail || 'Não foi possível processar o pagamento. Tente novamente.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const checkPaymentStatus = useCallback(async (sessionId: string, isPagarme: boolean = false) => {
     if (checkingPayment) return;
     
     setCheckingPayment(true);
     let attempts = 0;
     const maxAttempts = 10;
-    const pollInterval = 2000; // 2 seconds
+    const pollInterval = 3000; // 3 seconds for better UX
 
     const pollStatus = async () => {
       if (attempts >= maxAttempts) {
@@ -129,22 +219,40 @@ export default function Financial() {
         const token = await AsyncStorage.getItem('token');
         const headers = { Authorization: `Bearer ${token}` };
         
-        const response = await axios.get(`${API_URL}/payments/checkout/status/${sessionId}`, { headers });
+        let response;
+        if (isPagarme) {
+          response = await axios.get(`${API_URL}/payments/pagarme/order/${sessionId}`, { headers });
+        } else {
+          response = await axios.get(`${API_URL}/payments/checkout/status/${sessionId}`, { headers });
+        }
+        
         const data = response.data;
 
-        if (data.payment_status === 'paid') {
+        let paymentCompleted = false;
+        if (isPagarme) {
+          paymentCompleted = data.payment_completed === true;
+        } else {
+          paymentCompleted = data.payment_status === 'paid';
+        }
+
+        if (paymentCompleted) {
           setCheckingPayment(false);
+          const paymentMethod = isPagarme ? 
+            (data.payment_method === 'pix' ? 'PIX' : 
+             data.payment_method === 'boleto' ? 'Boleto' : 'Pagar.me') : 
+            'Cartão de Crédito';
+            
           Alert.alert(
             '🎉 Pagamento Confirmado!',
-            `Sua assinatura do ${data.plan_name} foi ativada com sucesso!`,
+            `Sua assinatura do ${data.plan_name} foi ativada com sucesso via ${paymentMethod}!`,
             [{ text: 'Excelente!', onPress: () => loadData() }]
           );
           return;
-        } else if (data.status === 'expired') {
+        } else if (data.status === 'expired' || data.status === 'canceled') {
           setCheckingPayment(false);
           Alert.alert(
             'Pagamento Expirado',
-            'A sessão de pagamento expirou. Tente novamente.',
+            'O pagamento expirou ou foi cancelado. Tente novamente.',
             [{ text: 'OK', onPress: () => loadData() }]
           );
           return;
@@ -162,62 +270,6 @@ export default function Financial() {
 
     pollStatus();
   }, [checkingPayment, loadData]);
-
-  const subscribeToPlan = useCallback(async (planId: string) => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      // Get origin URL for success/cancel redirects
-      const originUrl = Platform.OS === 'web' 
-        ? window.location.origin 
-        : 'https://luxepass-app.com'; // fallback for mobile
-
-      const checkoutData = {
-        plan_id: planId,
-        origin_url: originUrl,
-        payment_method: 'stripe'
-      };
-
-      const response = await axios.post(
-        `${API_URL}/payments/checkout/session`,
-        checkoutData,
-        { headers }
-      );
-
-      const { url, plan_name } = response.data;
-
-      Alert.alert(
-        'Confirmar Assinatura',
-        `Você será redirecionado para completar o pagamento do ${plan_name}.`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Continuar',
-            onPress: () => {
-              if (Platform.OS === 'web') {
-                window.location.href = url;
-              } else {
-                Linking.openURL(url);
-              }
-              setShowPlansModal(false);
-            }
-          }
-        ]
-      );
-
-    } catch (error: any) {
-      console.error('Erro ao criar sessão de checkout:', error);
-      Alert.alert(
-        'Erro no Pagamento',
-        error.response?.data?.detail || 'Não foi possível processar o pagamento. Tente novamente.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     loadData();
