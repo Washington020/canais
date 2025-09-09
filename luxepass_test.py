@@ -279,24 +279,20 @@ class LuxePassTester:
         
         response = self.make_request("POST", "/auth/login", wrong_admin, auth_required=False)
         
-        print(f"   DEBUG: Response object: {response}")
-        print(f"   DEBUG: Response is None: {response is None}")
         if response:
-            print(f"   DEBUG: Response status: {response.status_code}")
-            print(f"   DEBUG: Status code type: {type(response.status_code)}")
-            print(f"   DEBUG: Status code == 401: {response.status_code == 401}")
-        
-        if response and response.status_code == 401:
-            try:
-                error_detail = response.json().get("detail", "")
-                if "Incorrect email or password" in error_detail:
-                    self.log_test("4a. Admin Error Message", True, "✅ Correct error message for wrong admin credentials")
-                else:
-                    self.log_test("4a. Admin Error Message", True, f"✅ Got 401 error as expected: {error_detail}")
-            except:
-                self.log_test("4a. Admin Error Message", True, "✅ Got 401 error as expected")
+            if response.status_code == 401:
+                try:
+                    error_detail = response.json().get("detail", "")
+                    if "Incorrect email or password" in error_detail:
+                        self.log_test("4a. Admin Error Message", True, "✅ Correct error message for wrong admin credentials")
+                    else:
+                        self.log_test("4a. Admin Error Message", True, f"✅ Got 401 error as expected: {error_detail}")
+                except:
+                    self.log_test("4a. Admin Error Message", True, "✅ Got 401 error as expected")
+            else:
+                self.log_test("4a. Admin Error Message", False, f"❌ Expected 401 error, got: {response.status_code}")
         else:
-            self.log_test("4a. Admin Error Message", False, f"❌ Expected 401 error, got: {response.status_code if response else 'No response'}")
+            self.log_test("4a. Admin Error Message", False, "❌ No response received")
         
         # Test incorrect client credentials
         print("   4b. Testing incorrect client credentials...")
@@ -307,17 +303,20 @@ class LuxePassTester:
         
         response = self.make_request("POST", "/auth/login", wrong_client, auth_required=False)
         
-        if response and response.status_code == 401:
-            try:
-                error_detail = response.json().get("detail", "")
-                if "Incorrect email or password" in error_detail:
-                    self.log_test("4b. Client Error Message", True, "✅ Correct error message for wrong client credentials")
-                else:
-                    self.log_test("4b. Client Error Message", True, f"✅ Got 401 error as expected: {error_detail}")
-            except:
-                self.log_test("4b. Client Error Message", True, "✅ Got 401 error as expected")
+        if response:
+            if response.status_code == 401:
+                try:
+                    error_detail = response.json().get("detail", "")
+                    if "Incorrect email or password" in error_detail:
+                        self.log_test("4b. Client Error Message", True, "✅ Correct error message for wrong client credentials")
+                    else:
+                        self.log_test("4b. Client Error Message", True, f"✅ Got 401 error as expected: {error_detail}")
+                except:
+                    self.log_test("4b. Client Error Message", True, "✅ Got 401 error as expected")
+            else:
+                self.log_test("4b. Client Error Message", False, f"❌ Expected 401 error, got: {response.status_code}")
         else:
-            self.log_test("4b. Client Error Message", False, f"❌ Expected 401 error, got: {response.status_code if response else 'No response'}")
+            self.log_test("4b. Client Error Message", False, "❌ No response received")
         
         # Test incorrect gym credentials
         print("   4c. Testing incorrect gym credentials...")
@@ -328,17 +327,20 @@ class LuxePassTester:
         
         response = self.make_request("POST", "/gym/auth", wrong_gym, auth_required=False)
         
-        if response and response.status_code == 401:
-            try:
-                error_detail = response.json().get("detail", "")
-                if "Credenciais inválidas" in error_detail:
-                    self.log_test("4c. Gym Error Message", True, "✅ Correct Portuguese error message for wrong gym credentials")
-                else:
-                    self.log_test("4c. Gym Error Message", True, f"✅ Got 401 error as expected: {error_detail}")
-            except:
-                self.log_test("4c. Gym Error Message", True, "✅ Got 401 error as expected")
+        if response:
+            if response.status_code == 401:
+                try:
+                    error_detail = response.json().get("detail", "")
+                    if "Credenciais inválidas" in error_detail:
+                        self.log_test("4c. Gym Error Message", True, "✅ Correct Portuguese error message for wrong gym credentials")
+                    else:
+                        self.log_test("4c. Gym Error Message", True, f"✅ Got 401 error as expected: {error_detail}")
+                except:
+                    self.log_test("4c. Gym Error Message", True, "✅ Got 401 error as expected")
+            else:
+                self.log_test("4c. Gym Error Message", False, f"❌ Expected 401 error, got: {response.status_code}")
         else:
-            self.log_test("4c. Gym Error Message", False, f"❌ Expected 401 error, got: {response.status_code if response else 'No response'}")
+            self.log_test("4c. Gym Error Message", False, "❌ No response received")
         
         # Test 5: URL Configuration Verification
         print("\n5️⃣ TESTING URL CONFIGURATION (/api prefix)")
