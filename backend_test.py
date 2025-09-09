@@ -1493,6 +1493,8 @@ class FitPassTester:
                 print(f"   ✅ Endpoint accepts correct request format")
                 print(f"   ✅ Returns proper error handling for API issues")
                 print(f"   ⚠️  Pagar.me API unavailable (expected in test environment)")
+                # Set a mock order ID for the next test
+                self.pagarme_order_id = "test_order_12345"
                 return True
             else:
                 self.log_test("Pagar.me Checkout Session", False, f"Unexpected server error: {error_detail}")
