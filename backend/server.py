@@ -1831,6 +1831,236 @@ async def get_user_transactions(current_user: User = Depends(get_current_user)):
     
     return result
 
+# Pagar.me Payment Endpoints
+@api_router.post("/payments/pagarme/checkout/session")
+async def create_pagarme_checkout_session(
+    request: CreateCheckoutRequest,
+    http_request: Request,
+    current_user: User = Depends(get_current_user)
+):
+    """Create Pagar.me checkout session for Brazilian payments"""
+    try:
+        # Validate plan exists
+        if request.plan_id not in PAYMENT_PLANS:
+            raise HTTPException(status_code=400, detail="Plano inválido")
+        
+        plan = PAYMENT_PLANS[request.plan_id]
+        
+        # Get user data for customer creation
+        user_data = {
+            "name": current_user.full_name or "Cliente LuxePass",
+            "email": current_user.email,
+            "phone": getattr(current_user, 'phone', '11999999999'),
+            "document": getattr(current_user, 'document', ''),
+            "city": getattr(current_user, 'city', 'São Paulo'),
+            "state": getattr(current_user, 'state', 'SP'),
+            "zip_code": getattr(current_user, 'zip_code', '01000000'),
+            "address": getattr(current_user, 'address', 'Rua Example, 123')
+        }
+        
+        # Format customer data for Pagar.me
+        customer_data = pagarme_service.format_customer_data(user_data)
+        
+        # Create order in Pagar.me
+        order_result = await pagarme_service.create_order(
+            amount=plan["price"],
+            currency=plan["currency"],
+            customer=customer_data,
+            payment_method=request.payment_method,  # pix, boleto, credit_card
+            success_url=f"{request.origin_url}/client/(tabs)/financial?order_id={{ORDER_ID}}",
+            cancel_url=f"{request.origin_url}/client/(tabs)/financial",
+            metadata={
+                "user_id": str(current_user.id),
+                "plan_id": request.plan_id,
+                "plan_name": plan["name"]
+            }
+        )
+        
+        # Save transaction to database
+        transaction = PaymentTransaction(
+            user_id=str(current_user.id),
+            plan_id=request.plan_id,
+            session_id=order_result["order_id"],
+            amount=plan["price"],
+            currency=plan["currency"],
+            payment_status="pending",
+            payment_method=request.payment_method,
+            created_at=datetime.now(timezone.utc).isoformat(),
+            metadata={
+                "order_id": order_result["order_id"],
+                "pagarme_data": order_result.get("response", {})
+            }
+        )
+        
+        await db.payment_transactions.insert_one(transaction.dict())
+        
+        return {
+            "order_id": order_result["order_id"],
+            "status": order_result["status"],
+            "payment_method": request.payment_method,
+            "plan_name": plan["name"],
+            "amount": plan["price"],
+            "currency": plan["currency"],
+            "charges": order_result.get("charges", []),
+            "checkouts": order_result.get("checkouts", [])
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar sessão Pagar.me: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao processar pagamento")
+
+@api_router.get("/payments/pagarme/order/{order_id}")
+async def get_pagarme_order_status(
+    order_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get Pagar.me order status and update user subscription"""
+    try:
+        # Get order status from Pagar.me
+        order_data = await pagarme_service.get_order(order_id)
+        
+        # Find transaction in database
+        transaction = await db.payment_transactions.find_one({"session_id": order_id})
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transação não encontrada")
+        
+        # Check if payment is completed and not already processed
+        payment_completed = False
+        for charge in order_data.get("charges", []):
+            if charge.get("status") == "paid":
+                payment_completed = True
+                break
+        
+        if payment_completed and transaction["payment_status"] != "paid":
+            # Update transaction status
+            await db.payment_transactions.update_one(
+                {"session_id": order_id},
+                {
+                    "$set": {
+                        "payment_status": "paid",
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            )
+            
+            # Update user subscription
+            plan = PAYMENT_PLANS[transaction["plan_id"]]
+            subscription_end = datetime.now(timezone.utc) + timedelta(days=plan["duration_days"])
+            
+            await db.users.update_one(
+                {"_id": ObjectId(current_user.id)},
+                {
+                    "$set": {
+                        "plan_type": transaction["plan_id"],
+                        "payment_status": "active",
+                        "subscription_end": subscription_end,
+                        "monthly_amount": plan["price"],
+                        "tokens_available": plan["token_limit"] if plan["token_limit"] != -1 else 9999,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
+                }
+            )
+            
+            logger.info(f"Subscription updated for user {current_user.id} - Plan: {transaction['plan_id']}")
+        
+        return {
+            "order_id": order_data["order_id"],
+            "status": order_data["status"],
+            "payment_method": order_data["payment_method"],
+            "amount": order_data["amount"],
+            "currency": order_data["currency"],
+            "payment_url": order_data.get("payment_url"),
+            "qr_code": order_data.get("qr_code"),
+            "boleto_url": order_data.get("boleto_url"),
+            "plan_id": transaction["plan_id"],
+            "plan_name": PAYMENT_PLANS[transaction["plan_id"]]["name"],
+            "payment_completed": payment_completed
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao verificar status do pedido Pagar.me: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao verificar pagamento")
+
+@api_router.post("/payments/pagarme/webhook")
+async def pagarme_webhook(request: Request):
+    """Handle Pagar.me webhooks"""
+    try:
+        body = await request.json()
+        
+        # Process webhook based on event type
+        event_type = body.get("type")
+        
+        if event_type in ["order.paid", "charge.paid"]:
+            # Get order data from webhook
+            order_data = body.get("data", {})
+            order_id = order_data.get("id")
+            
+            if order_id:
+                # Find and update transaction
+                transaction = await db.payment_transactions.find_one({"session_id": order_id})
+                
+                if transaction and transaction["payment_status"] != "paid":
+                    # Update transaction
+                    await db.payment_transactions.update_one(
+                        {"session_id": order_id},
+                        {
+                            "$set": {
+                                "payment_status": "paid",
+                                "updated_at": datetime.now(timezone.utc).isoformat()
+                            }
+                        }
+                    )
+                    
+                    # Update user subscription
+                    plan = PAYMENT_PLANS[transaction["plan_id"]]
+                    subscription_end = datetime.now(timezone.utc) + timedelta(days=plan["duration_days"])
+                    
+                    await db.users.update_one(
+                        {"_id": ObjectId(transaction["user_id"])},
+                        {
+                            "$set": {
+                                "plan_type": transaction["plan_id"],
+                                "payment_status": "active",
+                                "subscription_end": subscription_end,
+                                "monthly_amount": plan["price"],
+                                "tokens_available": plan["token_limit"] if plan["token_limit"] != -1 else 9999,
+                                "updated_at": datetime.now(timezone.utc)
+                            }
+                        }
+                    )
+                    
+                    logger.info(f"Pagar.me webhook processed - User subscription updated: {transaction['user_id']}")
+        
+        return {"status": "success"}
+        
+    except Exception as e:
+        logger.error(f"Erro no webhook Pagar.me: {e}")
+        raise HTTPException(status_code=400, detail="Webhook error")
+
+@api_router.get("/payments/methods")
+async def get_payment_methods():
+    """Get available payment methods"""
+    return {
+        "stripe": {
+            "name": "Cartão de Crédito Internacional",
+            "description": "Visa, Mastercard, American Express",
+            "currency": "BRL",
+            "available": True
+        },
+        "pix": {
+            "name": "PIX",
+            "description": "Pagamento instantâneo via PIX",
+            "currency": "BRL",
+            "available": True
+        },
+        "boleto": {
+            "name": "Boleto Bancário",
+            "description": "Vencimento em 3 dias úteis",
+            "currency": "BRL",
+            "available": True
+        }
+    }
+
 # Notification System Endpoints
 @api_router.post("/notifications/register-token")
 async def register_push_token(
