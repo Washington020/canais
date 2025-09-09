@@ -87,34 +87,20 @@ export default function GymLogin() {
 
     setLoading(true);
     try {
-      console.log('🔍 [LOGIN] API_URL:', API_URL);
-      console.log('🔍 [LOGIN] Login attempt:', { login, password: '***' });
-      console.log('🔍 [LOGIN] Full URL:', `${API_URL}/api/gym/auth`);
-      
       const response = await axios.post(`${API_URL}/api/gym/auth`, {
         login,
         password
       });
 
-      console.log('✅ [LOGIN] Response received:', response.status);
-      console.log('✅ [LOGIN] Response data:', response.data);
-
       const { access_token, gym_info } = response.data;
       
       if (!access_token || !gym_info) {
-        console.error('❌ [LOGIN] Missing data in response:', { access_token: !!access_token, gym_info: !!gym_info });
         Alert.alert('Erro', 'Resposta inválida do servidor. Tente novamente.');
         return;
       }
       
-      console.log('💾 [LOGIN] Saving to AsyncStorage...');
       await AsyncStorage.setItem('gymToken', access_token);
       await AsyncStorage.setItem('gymInfo', JSON.stringify(gym_info));
-      console.log('✅ [LOGIN] Saved to AsyncStorage');
-      
-      // Verificar se foi salvo corretamente
-      const savedToken = await AsyncStorage.getItem('gymToken');
-      console.log('🔍 [LOGIN] Verification - Token saved:', !!savedToken);
       
       Alert.alert(
         'Login Realizado! ✅',
@@ -123,22 +109,16 @@ export default function GymLogin() {
           {
             text: 'Continuar',
             onPress: () => {
-              console.log('🚀 [LOGIN] Navigating to /gym/validation...');
-              // Use router.push instead of replace to ensure navigation
               router.push('/gym/validation');
-              console.log('✅ [LOGIN] Navigation command sent');
             }
           }
         ]
       );
     } catch (error: any) {
-      console.error('❌ [LOGIN] Login error:', error);
-      console.error('❌ [LOGIN] Error details:', error.response?.data);
-      console.error('❌ [LOGIN] Error status:', error.response?.status);
-      
+      console.error('Login error:', error);
       Alert.alert(
         'Erro de Login ❌', 
-        `${error.response?.data?.detail || 'Credenciais inválidas. Verifique seu login e senha.'}\n\nDEBUG INFO:\nURL: ${API_URL}/api/gym/auth\nStatus: ${error.response?.status || 'No response'}\nLogin: ${login}`
+        error.response?.data?.detail || 'Credenciais inválidas. Verifique seu login e senha.'
       );
     } finally {
       setLoading(false);
