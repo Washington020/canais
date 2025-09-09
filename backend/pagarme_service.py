@@ -236,5 +236,15 @@ class PagarMeService:
             }
         }
 
-# Global instance
-pagarme_service = PagarMeService()
+# Global instance - created lazily
+_pagarme_service_instance = None
+
+def get_pagarme_service():
+    """Get or create the global PagarMeService instance"""
+    global _pagarme_service_instance
+    if _pagarme_service_instance is None:
+        _pagarme_service_instance = PagarMeService()
+    return _pagarme_service_instance
+
+# For backward compatibility
+pagarme_service = get_pagarme_service()
