@@ -87,33 +87,53 @@ export default function GymLogin() {
 
     setLoading(true);
     try {
+      console.log('🔍 [DEBUG] API_URL:', API_URL);
+      console.log('🔍 [DEBUG] Login attempt:', { login, password });
+      console.log('🔍 [DEBUG] Full URL:', `${API_URL}/api/gym/auth`);
+      
       const response = await axios.post(`${API_URL}/api/gym/auth`, {
         login,
         password
       });
 
+      console.log('✅ [DEBUG] Response received:', response.status);
+      console.log('✅ [DEBUG] Response data:', response.data);
+
       const { access_token, gym_info } = response.data;
       
+      if (!access_token || !gym_info) {
+        console.error('❌ [DEBUG] Missing data in response:', { access_token: !!access_token, gym_info: !!gym_info });
+        Alert.alert('Erro', 'Resposta inválida do servidor. Tente novamente.');
+        return;
+      }
+      
+      console.log('💾 [DEBUG] Saving to AsyncStorage...');
       await AsyncStorage.setItem('gymToken', access_token);
       await AsyncStorage.setItem('gymInfo', JSON.stringify(gym_info));
+      console.log('✅ [DEBUG] Saved to AsyncStorage');
       
       Alert.alert(
         'Login Realizado! ✅',
-        `Bem-vindo ao sistema ${gym_info.name}!\n\nVocê agora pode validar tokens de clientes.`,
+        `Bem-vindo ao sistema ${gym_info.name}!\n\nVocê agora pode validar tokens de clientes.\n\nDEBUG: Navegando para /gym/validation`,
         [
           {
             text: 'Continuar',
             onPress: () => {
+              console.log('🚀 [DEBUG] Navigating to /gym/validation...');
               router.replace('/gym/validation');
+              console.log('✅ [DEBUG] Navigation command sent');
             }
           }
         ]
       );
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('❌ [DEBUG] Login error:', error);
+      console.error('❌ [DEBUG] Error details:', error.response?.data);
+      console.error('❌ [DEBUG] Error status:', error.response?.status);
+      
       Alert.alert(
         'Erro de Login ❌', 
-        error.response?.data?.detail || 'Credenciais inválidas. Verifique seu login e senha.'
+        `${error.response?.data?.detail || 'Credenciais inválidas. Verifique seu login e senha.'}\n\nDEBUG INFO:\nURL: ${API_URL}/api/gym/auth\nStatus: ${error.response?.status || 'No response'}\nLogin: ${login}`
       );
     } finally {
       setLoading(false);
