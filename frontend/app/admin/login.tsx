@@ -75,7 +75,18 @@ export default function AdminLogin() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      Alert.alert(
+        'Campos Obrigatórios ⚠️',
+        'Por favor, preencha email e senha para continuar.'
+      );
+      return;
+    }
+
+    if (!email.includes('@')) {
+      Alert.alert(
+        'Email Inválido ❌',
+        'Por favor, digite um email válido (exemplo: admin@luxepass.com).'
+      );
       return;
     }
 
@@ -94,10 +105,30 @@ export default function AdminLogin() {
       router.replace('/admin/(tabs)');
     } catch (error: any) {
       console.error('Admin login error:', error);
-      Alert.alert(
-        'Erro no Login', 
-        error.response?.data?.detail || 'Erro ao fazer login. Tente novamente.'
-      );
+      
+      let title = 'Erro no Login ❌';
+      let message = 'Não foi possível realizar o login.';
+
+      if (error.response?.status === 401) {
+        title = 'Credenciais Inválidas ❌';
+        message = 'Email ou senha incorretos. Verifique seus dados e tente novamente.\n\n💡 Credenciais padrão:\nEmail: admin@luxepass.com\nSenha: admin123';
+      } else if (error.response?.status === 400) {
+        title = 'Dados Inválidos ❌';
+        message = 'Email e senha são obrigatórios. Verifique se preencheu todos os campos corretamente.';
+      } else if (error.response?.status === 403) {
+        title = 'Acesso Negado ❌';
+        message = 'Você não tem permissão de administrador. Entre em contato com o suporte.';
+      } else if (error.code === 'ECONNABORTED') {
+        title = 'Timeout ❌';
+        message = 'A conexão demorou muito. Verifique sua internet e tente novamente.';
+      } else if (error.response?.status >= 500) {
+        title = 'Erro do Servidor ❌';
+        message = 'Erro interno do servidor. Tente novamente em alguns minutos.';
+      } else {
+        message = error.response?.data?.detail || error.message || 'Erro desconhecido ao fazer login.';
+      }
+      
+      Alert.alert(title, message);
     } finally {
       setLoading(false);
     }
