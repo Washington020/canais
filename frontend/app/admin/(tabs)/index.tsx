@@ -77,6 +77,18 @@ interface AdminStats {
     user_id: string;
     status: string;
   }>;
+  appointments_month?: number;
+  recent_appointments?: Array<{
+    id: string;
+    user_name: string;
+    user_email: string;
+    user_plan: string;
+    appointment_type: string;
+    appointment_date: string;
+    status: string;
+    notes: string;
+    created_at: string;
+  }>;
 }
 
 export default function AdminDashboard() {
