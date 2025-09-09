@@ -1946,24 +1946,316 @@ class FitPassTester:
         
         return True
 
+    def test_gym_authentication_comprehensive(self):
+        """Comprehensive test of gym authentication flow to identify specific issues"""
+        print("\n" + "="*80)
+        print("🚨 COMPREHENSIVE GYM AUTHENTICATION FLOW TEST")
+        print("="*80)
+        print("Testing the complete gym authentication flow to identify reported issues:")
+        print("1. Manual passwords generated in Admin app not working for Gym app login")
+        print("2. New generated passwords not being saved properly")
+        
+        # Step 1: Admin Login
+        print("\n1️⃣ Testing Admin Login...")
+        admin_login_data = {
+            "email": "admin@luxepass.com",
+            "password": "admin123"
+        }
+        
+        response = self.make_request("POST", "/auth/login", admin_login_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            self.admin_token = data["access_token"]
+            self.log_test("1. Admin Login", True, "Successfully logged in as admin")
+            print(f"   Admin Token: {data['access_token'][:20]}...")
+        else:
+            self.log_test("1. Admin Login", False, f"Admin login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 2: List existing gyms
+        print("\n2️⃣ Testing GET /api/admin/gyms...")
+        response = self.make_request("GET", "/admin/gyms", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            existing_gyms = data.get("gyms", []) if isinstance(data, dict) else data
+            self.log_test("2. List Existing Gyms", True, f"Retrieved {len(existing_gyms)} existing gyms")
+            print(f"   Found {len(existing_gyms)} gyms in database")
+        else:
+            self.log_test("2. List Existing Gyms", False, f"Failed to list gyms: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 3: Create test gym using POST /api/admin/gyms/register
+        print("\n3️⃣ Testing POST /api/admin/gyms/register...")
+        gym_data = {
+            "name": "Academia Teste Credenciais",
+            "cnpj": "12.345.678/0001-90",
+            "razao_social": "Academia Teste Credenciais LTDA",
+            "endereco": "Rua das Credenciais, 123",
+            "numero": "123",
+            "complemento": "Sala 1",
+            "bairro": "Vila Teste",
+            "cidade": "São Paulo",
+            "estado": "SP",
+            "cep": "01234-567",
+            "email": "contato@academiateste.com",
+            "site": "www.academiateste.com",
+            "telefone_principal": "(11) 99999-9999",
+            "telefone_secundario": "(11) 88888-8888",
+            "horario_funcionamento": "Segunda a Sexta: 06:00 às 22:00",
+            "tipo_academia": "Tradicional",
+            "franquia": "Independente",
+            "num_unidades": "1",
+            "responsavel_nome": "João Silva",
+            "responsavel_cargo": "Gerente",
+            "responsavel_email": "joao@academiateste.com",
+            "responsavel_telefone": "(11) 77777-7777",
+            "modelo_negocio": "Mensalidade",
+            "inscricao_estadual": "123.456.789.012",
+            "alvara_funcionamento": "ALV-2024-001",
+            "documento_responsavel": "123.456.789-00",
+            "recursos_oferecidos": "Musculação, Cardio, Funcional",
+            "politicas_cancelamento": "30 dias de antecedência",
+            "observacoes_qualidade": "Academia com equipamentos novos"
+        }
+        
+        response = self.make_request("POST", "/admin/gyms/register", gym_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if data.get("success") and "gym_id" in data:
+                self.test_gym_id = data["gym_id"]
+                auto_login = data.get("login", "")
+                auto_password = data.get("password", "")
+                self.log_test("3. Create Test Gym", True, f"Gym created with ID: {self.test_gym_id}")
+                print(f"   Auto-generated Login: {auto_login}")
+                print(f"   Auto-generated Password: {auto_password}")
+                
+                # Store auto credentials for later testing
+                self.auto_credentials = {"login": auto_login, "password": auto_password}
+            else:
+                self.log_test("3. Create Test Gym", False, "Response missing success or gym_id")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("3. Create Test Gym", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 4: Test manual password setting using PUT /api/admin/gyms/{gym_id}/set-password
+        print("\n4️⃣ Testing PUT /api/admin/gyms/{gym_id}/set-password...")
+        manual_password_data = {
+            "password": "testpass123",
+            "login": "gym_manual_test"
+        }
+        
+        response = self.make_request("PUT", f"/admin/gyms/{self.test_gym_id}/set-password", 
+                                   manual_password_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if data.get("success"):
+                manual_login = data.get("login", manual_password_data["login"])
+                self.log_test("4. Set Manual Password", True, f"Manual password set successfully")
+                print(f"   Manual Login: {manual_login}")
+                print(f"   Manual Password: {manual_password_data['password']}")
+                print(f"   Response Message: {data.get('message', 'N/A')}")
+                
+                # Store manual credentials for later testing
+                self.manual_credentials = {"login": manual_login, "password": manual_password_data["password"]}
+            else:
+                self.log_test("4. Set Manual Password", False, "Response success field is False")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("4. Set Manual Password", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 5: Test automatic password reset using PUT /api/admin/gyms/{gym_id}/reset-password
+        print("\n5️⃣ Testing PUT /api/admin/gyms/{gym_id}/reset-password...")
+        response = self.make_request("PUT", f"/admin/gyms/{self.test_gym_id}/reset-password", 
+                                   {}, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if data.get("success"):
+                reset_login = data.get("login", "")
+                reset_password = data.get("new_password", "")
+                self.log_test("5. Reset Password", True, f"Password reset successfully")
+                print(f"   Reset Login: {reset_login}")
+                print(f"   Reset Password: {reset_password}")
+                print(f"   Response Message: {data.get('message', 'N/A')}")
+                
+                # Store reset credentials for later testing
+                self.reset_credentials = {"login": reset_login, "password": reset_password}
+            else:
+                self.log_test("5. Reset Password", False, "Response success field is False")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("5. Reset Password", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 6: Approve the gym for authentication testing
+        print("\n6️⃣ Approving gym for authentication testing...")
+        response = self.make_request("PUT", f"/admin/gyms/{self.test_gym_id}/status", 
+                                   {"status": "approved"}, auth_required=False)
+        
+        if response and response.status_code == 200:
+            self.log_test("6. Approve Gym", True, "Gym approved successfully")
+        else:
+            self.log_test("6. Approve Gym", False, "Failed to approve gym")
+            return False
+        
+        # Step 7: Test gym authentication with manual credentials
+        print("\n7️⃣ Testing POST /api/gym/auth with MANUAL credentials...")
+        if hasattr(self, 'manual_credentials'):
+            response = self.make_request("POST", "/gym/auth", self.manual_credentials, auth_required=False)
+            
+            if response and response.status_code == 200:
+                data = response.json()
+                if "access_token" in data and "gym_info" in data:
+                    self.log_test("7. Manual Credentials Auth", True, f"✅ Manual credentials authentication successful")
+                    print(f"   Access Token: {data['access_token'][:20]}...")
+                    print(f"   Gym Name: {data['gym_info'].get('name', 'N/A')}")
+                    print(f"   Gym Status: {data['gym_info'].get('status', 'N/A')}")
+                else:
+                    self.log_test("7. Manual Credentials Auth", False, "Response missing access_token or gym_info")
+            elif response and response.status_code == 401:
+                error_detail = ""
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+                self.log_test("7. Manual Credentials Auth", False, f"❌ MANUAL CREDENTIALS FAILED: {error_detail}")
+                print(f"   🚨 THIS IS THE REPORTED ISSUE: Manual passwords not working!")
+            else:
+                error_detail = ""
+                if response:
+                    try:
+                        error_detail = response.json().get("detail", response.text)
+                    except:
+                        error_detail = response.text
+                self.log_test("7. Manual Credentials Auth", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+        
+        # Step 8: Test gym authentication with reset credentials
+        print("\n8️⃣ Testing POST /api/gym/auth with RESET credentials...")
+        if hasattr(self, 'reset_credentials'):
+            response = self.make_request("POST", "/gym/auth", self.reset_credentials, auth_required=False)
+            
+            if response and response.status_code == 200:
+                data = response.json()
+                if "access_token" in data and "gym_info" in data:
+                    self.log_test("8. Reset Credentials Auth", True, f"✅ Reset credentials authentication successful")
+                    print(f"   Access Token: {data['access_token'][:20]}...")
+                    print(f"   Gym Name: {data['gym_info'].get('name', 'N/A')}")
+                    print(f"   Gym Status: {data['gym_info'].get('status', 'N/A')}")
+                else:
+                    self.log_test("8. Reset Credentials Auth", False, "Response missing access_token or gym_info")
+            elif response and response.status_code == 401:
+                error_detail = ""
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+                self.log_test("8. Reset Credentials Auth", False, f"❌ RESET CREDENTIALS FAILED: {error_detail}")
+                print(f"   🚨 THIS IS THE REPORTED ISSUE: New generated passwords not working!")
+            else:
+                error_detail = ""
+                if response:
+                    try:
+                        error_detail = response.json().get("detail", response.text)
+                    except:
+                        error_detail = response.text
+                self.log_test("8. Reset Credentials Auth", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+        
+        # Step 9: Test gym authentication with auto-generated credentials (for comparison)
+        print("\n9️⃣ Testing POST /api/gym/auth with AUTO-GENERATED credentials...")
+        if hasattr(self, 'auto_credentials'):
+            response = self.make_request("POST", "/gym/auth", self.auto_credentials, auth_required=False)
+            
+            if response and response.status_code == 200:
+                data = response.json()
+                if "access_token" in data and "gym_info" in data:
+                    self.log_test("9. Auto Credentials Auth", True, f"✅ Auto-generated credentials authentication successful")
+                    print(f"   Access Token: {data['access_token'][:20]}...")
+                    print(f"   Gym Name: {data['gym_info'].get('name', 'N/A')}")
+                    print(f"   Gym Status: {data['gym_info'].get('status', 'N/A')}")
+                else:
+                    self.log_test("9. Auto Credentials Auth", False, "Response missing access_token or gym_info")
+            elif response and response.status_code == 401:
+                error_detail = ""
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+                self.log_test("9. Auto Credentials Auth", False, f"Auto-generated credentials also failed: {error_detail}")
+            else:
+                error_detail = ""
+                if response:
+                    try:
+                        error_detail = response.json().get("detail", response.text)
+                    except:
+                        error_detail = response.text
+                self.log_test("9. Auto Credentials Auth", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+        
+        # Summary
+        print("\n" + "="*80)
+        print("📊 COMPREHENSIVE GYM AUTHENTICATION TEST SUMMARY")
+        print("="*80)
+        
+        # Count results
+        passed = sum(1 for result in self.test_results if result["success"] and result["test"].startswith(("1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.")))
+        total = len([result for result in self.test_results if result["test"].startswith(("1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9."))])
+        
+        print(f"Tests Passed: {passed}/{total}")
+        
+        # Show specific failures
+        auth_failures = []
+        for result in self.test_results:
+            if not result["success"] and ("Manual Credentials" in result["test"] or "Reset Credentials" in result["test"]):
+                auth_failures.append(result)
+        
+        if auth_failures:
+            print("\n🚨 IDENTIFIED ISSUES:")
+            for failure in auth_failures:
+                print(f"  ❌ {failure['test']}: {failure['details']}")
+        else:
+            print("\n✅ All authentication methods working correctly!")
+        
+        return len(auth_failures) == 0
+
 if __name__ == "__main__":
     tester = FitPassTester()
     
-    print("🎯 RUNNING PERSONALIZATION ENDPOINTS TEST AS REQUESTED")
-    print("Testing the personalization endpoints with @luxepass.com emails:")
-    print("1. Login with cliente@luxepass.com")
-    print("2. GET /api/users/profile - Verify user information")
-    print("3. Login with admin@luxepass.com")
-    print("4. Admin Dashboard API - Verify loading")
-    print("="*70)
+    print("🚨 RUNNING COMPREHENSIVE GYM AUTHENTICATION FLOW TEST")
+    print("Testing the complete gym authentication flow to identify reported issues:")
+    print("1. Manual passwords generated in Admin app not working for Gym app login")
+    print("2. New generated passwords not being saved properly")
+    print("="*80)
     
-    # Run the personalization endpoints test
-    success = tester.test_personalization_endpoints()
+    # Run the comprehensive gym authentication test to identify specific issues
+    success = tester.test_gym_authentication_comprehensive()
     
     # Summary
-    print("\n" + "="*70)
-    print("📊 PERSONALIZATION ENDPOINTS TEST SUMMARY")
-    print("="*70)
+    print("\n" + "="*80)
+    print("📊 COMPREHENSIVE GYM AUTHENTICATION TEST SUMMARY")
+    print("="*80)
     
     passed = sum(1 for result in tester.test_results if result["success"])
     total = len(tester.test_results)
@@ -1980,22 +2272,29 @@ if __name__ == "__main__":
         if result["details"]:
             print(f"   Details: {result['details']}")
     
-    if success:
-        print("\n🎉 ALL PERSONALIZATION TESTS PASSED!")
-        print("The personalization endpoints are working correctly:")
-        print("  ✓ cliente@luxepass.com login - Working")
-        print("  ✓ GET /api/users/profile - Returns user information")
-        print("  ✓ admin@luxepass.com login - Working")
-        print("  ✓ Admin Dashboard API - Loading without errors")
-        print("\n💡 CONCLUSION: The personalization backend is functioning properly.")
-        print("Interface personalization with user names from database is operational.")
-    else:
-        print("\n❌ SOME TESTS FAILED!")
-        print("Check the detailed output above for specific issues.")
+    # Show specific authentication failures
+    auth_failures = [result for result in tester.test_results if not result["success"] and ("Credentials Auth" in result["test"])]
+    
+    if auth_failures:
+        print("\n🚨 CRITICAL AUTHENTICATION ISSUES IDENTIFIED:")
+        for failure in auth_failures:
+            print(f"  ❌ {failure['test']}: {failure['details']}")
         
-        # Show failed tests
-        failed_tests = [result for result in tester.test_results if not result["success"]]
-        if failed_tests:
-            print("\n❌ Failed Tests:")
-            for test in failed_tests:
-                print(f"  - {test['test']}: {test['details']}")
+        print("\n🔍 ROOT CAUSE ANALYSIS NEEDED:")
+        print("  - Check if credentials are being saved in correct database structure")
+        print("  - Verify bcrypt password hashing is working properly")
+        print("  - Check if gym authentication endpoint is looking in right fields")
+        print("  - Investigate data structure mismatch between save and retrieve operations")
+    else:
+        print("\n🎉 ALL AUTHENTICATION METHODS WORKING!")
+        print("The gym authentication system is functioning correctly:")
+        print("  ✓ Manual password setting - Working")
+        print("  ✓ Automatic password reset - Working")
+        print("  ✓ Auto-generated credentials - Working")
+        print("  ✓ Gym authentication endpoint - Working")
+        
+    print("\n💡 CONCLUSION:")
+    if success:
+        print("The gym authentication system is working correctly. No issues found.")
+    else:
+        print("Issues identified in gym authentication system. See details above.")
