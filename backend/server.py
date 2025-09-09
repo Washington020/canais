@@ -41,6 +41,40 @@ STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', 'sk-test-51PxqFfJchv7KIiWYvSJN
 # Emergent LLM Key for AI features
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-f400b75B69872D785E')
 
+# Payment Plans Configuration
+PAYMENT_PLANS = {
+    "basic": {
+        "id": "basic",
+        "name": "Plano Básico",
+        "price": 29.90,
+        "currency": "BRL",
+        "duration_days": 30,
+        "features": ["10 tokens por mês", "Acesso a academias básicas", "Suporte por email"],
+        "token_limit": 10,
+        "description": "Ideal para uso ocasional"
+    },
+    "premium": {
+        "id": "premium", 
+        "name": "Plano Premium",
+        "price": 59.90,
+        "currency": "BRL",
+        "duration_days": 30,
+        "features": ["60 tokens por mês", "Acesso a todas as academias", "Suporte prioritário", "Relatórios detalhados"],
+        "token_limit": 60,
+        "description": "Recomendado para uso regular"
+    },
+    "vip": {
+        "id": "vip",
+        "name": "Plano VIP",
+        "price": 99.90,
+        "currency": "BRL", 
+        "duration_days": 30,
+        "features": ["Tokens ilimitados", "Acesso premium", "Suporte 24/7", "Personal trainer virtual", "Nutricionista virtual"],
+        "token_limit": -1,  # -1 = unlimited
+        "description": "Para quem quer o melhor"
+    }
+}
+
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
