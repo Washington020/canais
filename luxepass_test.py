@@ -289,7 +289,7 @@ class LuxePassTester:
         
         response = self.make_request("POST", "/auth/login", wrong_admin, auth_required=False)
         
-        if response:
+        if response is not None:
             if response.status_code == 401:
                 try:
                     error_detail = response.json().get("detail", "")
@@ -313,7 +313,7 @@ class LuxePassTester:
         
         response = self.make_request("POST", "/auth/login", wrong_client, auth_required=False)
         
-        if response:
+        if response is not None:
             if response.status_code == 401:
                 try:
                     error_detail = response.json().get("detail", "")
@@ -337,7 +337,7 @@ class LuxePassTester:
         
         response = self.make_request("POST", "/gym/auth", wrong_gym, auth_required=False)
         
-        if response:
+        if response is not None:
             if response.status_code == 401:
                 try:
                     error_detail = response.json().get("detail", "")
