@@ -1590,8 +1590,43 @@ async def create_user_admin(credentials: HTTPAuthorizationCredentials = Depends(
 async def get_professional_clients(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Get clients assigned to current professional"""
     try:
-        # For now, return empty list - will populate after flagging
-        return {"clients": []}
+        # Get token info to identify professional
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        professional_id: str = payload.get("sub")
+        professional_type: str = payload.get("professional_type")
+        
+        if professional_id is None:
+            raise HTTPException(status_code=401, detail="Token inválido")
+        
+        # Get clients flagged for this professional
+        flagged_clients = await db.client_assignments.find({
+            "professional_id": professional_id,
+            "professional_type": professional_type
+        }).to_list(100)
+        
+        if not flagged_clients:
+            return {"clients": []}
+        
+        # Get detailed client information
+        clients = []
+        for assignment in flagged_clients:
+            client_id = assignment["client_id"]
+            user = await db.users.find_one({"_id": ObjectId(client_id)})
+            if user and user.get("plan_type") in ["premium", "vip"]:
+                clients.append({
+                    "id": str(user["_id"]),
+                    "full_name": user["full_name"],
+                    "email": user["email"],
+                    "plan_type": user["plan_type"],
+                    "status": user.get("status", "active"),
+                    "flagged_date": assignment["assigned_at"].isoformat(),
+                    "last_session": None,  # TODO: implementar sessões
+                    "next_session": None,  # TODO: implementar agendamento
+                    "progress_status": "good"  # TODO: implementar progresso
+                })
+        
+        return {"clients": clients}
         
     except Exception as e:
         logger.error(f"Erro ao listar clientes do profissional: {e}")
