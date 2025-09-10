@@ -26,7 +26,7 @@ interface DaySchedule {
   slots: TimeSlot[];
 }
 
-export default function NutritionistSchedule() {
+export default function PersonalTrainerSchedule() {
   const [schedule, setSchedule] = useState<DaySchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<string>('');
@@ -38,20 +38,20 @@ export default function NutritionistSchedule() {
 
   const loadSchedule = async () => {
     try {
-      // Simular dados de agenda para demonstração
+      // Simular dados de agenda para personal trainer
       const mockSchedule: DaySchedule[] = [
         {
           date: '2025-01-15',
           day: 'Segunda-feira',
           slots: [
-            { time: '08:00', available: false, client: 'Isabella Costa VIP', type: 'consultation' },
-            { time: '09:00', available: true },
+            { time: '07:00', available: false, client: 'Isabella Costa VIP', type: 'consultation' },
+            { time: '08:00', available: true },
+            { time: '09:00', available: false, client: 'Carlos Santos VIP', type: 'followup' },
             { time: '10:00', available: true },
-            { time: '11:00', available: false, client: 'Ana Silva Premium', type: 'followup' },
-            { time: '14:00', available: true },
             { time: '15:00', available: true },
-            { time: '16:00', available: true },
-            { time: '17:00', available: false, client: 'Carlos Santos VIP', type: 'consultation' },
+            { time: '16:00', available: false, client: 'Ana Silva Premium', type: 'consultation' },
+            { time: '17:00', available: true },
+            { time: '18:00', available: true },
           ]
         },
         {
