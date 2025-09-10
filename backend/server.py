@@ -1554,12 +1554,12 @@ async def create_user_admin(credentials: HTTPAuthorizationCredentials = Depends(
         # Get available professionals for assignment
         nutritionists = await db.professionals.find({
             "professional_type": "nutritionist",
-            "status": "active"
+            "active": True
         }).to_list(10)
         
         personal_trainers = await db.professionals.find({
             "professional_type": "personal",
-            "status": "active"
+            "active": True
         }).to_list(10)
         
         # Create VIP test user with professional assignments
