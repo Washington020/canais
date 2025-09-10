@@ -102,7 +102,88 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Test the FitPass Brasil backend API with comprehensive coverage of authentication, user management, token generation/validation, gym management, workout tracking, nutrition plans, and admin functionality."
+user_problem_statement: "Corrigir problemas na interface do nutricionista: (1) aba 'Dieta' não está funcionando, (2) clientes criados via admin não aparecem para nutricionista/personal trainer"
+
+backend:
+  - task: "Admin User Creation with Professional Assignment"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Identificado problema: usuários criados via admin não recebem campos nutritionist_id e personal_id necessários para aparecer nas interfaces dos profissionais. Implementada correção para atribuição automática de profissionais durante criação de usuários."
+
+  - task: "Professional Client Assignment Fix"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Criado endpoint adicional /admin/users/assign-professionals para atualizar usuários existentes que não têm profissionais atribuídos."
+
+  - task: "Professional Login and Client Listing"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Endpoints /professionals/login e /professionals/my-assigned-clients existem mas precisam ser testados após correção da atribuição de profissionais."
+
+frontend:
+  - task: "Nutritionist Dieta Tab Interface"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/professional/nutritionist/(tabs)/create-plan.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Interface create-plan.tsx está funcionando corretamente - é uma interface completa para criação de planos nutricionais. O problema reportado não era com esta aba específica."
+
+  - task: "Professional Client List Display"
+    implemented: true
+    working: false
+    file: "/app/frontend/app/professional/nutritionist/(tabs)/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Interface está correta, mas não mostra clientes porque backend não estava retornando clientes atribuídos. Precisa ser testada após correção do backend."
+
+metadata:
+  created_by: "main_agent"
+  version: "2.0"
+  test_sequence: 0
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Admin User Creation with Professional Assignment"
+    - "Professional Client Assignment Fix"
+    - "Professional Login and Client Listing"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "main"
+      message: "IDENTIFICADO PROBLEMA RAIZ: Usuários criados via admin não recebem campos nutritionist_id/personal_id. Implementadas correções: 1) Modificado endpoint /admin/users para atribuição automática de profissionais, 2) Criado endpoint /admin/users/assign-professionals para corrigir usuários existentes. Precisa testar backend para verificar se correções funcionam."
 
 backend:
   - task: "User Registration API"
