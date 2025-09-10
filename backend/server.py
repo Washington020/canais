@@ -3435,6 +3435,9 @@ app.include_router(integration_router)
 @app.on_event("startup")
 async def startup_event():
     init_services(db)
+    
+    # Create test professionals if they don't exist
+    await create_test_professionals()
 
 app.add_middleware(
     CORSMiddleware,
