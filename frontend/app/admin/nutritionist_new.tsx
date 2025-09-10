@@ -1,0 +1,647 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  TextInput,
+  RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+
+const API_URL = '/api';
+
+interface Professional {
+  id: string;
+  full_name: string;
+  email: string;
+  professional_type: string;
+  cref_crn: string;
+  specialization: string;
+  phone: string;
+  experience_years: number;
+  active: boolean;
+  created_at: string;
+}
+
+export default function NutritionistManagement() {
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const router = useRouter();
+
+  // Form states
+  const [formData, setFormData] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+    cref_crn: '',
+    specialization: '',
+    phone: '',
+    experience_years: '0',
+    bio: ''
+  });
+
+  const loadProfessionals = async () => {
+    try {
+      const token = await AsyncStorage.getItem('adminToken');
+      if (!token) {
+        Alert.alert('Erro', 'Token não encontrado', [
+          { text: 'OK', onPress: () => router.replace('/admin/login') }
+        ]);
+        return;
+      }
+
+      const response = await axios.get(`${API_URL}/admin/professionals`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Filter only nutritionists
+      const nutritionists = response.data.professionals.filter(
+        (prof: Professional) => prof.professional_type === 'nutritionist'
+      );
+      setProfessionals(nutritionists);
+    } catch (error: any) {
+      console.error('Error loading professionals:', error);
+      if (error.response?.status === 401) {
+        Alert.alert('Erro', 'Sessão expirada', [
+          { text: 'OK', onPress: () => router.replace('/admin/login') }
+        ]);
+      } else {
+        Alert.alert('Erro', 'Não foi possível carregar os nutricionistas');
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleCreateProfessional = async () => {
+    if (!formData.full_name.trim() || !formData.email.trim() || !formData.password.trim()) {
+      Alert.alert('Erro', 'Por favor, preencha nome, email e senha');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const token = await AsyncStorage.getItem('adminToken');
+      if (!token) {
+        Alert.alert('Erro', 'Token não encontrado');
+        return;
+      }
+
+      const professionalData = {
+        full_name: formData.full_name.trim(),
+        email: formData.email.trim(),
+        password: formData.password.trim(),
+        professional_type: 'nutritionist',
+        cref_crn: formData.cref_crn.trim(),
+        specialization: formData.specialization.trim(),
+        phone: formData.phone.trim(),
+        experience_years: parseInt(formData.experience_years) || 0,
+        bio: formData.bio.trim()
+      };
+
+      const response = await axios.post(`${API_URL}/admin/professionals`, professionalData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      Alert.alert(
+        '✅ Nutricionista Criado!',
+        `${formData.full_name} foi cadastrado com sucesso.\n\nCredenciais de Login:\nEmail: ${formData.email}\nSenha: ${formData.password}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowCreateModal(false);
+              setFormData({
+                full_name: '',
+                email: '',
+                password: '',
+                cref_crn: '',
+                specialization: '',
+                phone: '',
+                experience_years: '0',
+                bio: ''
+              });
+              loadProfessionals();
+            }
+          }
+        ]
+      );
+    } catch (error: any) {
+      console.error('Error creating professional:', error);
+      if (error.response?.data?.detail) {
+        Alert.alert('Erro', error.response.data.detail);
+      } else {
+        Alert.alert('Erro', 'Não foi possível criar o nutricionista');
+      }
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const toggleProfessionalStatus = async (professional: Professional) => {
+    const action = professional.active ? 'desativar' : 'ativar';
+    Alert.alert(
+      'Confirmar',
+      `Deseja ${action} ${professional.full_name}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('adminToken');
+              await axios.put(
+                `${API_URL}/admin/professionals/${professional.id}/status?active=${!professional.active}`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              loadProfessionals();
+            } catch (error) {
+              Alert.alert('Erro', `Não foi possível ${action} o nutricionista`);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadProfessionals();
+  };
+
+  useEffect(() => {
+    loadProfessionals();
+  }, []);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#22C55E" />
+          <Text style={styles.loadingText}>Carregando nutricionistas...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="light" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Nutricionistas</Text>
+          <Text style={styles.headerSubtitle}>
+            Gerenciar nutricionistas • {professionals.length} cadastrados
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={() => setShowCreateModal(true)}
+        >
+          <Ionicons name="add" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Professionals List */}
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#22C55E"
+            colors={['#22C55E']}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {professionals.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="restaurant" size={64} color="#64748B" />
+            <Text style={styles.emptyTitle}>Nenhum nutricionista cadastrado</Text>
+            <Text style={styles.emptySubtitle}>
+              Clique no botão + para cadastrar o primeiro nutricionista
+            </Text>
+          </View>
+        ) : (
+          professionals.map((professional) => (
+            <View key={professional.id} style={styles.professionalCard}>
+              <View style={styles.professionalHeader}>
+                <View style={styles.professionalInfo}>
+                  <Text style={styles.professionalName}>{professional.full_name}</Text>
+                  <Text style={styles.professionalEmail}>{professional.email}</Text>
+                  <Text style={styles.professionalCref}>{professional.cref_crn}</Text>
+                </View>
+                <View style={[
+                  styles.statusBadge,
+                  { backgroundColor: professional.active ? '#22C55E' : '#EF4444' }
+                ]}>
+                  <Text style={styles.statusText}>
+                    {professional.active ? 'Ativo' : 'Inativo'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.professionalDetails}>
+                <Text style={styles.detailText}>
+                  📋 {professional.specialization || 'Especialização não informada'}
+                </Text>
+                <Text style={styles.detailText}>
+                  📞 {professional.phone || 'Telefone não informado'}
+                </Text>
+                <Text style={styles.detailText}>
+                  ⏱️ {professional.experience_years} anos de experiência
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: professional.active ? '#EF4444' : '#22C55E' }
+                ]}
+                onPress={() => toggleProfessionalStatus(professional)}
+              >
+                <Ionicons 
+                  name={professional.active ? "close-circle" : "checkmark-circle"} 
+                  size={16} 
+                  color="#FFFFFF" 
+                />
+                <Text style={styles.actionButtonText}>
+                  {professional.active ? 'Desativar' : 'Ativar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
+      </ScrollView>
+
+      {/* Create Professional Modal */}
+      <Modal
+        visible={showCreateModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalContent}
+          >
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowCreateModal(false)}
+              >
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Novo Nutricionista</Text>
+              <View style={styles.modalCloseButton} />
+            </View>
+
+            <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+              {/* Form Fields */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Nome Completo *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: Dra. Maria Silva"
+                  placeholderTextColor="#64748B"
+                  value={formData.full_name}
+                  onChangeText={(text) => setFormData({...formData, full_name: text})}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Email *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="maria@luxepass.com"
+                  placeholderTextColor="#64748B"
+                  value={formData.email}
+                  onChangeText={(text) => setFormData({...formData, email: text})}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Senha *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Senha de acesso"
+                  placeholderTextColor="#64748B"
+                  value={formData.password}
+                  onChangeText={(text) => setFormData({...formData, password: text})}
+                  secureTextEntry
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>CRN (Registro)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="CRN-12345/SP"
+                  placeholderTextColor="#64748B"
+                  value={formData.cref_crn}
+                  onChangeText={(text) => setFormData({...formData, cref_crn: text})}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Especialização</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: Nutrição Esportiva"
+                  placeholderTextColor="#64748B"
+                  value={formData.specialization}
+                  onChangeText={(text) => setFormData({...formData, specialization: text})}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Telefone</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="(11) 99999-9999"
+                  placeholderTextColor="#64748B"
+                  value={formData.phone}
+                  onChangeText={(text) => setFormData({...formData, phone: text})}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Anos de Experiência</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="5"
+                  placeholderTextColor="#64748B"
+                  value={formData.experience_years}
+                  onChangeText={(text) => setFormData({...formData, experience_years: text})}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Bio/Descrição</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Breve descrição profissional..."
+                  placeholderTextColor="#64748B"
+                  value={formData.bio}
+                  onChangeText={(text) => setFormData({...formData, bio: text})}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.createProfessionalButton, creating && styles.createProfessionalButtonDisabled]}
+                onPress={handleCreateProfessional}
+                disabled={creating}
+              >
+                {creating ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                    <Text style={styles.createProfessionalButtonText}>Criar Nutricionista</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <View style={{ height: 100 }} />
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0B0D17',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginTop: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+  },
+  createButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#22C55E',
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 80,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    color: '#64748B',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  professionalCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  professionalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  professionalInfo: {
+    flex: 1,
+  },
+  professionalName: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  professionalEmail: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  professionalCref: {
+    color: '#64748B',
+    fontSize: 12,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  professionalDetails: {
+    marginBottom: 16,
+  },
+  detailText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#0B0D17',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  modalForm: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: '#FFFFFF',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  createProfessionalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#22C55E',
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 20,
+  },
+  createProfessionalButtonDisabled: {
+    opacity: 0.6,
+  },
+  createProfessionalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+});
