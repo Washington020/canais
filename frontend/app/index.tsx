@@ -303,4 +303,44 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     textAlign: 'center',
   },
+  professionalSection: {
+    marginTop: 16,
+    backgroundColor: 'rgba(34, 197, 94, 0.05)',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
+  },
+  professionalTitle: {
+    color: '#22C55E',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  professionalLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    marginVertical: 2,
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 6,
+  },
+  professionalIcon: {
+    fontSize: 14,
+    marginRight: 8,
+  },
+  professionalContent: {
+    flex: 1,
+  },
+  professionalText: {
+    color: '#22C55E',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  professionalSubtext: {
+    color: '#94A3B8',
+    fontSize: 10,
+    marginTop: 1,
+  },
 });
