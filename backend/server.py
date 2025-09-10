@@ -1590,34 +1590,12 @@ async def create_user_admin(credentials: HTTPAuthorizationCredentials = Depends(
 async def get_professional_clients(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Get clients assigned to current professional"""
     try:
-        professional = await get_current_professional(credentials)
-        
-        # Get clients flagged for this professional
-        flagged_clients = await db.client_assignments.find({"professional_id": professional["id"]}).to_list(100)
-        client_ids = [assignment["client_id"] for assignment in flagged_clients]
-        
-        if not client_ids:
-            return {"clients": []}
-        
-        # Get detailed client information
-        clients = []
-        for client_id in client_ids:
-            user = await db.users.find_one({"_id": ObjectId(client_id)})
-            if user and user.get("plan_type") in ["premium", "vip"]:
-                clients.append({
-                    "id": str(user["_id"]),
-                    "full_name": user["full_name"],
-                    "email": user["email"],
-                    "plan_type": user["plan_type"],
-                    "status": user.get("status", "active"),
-                    "created_at": user.get("created_at", datetime.now(timezone.utc))
-                })
-        
-        return {"clients": clients}
+        # For now, return empty list - will populate after flagging
+        return {"clients": []}
         
     except Exception as e:
         logger.error(f"Erro ao listar clientes do profissional: {e}")
-        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+        raise HTTPException(status_code=500, detail=f"Erro: {str(e)}")
 
 @api_router.get("/professionals/unassigned-clients")
 async def get_unassigned_clients(credentials: HTTPAuthorizationCredentials = Depends(security)):
