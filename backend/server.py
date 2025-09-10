@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 import jwt
+from jwt import JWTError
 from bson import ObjectId
 import base64
 import secrets
