@@ -1546,12 +1546,23 @@ async def update_professional_status_admin(professional_id: str, active: bool, c
 
 @api_router.post("/admin/users")
 async def create_user_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Create a new user through admin interface"""
+    """Create a new user through admin interface with professional assignments"""
     try:
         # Verify admin access
         current_user = await get_current_admin(credentials)
         
-        # Create VIP test user
+        # Get available professionals for assignment
+        nutritionists = await db.professionals.find({
+            "professional_type": "nutritionist",
+            "status": "active"
+        }).to_list(10)
+        
+        personal_trainers = await db.professionals.find({
+            "professional_type": "personal",
+            "status": "active"
+        }).to_list(10)
+        
+        # Create VIP test user with professional assignments
         user_data = {
             "full_name": "Isabella Costa VIP",
             "email": "isabella@luxepass.com",
@@ -1565,21 +1576,56 @@ async def create_user_admin(credentials: HTTPAuthorizationCredentials = Depends(
             "created_by_admin": str(current_user["id"])
         }
         
+        # Auto-assign to available professionals if they exist
+        assignment_msg = ""
+        if nutritionists:
+            # Assign to first available nutritionist
+            user_data["nutritionist_id"] = str(nutritionists[0]["_id"])
+            user_data["nutritionist_assigned_at"] = datetime.now(timezone.utc)
+            assignment_msg += f" Atribuído ao nutricionista: {nutritionists[0]['full_name']}."
+        
+        if personal_trainers:
+            # Assign to first available personal trainer
+            user_data["personal_id"] = str(personal_trainers[0]["_id"])
+            user_data["personal_assigned_at"] = datetime.now(timezone.utc)
+            assignment_msg += f" Atribuído ao personal trainer: {personal_trainers[0]['full_name']}."
+        
         # Check if user already exists
         existing_user = await db.users.find_one({"email": user_data["email"]})
         if existing_user:
-            return {"success": True, "message": "Cliente VIP já existe", "user_id": str(existing_user["_id"])}
+            # If user exists but lacks professional assignments, update them
+            update_data = {}
+            if nutritionists and not existing_user.get("nutritionist_id"):
+                update_data["nutritionist_id"] = str(nutritionists[0]["_id"])
+                update_data["nutritionist_assigned_at"] = datetime.now(timezone.utc)
+                assignment_msg += f" Atribuído ao nutricionista: {nutritionists[0]['full_name']}."
+            
+            if personal_trainers and not existing_user.get("personal_id"):
+                update_data["personal_id"] = str(personal_trainers[0]["_id"])
+                update_data["personal_assigned_at"] = datetime.now(timezone.utc)
+                assignment_msg += f" Atribuído ao personal trainer: {personal_trainers[0]['full_name']}."
+            
+            if update_data:
+                await db.users.update_one(
+                    {"_id": existing_user["_id"]},
+                    {"$set": update_data}
+                )
+                return {"success": True, "message": f"Cliente VIP já existe e foi atualizado com profissionais.{assignment_msg}", "user_id": str(existing_user["_id"])}
+            
+            return {"success": True, "message": "Cliente VIP já existe e já tem profissionais atribuídos", "user_id": str(existing_user["_id"])}
         
         result = await db.users.insert_one(user_data)
         
         return {
             "success": True,
-            "message": f"Cliente VIP {user_data['full_name']} criado com sucesso",
+            "message": f"Cliente VIP {user_data['full_name']} criado com sucesso.{assignment_msg}",
             "user": {
                 "id": str(result.inserted_id),
                 "full_name": user_data["full_name"],
                 "email": user_data["email"],
-                "plan_type": user_data["plan_type"]
+                "plan_type": user_data["plan_type"],
+                "nutritionist_id": user_data.get("nutritionist_id"),
+                "personal_id": user_data.get("personal_id")
             }
         }
         
