@@ -1339,6 +1339,291 @@ async def get_admin_users():
     
     return result
 
+# Professional System Endpoints
+@api_router.post("/professionals/register")
+async def register_professional(professional: ProfessionalRegister):
+    """Register a new professional (nutritionist or personal trainer)"""
+    try:
+        # Check if professional already exists
+        existing_professional = await db.professionals.find_one({"email": professional.email})
+        if existing_professional:
+            raise HTTPException(status_code=400, detail="Profissional já cadastrado com este email")
+        
+        # Hash password
+        password_hash = pwd_context.hash(professional.password)
+        
+        # Create professional
+        professional_data = {
+            "full_name": professional.full_name,
+            "email": professional.email,
+            "password_hash": password_hash,
+            "professional_type": professional.professional_type,
+            "cref_crn": professional.cref_crn,
+            "specialization": professional.specialization,
+            "bio": professional.bio,
+            "phone": professional.phone,
+            "experience_years": professional.experience_years,
+            "active": True,
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        result = await db.professionals.insert_one(professional_data)
+        
+        return {
+            "id": str(result.inserted_id),
+            "message": f"{professional.professional_type.title()} cadastrado com sucesso!",
+            "professional_type": professional.professional_type
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao cadastrar profissional: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao cadastrar profissional")
+
+@api_router.post("/professionals/login")
+async def login_professional(professional_login: ProfessionalLogin):
+    """Professional login"""
+    try:
+        # Find professional
+        professional = await db.professionals.find_one({"email": professional_login.email})
+        if not professional:
+            raise HTTPException(status_code=401, detail="Email ou senha incorretos")
+        
+        # Check password
+        if not pwd_context.verify(professional_login.password, professional["password_hash"]):
+            raise HTTPException(status_code=401, detail="Email ou senha incorretos")
+        
+        if not professional.get("active", True):
+            raise HTTPException(status_code=401, detail="Conta de profissional desativada")
+        
+        # Create access token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": str(professional["_id"]), "type": "professional", "professional_type": professional["professional_type"]},
+            expires_delta=access_token_expires
+        )
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "professional": {
+                "id": str(professional["_id"]),
+                "full_name": professional["full_name"],
+                "email": professional["email"],
+                "professional_type": professional["professional_type"],
+                "cref_crn": professional["cref_crn"]
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro no login do profissional: {e}")
+        raise HTTPException(status_code=500, detail="Erro no login")
+
+async def get_current_professional(token: str = Depends(oauth2_scheme)):
+    """Get current professional from token"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        professional_id: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        
+        if professional_id is None or token_type != "professional":
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    professional = await db.professionals.find_one({"_id": ObjectId(professional_id)})
+    if professional is None:
+        raise credentials_exception
+    
+    return professional
+
+@api_router.get("/professionals/profile")
+async def get_professional_profile(current_professional: dict = Depends(get_current_professional)):
+    """Get professional profile"""
+    return {
+        "id": str(current_professional["_id"]),
+        "full_name": current_professional["full_name"],
+        "email": current_professional["email"],
+        "professional_type": current_professional["professional_type"],
+        "cref_crn": current_professional["cref_crn"],
+        "specialization": current_professional.get("specialization"),
+        "bio": current_professional.get("bio"),
+        "phone": current_professional.get("phone"),
+        "experience_years": current_professional.get("experience_years"),
+        "created_at": current_professional["created_at"].isoformat()
+    }
+
+@api_router.get("/professionals/my-clients")
+async def get_professional_clients(current_professional: dict = Depends(get_current_professional)):
+    """Get clients assigned to current professional"""
+    try:
+        professional_type = current_professional["professional_type"]
+        professional_id = str(current_professional["_id"])
+        
+        # Get users with active premium/vip plans
+        users = await db.users.find({
+            "plan_type": {"$in": ["premium", "vip"]},
+            "payment_status": "active"
+        }).to_list(100)
+        
+        # Get clients with plans created by this professional
+        if professional_type == "nutritionist":
+            plans = await db.supplement_plans.find({
+                "created_by": professional_id,
+                "active": True
+            }).to_list(100)
+        else:  # personal trainer
+            plans = await db.workout_plans.find({
+                "created_by": professional_id,
+                "active": True
+            }).to_list(100)
+        
+        # Get user IDs with plans from this professional
+        users_with_plans = [plan["user_id"] for plan in plans]
+        
+        result = []
+        for user in users:
+            has_plan = str(user["_id"]) in users_with_plans
+            result.append({
+                "id": str(user["_id"]),
+                "full_name": user.get("full_name", "Usuário"),
+                "email": user.get("email", ""),
+                "plan_type": user.get("plan_type", "basic"),
+                "status": user.get("payment_status", "inactive"),
+                "has_plan": has_plan,
+                "created_at": user.get("created_at", datetime.now()).isoformat()
+            })
+        
+        return {"clients": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar clientes do profissional: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar clientes")
+
+@api_router.get("/professionals/my-appointments")
+async def get_professional_appointments(current_professional: dict = Depends(get_current_professional)):
+    """Get appointments for current professional"""
+    try:
+        professional_type = current_professional["professional_type"]
+        
+        appointments = await db.appointments.find({
+            "professional_type": professional_type
+        }).sort("appointment_date", 1).to_list(50)
+        
+        result = []
+        for appointment in appointments:
+            # Get user details
+            user = await db.users.find_one({"_id": ObjectId(appointment["user_id"])})
+            
+            result.append({
+                "id": str(appointment["_id"]),
+                "user_name": user.get("full_name", "Usuário") if user else "Usuário",
+                "user_email": user.get("email", "") if user else "",
+                "user_plan": user.get("plan_type", "basic") if user else "basic",
+                "appointment_date": appointment["appointment_date"].isoformat(),
+                "status": appointment["status"],
+                "notes": appointment.get("notes", ""),
+                "created_at": appointment["created_at"].isoformat()
+            })
+        
+        return {"appointments": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar agendamentos: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar agendamentos")
+
+# Enhanced supplement and workout creation with professional info
+@api_router.post("/professionals/supplements/create")
+async def create_supplement_plan_professional(
+    plan: SupplementPlan,
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Create supplement plan by nutritionist"""
+    try:
+        if current_professional["professional_type"] != "nutritionist":
+            raise HTTPException(status_code=403, detail="Apenas nutricionistas podem criar planos de suplementação")
+        
+        professional_id = str(current_professional["_id"])
+        professional_name = current_professional["full_name"]
+        
+        plan_data = {
+            "user_id": plan.user_id,
+            "supplements": plan.supplements,
+            "created_by": professional_id,
+            "created_by_name": professional_name,
+            "created_by_cref": current_professional["cref_crn"],
+            "created_at": datetime.now(timezone.utc),
+            "start_date": plan.start_date,
+            "end_date": plan.end_date,
+            "active": True
+        }
+        
+        result = await db.supplement_plans.insert_one(plan_data)
+        
+        # Create daily supplement logs
+        await create_supplement_logs_for_plan(str(result.inserted_id), plan)
+        
+        return {
+            "id": str(result.inserted_id),
+            "message": f"Plano de suplementação criado por {professional_name}",
+            "created_by": professional_name
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao criar plano de suplementação: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar plano")
+
+@api_router.post("/professionals/workouts/create")
+async def create_workout_plan_professional(
+    plan: WorkoutPlan,
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Create workout plan by personal trainer"""
+    try:
+        if current_professional["professional_type"] != "personal":
+            raise HTTPException(status_code=403, detail="Apenas personal trainers podem criar planos de treino")
+        
+        professional_id = str(current_professional["_id"])
+        professional_name = current_professional["full_name"]
+        
+        plan_data = {
+            "user_id": plan.user_id,
+            "workout_name": plan.workout_name,
+            "exercises": plan.exercises,
+            "created_by": professional_id,
+            "created_by_name": professional_name,
+            "created_by_cref": current_professional["cref_crn"],
+            "created_at": datetime.now(timezone.utc),
+            "start_date": plan.start_date,
+            "end_date": plan.end_date,
+            "active": True
+        }
+        
+        result = await db.workout_plans.insert_one(plan_data)
+        
+        return {
+            "id": str(result.inserted_id),
+            "message": f"Plano de treino criado por {professional_name}",
+            "created_by": professional_name
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao criar plano de treino: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar plano")
+
 # Enhanced Dashboard Endpoints for Admin
 @api_router.get("/admin/dashboard/stats")
 async def get_enhanced_dashboard_stats():
