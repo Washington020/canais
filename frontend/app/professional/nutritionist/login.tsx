@@ -21,8 +21,8 @@ import Constants from 'expo-constants';
 const API_URL = '/api';
 
 export default function NutritionistLogin() {
-  const [email, setEmail] = useState('ana@luxepass.com');
-  const [password, setPassword] = useState('ana123');
+  const [email, setEmail] = useState('marina@luxepass.com');
+  const [password, setPassword] = useState('marina123');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
