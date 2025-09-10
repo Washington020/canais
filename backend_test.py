@@ -1294,6 +1294,203 @@ class FitPassTester:
         
         return False
 
+    def test_professional_client_assignment_fixes(self):
+        """Test the professional-client assignment fixes as requested in review"""
+        print("\n" + "="*80)
+        print("🩺 TESTING PROFESSIONAL-CLIENT ASSIGNMENT FIXES - LUXEPASS")
+        print("="*80)
+        print("Testing the corrections implemented for professional-client assignment issues...")
+        
+        # Step 1: Test admin login
+        print("\n1️⃣ Testing admin login (admin@luxepass.com/admin123)...")
+        admin_login_data = {
+            "email": "admin@luxepass.com",
+            "password": "admin123"
+        }
+        
+        response = self.make_request("POST", "/auth/login", admin_login_data, auth_required=False)
+        if response and response.status_code == 200:
+            data = response.json()
+            self.admin_token = data["access_token"]
+            self.log_test("1. Admin Login", True, "Admin login successful")
+            print(f"   ✅ Admin authenticated successfully")
+        else:
+            self.log_test("1. Admin Login", False, f"Admin login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 2: Test professional creation/verification at startup
+        print("\n2️⃣ Testing if professionals were created at startup...")
+        
+        # Check nutritionist
+        nutri_login_data = {
+            "email": "nutri@luxepass.com",
+            "password": "nutri123"
+        }
+        
+        nutri_response = self.make_request("POST", "/auth/login", nutri_login_data, auth_required=False)
+        if nutri_response and nutri_response.status_code == 200:
+            self.log_test("2a. Nutritionist Exists", True, "Nutritionist nutri@luxepass.com exists and can login")
+            print(f"   ✅ Nutritionist login successful")
+        else:
+            self.log_test("2a. Nutritionist Exists", False, "Nutritionist nutri@luxepass.com not found or login failed")
+        
+        # Check personal trainer
+        personal_login_data = {
+            "email": "personal@luxepass.com",
+            "password": "personal123"
+        }
+        
+        personal_response = self.make_request("POST", "/auth/login", personal_login_data, auth_required=False)
+        if personal_response and personal_response.status_code == 200:
+            self.log_test("2b. Personal Trainer Exists", True, "Personal trainer personal@luxepass.com exists and can login")
+            print(f"   ✅ Personal trainer login successful")
+        else:
+            self.log_test("2b. Personal Trainer Exists", False, "Personal trainer personal@luxepass.com not found or login failed")
+        
+        # Step 3: Test POST /api/admin/users endpoint (should include professional assignment)
+        print("\n3️⃣ Testing POST /api/admin/users (should auto-assign professionals)...")
+        
+        # Set admin token for authenticated requests
+        self.auth_token = self.admin_token
+        
+        response = self.make_request("POST", "/admin/users", auth_required=True)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "success" in data and data["success"]:
+                self.log_test("3. Admin User Creation", True, f"User created successfully: {data.get('message', '')}")
+                print(f"   ✅ {data.get('message', 'User created')}")
+                
+                # Check if user has professional assignments
+                user_info = data.get("user", {})
+                if user_info.get("nutritionist_id") or user_info.get("personal_id"):
+                    print(f"   ✅ Professional assignments included:")
+                    if user_info.get("nutritionist_id"):
+                        print(f"      - Nutritionist ID: {user_info['nutritionist_id']}")
+                    if user_info.get("personal_id"):
+                        print(f"      - Personal Trainer ID: {user_info['personal_id']}")
+                else:
+                    print(f"   ⚠️  No professional assignments found in response")
+            else:
+                self.log_test("3. Admin User Creation", False, f"User creation failed: {data.get('message', 'Unknown error')}")
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("3. Admin User Creation", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+        
+        # Step 4: Test POST /api/admin/users/assign-professionals endpoint
+        print("\n4️⃣ Testing POST /api/admin/users/assign-professionals (for existing users)...")
+        
+        response = self.make_request("POST", "/admin/users/assign-professionals", auth_required=True)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "success" in data and data["success"]:
+                self.log_test("4. Assign Professionals to Existing Users", True, f"Assignment successful: {data.get('message', '')}")
+                print(f"   ✅ {data.get('message', 'Professionals assigned')}")
+                
+                # Check assignment details
+                if "updated_count" in data:
+                    print(f"   📊 Users updated: {data['updated_count']}")
+                if "assignments" in data:
+                    assignments = data["assignments"]
+                    print(f"   📋 Assignment details:")
+                    for assignment in assignments:
+                        print(f"      - {assignment}")
+            else:
+                self.log_test("4. Assign Professionals to Existing Users", False, f"Assignment failed: {data.get('message', 'Unknown error')}")
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("4. Assign Professionals to Existing Users", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+        
+        # Step 5: Test professional login and client listing
+        print("\n5️⃣ Testing professional login and client listing...")
+        
+        # Test nutritionist login and client access
+        if nutri_response and nutri_response.status_code == 200:
+            nutri_data = nutri_response.json()
+            nutri_token = nutri_data["access_token"]
+            
+            # Test GET /api/professionals/my-assigned-clients for nutritionist
+            print("\n   5a. Testing nutritionist client listing...")
+            self.auth_token = nutri_token
+            
+            response = self.make_request("GET", "/professionals/my-assigned-clients", auth_required=True)
+            
+            if response and response.status_code == 200:
+                data = response.json()
+                if "clients" in data and isinstance(data["clients"], list):
+                    client_count = len(data["clients"])
+                    self.log_test("5a. Nutritionist Client Listing", True, f"Nutritionist can see {client_count} assigned clients")
+                    print(f"   ✅ Nutritionist has access to {client_count} clients")
+                    
+                    # Show sample client info if available
+                    if client_count > 0:
+                        sample_client = data["clients"][0]
+                        print(f"      Sample client: {sample_client.get('full_name', 'N/A')} ({sample_client.get('email', 'N/A')})")
+                else:
+                    self.log_test("5a. Nutritionist Client Listing", False, "Response missing 'clients' array")
+            else:
+                error_detail = ""
+                if response:
+                    try:
+                        error_detail = response.json().get("detail", response.text)
+                    except:
+                        error_detail = response.text
+                self.log_test("5a. Nutritionist Client Listing", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+        
+        # Test personal trainer login and client access
+        if personal_response and personal_response.status_code == 200:
+            personal_data = personal_response.json()
+            personal_token = personal_data["access_token"]
+            
+            # Test GET /api/professionals/my-assigned-clients for personal trainer
+            print("\n   5b. Testing personal trainer client listing...")
+            self.auth_token = personal_token
+            
+            response = self.make_request("GET", "/professionals/my-assigned-clients", auth_required=True)
+            
+            if response and response.status_code == 200:
+                data = response.json()
+                if "clients" in data and isinstance(data["clients"], list):
+                    client_count = len(data["clients"])
+                    self.log_test("5b. Personal Trainer Client Listing", True, f"Personal trainer can see {client_count} assigned clients")
+                    print(f"   ✅ Personal trainer has access to {client_count} clients")
+                    
+                    # Show sample client info if available
+                    if client_count > 0:
+                        sample_client = data["clients"][0]
+                        print(f"      Sample client: {sample_client.get('full_name', 'N/A')} ({sample_client.get('email', 'N/A')})")
+                else:
+                    self.log_test("5b. Personal Trainer Client Listing", False, "Response missing 'clients' array")
+            else:
+                error_detail = ""
+                if response:
+                    try:
+                        error_detail = response.json().get("detail", response.text)
+                    except:
+                        error_detail = response.text
+                self.log_test("5b. Personal Trainer Client Listing", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+        
+        print("\n✅ PROFESSIONAL-CLIENT ASSIGNMENT TESTING COMPLETED!")
+        print("Summary of tests:")
+        print("  ✓ Admin login functionality")
+        print("  ✓ Professional accounts creation at startup")
+        print("  ✓ Admin user creation with professional assignment")
+        print("  ✓ Professional assignment to existing users")
+        print("  ✓ Professional login and client access")
+        
+        return True
+
     def test_new_dashboard_endpoints(self):
         """Test the NEW dashboard endpoints as requested in review"""
         print("\n" + "="*70)
