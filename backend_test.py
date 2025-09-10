@@ -1327,7 +1327,7 @@ class FitPassTester:
             "password": "nutri123"
         }
         
-        nutri_response = self.make_request("POST", "/auth/login", nutri_login_data, auth_required=False)
+        nutri_response = self.make_request("POST", "/professionals/login", nutri_login_data, auth_required=False)
         if nutri_response and nutri_response.status_code == 200:
             self.log_test("2a. Nutritionist Exists", True, "Nutritionist nutri@luxepass.com exists and can login")
             print(f"   ✅ Nutritionist login successful")
@@ -1340,7 +1340,7 @@ class FitPassTester:
             "password": "personal123"
         }
         
-        personal_response = self.make_request("POST", "/auth/login", personal_login_data, auth_required=False)
+        personal_response = self.make_request("POST", "/professionals/login", personal_login_data, auth_required=False)
         if personal_response and personal_response.status_code == 200:
             self.log_test("2b. Personal Trainer Exists", True, "Personal trainer personal@luxepass.com exists and can login")
             print(f"   ✅ Personal trainer login successful")
