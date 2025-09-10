@@ -1417,52 +1417,55 @@ async def get_admin_users():
     return result
 
 # Admin Professional Management Endpoints
-# @api_router.post("/admin/professionals")
-# async def create_professional_admin(professional: ProfessionalRegister, current_user=Depends(get_current_admin)):
-#     """Create a new professional through admin interface"""
-#     try:
-#         # Check if professional already exists
-#         existing_professional = await db.professionals.find_one({"email": professional.email})
-#         if existing_professional:
-#             raise HTTPException(status_code=400, detail="Profissional já cadastrado com este email")
-#         
-#         # Hash password
-#         password_hash = pwd_context.hash(professional.password)
-#         
-#         # Create professional
-#         professional_data = {
-#             "full_name": professional.full_name,
-#             "email": professional.email,
-#             "password_hash": password_hash,
-#             "professional_type": professional.professional_type,
-#             "cref_crn": professional.cref_crn,
-#             "specialization": professional.specialization,
-#             "bio": professional.bio,
-#             "phone": professional.phone,
-#             "experience_years": professional.experience_years,
-#             "active": True,
-#             "created_at": datetime.now(timezone.utc),
-#             "created_by_admin": str(current_user["id"])
-#         }
-#         
-#         result = await db.professionals.insert_one(professional_data)
-#         professional_data["id"] = str(result.inserted_id)
-#         
-#         return {
-#             "success": True,
-#             "message": f"Profissional {professional.full_name} criado com sucesso",
-#             "professional": {
-#                 "id": professional_data["id"],
-#                 "full_name": professional.full_name,
-#                 "email": professional.email,
-#                 "professional_type": professional.professional_type,
-#                 "cref_crn": professional.cref_crn
-#             }
-#         }
-#         
-#     except Exception as e:
-#         logger.error(f"Erro ao criar profissional: {e}")
-#         raise HTTPException(status_code=500, detail="Erro interno do servidor")
+@api_router.post("/admin/professionals")
+async def create_professional_admin(professional: ProfessionalRegister, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Create a new professional through admin interface"""
+    try:
+        # Verify admin access
+        current_user = await get_current_admin(credentials)
+        
+        # Check if professional already exists
+        existing_professional = await db.professionals.find_one({"email": professional.email})
+        if existing_professional:
+            raise HTTPException(status_code=400, detail="Profissional já cadastrado com este email")
+        
+        # Hash password
+        password_hash = pwd_context.hash(professional.password)
+        
+        # Create professional
+        professional_data = {
+            "full_name": professional.full_name,
+            "email": professional.email,
+            "password_hash": password_hash,
+            "professional_type": professional.professional_type,
+            "cref_crn": professional.cref_crn,
+            "specialization": professional.specialization,
+            "bio": professional.bio,
+            "phone": professional.phone,
+            "experience_years": professional.experience_years,
+            "active": True,
+            "created_at": datetime.now(timezone.utc),
+            "created_by_admin": str(current_user["id"])
+        }
+        
+        result = await db.professionals.insert_one(professional_data)
+        professional_data["id"] = str(result.inserted_id)
+        
+        return {
+            "success": True,
+            "message": f"Profissional {professional.full_name} criado com sucesso",
+            "professional": {
+                "id": professional_data["id"],
+                "full_name": professional.full_name,
+                "email": professional.email,
+                "professional_type": professional.professional_type,
+                "cref_crn": professional.cref_crn
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar profissional: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 # @api_router.get("/admin/professionals")
 # async def get_professionals_admin(current_user=Depends(get_current_admin)):
