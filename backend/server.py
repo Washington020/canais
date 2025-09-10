@@ -248,6 +248,50 @@ def generate_qr_code(data: str) -> str:
     
     return base64.b64encode(buffer.getvalue()).decode()
 
+async def create_test_professionals():
+    """Create test professionals if they don't exist"""
+    try:
+        # Check if nutritionist exists
+        nutritionist = await db.professionals.find_one({"email": "nutri@luxepass.com"})
+        if not nutritionist:
+            nutritionist_data = {
+                "full_name": "Dra. Maria Nutricionista",
+                "email": "nutri@luxepass.com",
+                "password_hash": pwd_context.hash("nutri123"),
+                "professional_type": "nutritionist",
+                "cref_crn": "CRN-12345/SP",
+                "specialization": "Nutrição Esportiva e Funcional",
+                "bio": "Nutricionista especializada em nutrição esportiva com mais de 10 anos de experiência.",
+                "phone": "(11) 99999-0001",
+                "experience_years": 10,
+                "active": True,
+                "created_at": datetime.now(timezone.utc)
+            }
+            await db.professionals.insert_one(nutritionist_data)
+            logger.info("✅ Nutricionista de teste criada: nutri@luxepass.com / nutri123")
+        
+        # Check if personal trainer exists
+        personal = await db.professionals.find_one({"email": "personal@luxepass.com"})
+        if not personal:
+            personal_data = {
+                "full_name": "Prof. João Personal",
+                "email": "personal@luxepass.com",
+                "password_hash": pwd_context.hash("personal123"),
+                "professional_type": "personal",
+                "cref_crn": "CREF-12345/SP",
+                "specialization": "Musculação e Condicionamento Físico",
+                "bio": "Personal trainer especializado em musculação e condicionamento com mais de 8 anos de experiência.",
+                "phone": "(11) 99999-0002",
+                "experience_years": 8,
+                "active": True,
+                "created_at": datetime.now(timezone.utc)
+            }
+            await db.professionals.insert_one(personal_data)
+            logger.info("✅ Personal trainer de teste criado: personal@luxepass.com / personal123")
+            
+    except Exception as e:
+        logger.error(f"Erro ao criar profissionais de teste: {e}")
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
