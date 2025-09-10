@@ -21,8 +21,8 @@ import Constants from 'expo-constants';
 const API_URL = '/api';
 
 export default function PersonalTrainerLogin() {
-  const [email, setEmail] = useState('personal@luxepass.com');
-  const [password, setPassword] = useState('personal123');
+  const [email, setEmail] = useState('joao@luxepass.com');
+  const [password, setPassword] = useState('joao123');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
