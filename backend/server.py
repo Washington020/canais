@@ -341,6 +341,30 @@ async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
+async def get_current_professional(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get current professional from JWT token"""
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        professional_id: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        
+        if professional_id is None or token_type != "professional":
+            raise HTTPException(status_code=401, detail="Token inválido")
+            
+        professional = await db.professionals.find_one({"_id": ObjectId(professional_id)})
+        if professional is None:
+            raise HTTPException(status_code=401, detail="Profissional não encontrado")
+            
+        return {
+            "id": str(professional["_id"]),
+            "email": professional["email"],
+            "full_name": professional["full_name"],
+            "professional_type": professional["professional_type"]
+        }
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
 @app.get("/")
 async def root():
     return {"message": "Luxe Forma API - Sistema funcionando perfeitamente!", "status": "active"}
