@@ -1613,7 +1613,11 @@ async def get_unassigned_clients(credentials: HTTPAuthorizationCredentials = Dep
         # Get all Premium/VIP users from database
         premium_vip_users = await db.users.find({
             "plan_type": {"$in": ["premium", "vip"]},
-            "status": "active"
+            "$or": [
+                {"status": "active"},
+                {"status": {"$exists": False}},
+                {"status": None}
+            ]
         }).to_list(100)
         
         # Get already assigned clients for this professional type
