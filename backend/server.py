@@ -1467,51 +1467,57 @@ async def create_professional_admin(professional: ProfessionalRegister, credenti
         logger.error(f"Erro ao criar profissional: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
-# @api_router.get("/admin/professionals")
-# async def get_professionals_admin(current_user=Depends(get_current_admin)):
-#     """Get all professionals for admin management"""
-#     try:
-#         professionals = await db.professionals.find({}).to_list(100)
-#         result = []
-#         
-#         for prof in professionals:
-#             result.append({
-#                 "id": str(prof["_id"]),
-#                 "full_name": prof["full_name"],
-#                 "email": prof["email"],
-#                 "professional_type": prof["professional_type"],
-#                 "cref_crn": prof.get("cref_crn", ""),
-#                 "specialization": prof.get("specialization", ""),
-#                 "phone": prof.get("phone", ""),
-#                 "experience_years": prof.get("experience_years", 0),
-#                 "active": prof.get("active", True),
-#                 "created_at": prof.get("created_at", datetime.now(timezone.utc))
-#             })
-#         
-#         return {"professionals": result}
-#         
-#     except Exception as e:
-#         logger.error(f"Erro ao listar profissionais: {e}")
-#         raise HTTPException(status_code=500, detail="Erro interno do servidor")
+@api_router.get("/admin/professionals")
+async def get_professionals_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get all professionals for admin management"""
+    try:
+        # Verify admin access
+        current_user = await get_current_admin(credentials)
+        
+        professionals = await db.professionals.find({}).to_list(100)
+        result = []
+        
+        for prof in professionals:
+            result.append({
+                "id": str(prof["_id"]),
+                "full_name": prof["full_name"],
+                "email": prof["email"],
+                "professional_type": prof["professional_type"],
+                "cref_crn": prof.get("cref_crn", ""),
+                "specialization": prof.get("specialization", ""),
+                "phone": prof.get("phone", ""),
+                "experience_years": prof.get("experience_years", 0),
+                "active": prof.get("active", True),
+                "created_at": prof.get("created_at", datetime.now(timezone.utc))
+            })
+        
+        return {"professionals": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao listar profissionais: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
-# @api_router.put("/admin/professionals/{professional_id}/status")
-# async def update_professional_status_admin(professional_id: str, active: bool, current_user=Depends(get_current_admin)):
-#     """Activate/deactivate professional"""
-#     try:
-#         result = await db.professionals.update_one(
-#             {"_id": ObjectId(professional_id)},
-#             {"$set": {"active": active, "updated_at": datetime.now(timezone.utc)}}
-#         )
-#         
-#         if result.matched_count == 0:
-#             raise HTTPException(status_code=404, detail="Profissional não encontrado")
-#         
-#         status_text = "ativado" if active else "desativado"
-#         return {"success": True, "message": f"Profissional {status_text} com sucesso"}
-#         
-#     except Exception as e:
-#         logger.error(f"Erro ao atualizar status do profissional: {e}")
-#         raise HTTPException(status_code=500, detail="Erro interno do servidor")
+@api_router.put("/admin/professionals/{professional_id}/status")
+async def update_professional_status_admin(professional_id: str, active: bool, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Activate/deactivate professional"""
+    try:
+        # Verify admin access
+        current_user = await get_current_admin(credentials)
+        
+        result = await db.professionals.update_one(
+            {"_id": ObjectId(professional_id)},
+            {"$set": {"active": active, "updated_at": datetime.now(timezone.utc)}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Profissional não encontrado")
+        
+        status_text = "ativado" if active else "desativado"
+        return {"success": True, "message": f"Profissional {status_text} com sucesso"}
+        
+    except Exception as e:
+        logger.error(f"Erro ao atualizar status do profissional: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 # Professional System Endpoints
 @api_router.post("/professionals/register")
