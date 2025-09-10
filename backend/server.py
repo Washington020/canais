@@ -1626,6 +1626,259 @@ async def create_workout_plan_professional(
         logger.error(f"Erro ao criar plano de treino: {e}")
         raise HTTPException(status_code=500, detail="Erro ao criar plano")
 
+# Enhanced Professional System - Client Assignment
+@api_router.get("/professionals/available-clients")
+async def get_available_clients(current_professional: dict = Depends(get_current_professional)):
+    """Get clients that don't have a professional assigned yet"""
+    try:
+        professional_type = current_professional["professional_type"]
+        
+        # Get all premium/vip users
+        all_users = await db.users.find({
+            "plan_type": {"$in": ["premium", "vip"]},
+            "payment_status": "active"
+        }).to_list(200)
+        
+        # Get users already assigned to professionals of this type
+        field_name = f"{professional_type}_id"
+        assigned_users = await db.users.find({
+            field_name: {"$exists": True, "$ne": None}
+        }).to_list(200)
+        
+        assigned_user_ids = [str(user["_id"]) for user in assigned_users]
+        
+        # Filter available users (not assigned yet)
+        available_users = []
+        for user in all_users:
+            user_id = str(user["_id"])
+            if user_id not in assigned_user_ids:
+                available_users.append({
+                    "id": user_id,
+                    "full_name": user.get("full_name", "Usuário"),
+                    "email": user.get("email", ""),
+                    "plan_type": user.get("plan_type", "basic"),
+                    "created_at": user.get("created_at", datetime.now()).isoformat(),
+                    "subscription_end": user.get("subscription_end").isoformat() if user.get("subscription_end") else None,
+                    "tokens_available": user.get("tokens_available", 0)
+                })
+        
+        return {"available_clients": available_users}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar clientes disponíveis: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar clientes")
+
+@api_router.post("/professionals/claim-client/{client_id}")
+async def claim_client(client_id: str, current_professional: dict = Depends(get_current_professional)):
+    """Claim a client to start following them"""
+    try:
+        professional_type = current_professional["professional_type"]
+        professional_id = str(current_professional["_id"])
+        professional_name = current_professional["full_name"]
+        
+        # Check if client exists and is premium/vip
+        client = await db.users.find_one({"_id": ObjectId(client_id)})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        if client.get("plan_type") not in ["premium", "vip"]:
+            raise HTTPException(status_code=400, detail="Cliente deve ter plano Premium ou VIP")
+        
+        # Check if client is already assigned to this type of professional
+        field_name = f"{professional_type}_id"
+        if client.get(field_name):
+            raise HTTPException(status_code=400, detail="Cliente já possui profissional deste tipo")
+        
+        # Assign professional to client
+        update_data = {
+            field_name: professional_id,
+            f"{professional_type}_name": professional_name,
+            f"{professional_type}_cref": current_professional["cref_crn"],
+            f"{professional_type}_assigned_at": datetime.now(timezone.utc)
+        }
+        
+        await db.users.update_one(
+            {"_id": ObjectId(client_id)},
+            {"$set": update_data}
+        )
+        
+        return {
+            "success": True,
+            "message": f"Cliente {client['full_name']} agora está sob seus cuidados!",
+            "client_name": client.get("full_name", "Cliente"),
+            "professional_type": professional_type
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao assumir cliente: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao assumir cliente")
+
+@api_router.get("/professionals/my-assigned-clients")
+async def get_assigned_clients(current_professional: dict = Depends(get_current_professional)):
+    """Get clients assigned to current professional"""
+    try:
+        professional_type = current_professional["professional_type"]
+        professional_id = str(current_professional["_id"])
+        field_name = f"{professional_type}_id"
+        
+        # Get clients assigned to this professional
+        clients = await db.users.find({
+            field_name: professional_id
+        }).to_list(100)
+        
+        result = []
+        for client in clients:
+            # Check if client has active plans
+            if professional_type == "nutritionist":
+                active_plans = await db.supplement_plans.count_documents({
+                    "user_id": str(client["_id"]),
+                    "created_by": professional_id,
+                    "active": True
+                })
+            else:  # personal trainer
+                active_plans = await db.workout_plans.count_documents({
+                    "user_id": str(client["_id"]),
+                    "created_by": professional_id,
+                    "active": True
+                })
+            
+            result.append({
+                "id": str(client["_id"]),
+                "full_name": client.get("full_name", "Usuário"),
+                "email": client.get("email", ""),
+                "plan_type": client.get("plan_type", "basic"),
+                "assigned_at": client.get(f"{professional_type}_assigned_at", datetime.now()).isoformat(),
+                "active_plans": active_plans,
+                "tokens_available": client.get("tokens_available", 0),
+                "subscription_end": client.get("subscription_end").isoformat() if client.get("subscription_end") else None
+            })
+        
+        return {"assigned_clients": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar clientes atribuídos: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar clientes")
+
+@api_router.post("/professionals/request-client-transfer")
+async def request_client_transfer(
+    client_id: str,
+    reason: str,
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Request to transfer a client to another professional"""
+    try:
+        professional_type = current_professional["professional_type"]
+        professional_name = current_professional["full_name"]
+        
+        # Get client info
+        client = await db.users.find_one({"_id": ObjectId(client_id)})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        # Create transfer request
+        transfer_request = {
+            "client_id": client_id,
+            "client_name": client.get("full_name", "Cliente"),
+            "current_professional_id": str(current_professional["_id"]),
+            "current_professional_name": professional_name,
+            "professional_type": professional_type,
+            "reason": reason,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc),
+            "request_type": "transfer"
+        }
+        
+        result = await db.admin_requests.insert_one(transfer_request)
+        
+        return {
+            "success": True,
+            "message": "Solicitação de transferência enviada para análise",
+            "request_id": str(result.inserted_id)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao solicitar transferência: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar solicitação")
+
+# Admin endpoints for managing transfer requests
+@api_router.get("/admin/transfer-requests")
+async def get_transfer_requests():
+    """Get all transfer requests for admin"""
+    try:
+        requests = await db.admin_requests.find({
+            "request_type": "transfer",
+            "status": "pending"
+        }).sort("created_at", -1).to_list(50)
+        
+        result = []
+        for req in requests:
+            result.append({
+                "id": str(req["_id"]),
+                "client_name": req["client_name"],
+                "current_professional_name": req["current_professional_name"],
+                "professional_type": req["professional_type"],
+                "reason": req["reason"],
+                "created_at": req["created_at"].isoformat(),
+                "status": req["status"]
+            })
+        
+        return {"requests": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar solicitações: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar solicitações")
+
+@api_router.post("/admin/transfer-requests/{request_id}/approve")
+async def approve_transfer_request(request_id: str):
+    """Approve transfer request and unassign client"""
+    try:
+        # Get request
+        request = await db.admin_requests.find_one({"_id": ObjectId(request_id)})
+        if not request:
+            raise HTTPException(status_code=404, detail="Solicitação não encontrada")
+        
+        # Unassign professional from client
+        professional_type = request["professional_type"]
+        field_name = f"{professional_type}_id"
+        
+        await db.users.update_one(
+            {"_id": ObjectId(request["client_id"])},
+            {
+                "$unset": {
+                    field_name: "",
+                    f"{professional_type}_name": "",
+                    f"{professional_type}_cref": "",
+                    f"{professional_type}_assigned_at": ""
+                }
+            }
+        )
+        
+        # Update request status
+        await db.admin_requests.update_one(
+            {"_id": ObjectId(request_id)},
+            {
+                "$set": {
+                    "status": "approved",
+                    "processed_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "message": f"Cliente {request['client_name']} foi liberado para novo profissional"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao aprovar transferência: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao processar solicitação")
+
 # Enhanced Dashboard Endpoints for Admin
 @api_router.get("/admin/dashboard/stats")
 async def get_enhanced_dashboard_stats():
