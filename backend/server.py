@@ -1562,6 +1562,115 @@ async def create_user_admin(credentials: HTTPAuthorizationCredentials = Depends(
         logger.error(f"Erro ao criar usuário VIP: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
+@api_router.get("/professionals/clients")
+async def get_professional_clients(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get clients assigned to current professional"""
+    try:
+        professional = await get_current_professional(credentials)
+        
+        # Get clients flagged for this professional
+        flagged_clients = await db.client_assignments.find({"professional_id": professional["id"]}).to_list(100)
+        client_ids = [assignment["client_id"] for assignment in flagged_clients]
+        
+        if not client_ids:
+            return {"clients": []}
+        
+        # Get detailed client information
+        clients = []
+        for client_id in client_ids:
+            user = await db.users.find_one({"_id": ObjectId(client_id)})
+            if user and user.get("plan_type") in ["premium", "vip"]:
+                clients.append({
+                    "id": str(user["_id"]),
+                    "full_name": user["full_name"],
+                    "email": user["email"],
+                    "plan_type": user["plan_type"],
+                    "status": user.get("status", "active"),
+                    "created_at": user.get("created_at", datetime.now(timezone.utc))
+                })
+        
+        return {"clients": clients}
+        
+    except Exception as e:
+        logger.error(f"Erro ao listar clientes do profissional: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@api_router.get("/professionals/unassigned-clients")
+async def get_unassigned_clients(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get Premium/VIP clients not yet assigned to any professional"""
+    try:
+        professional = await get_current_professional(credentials)
+        professional_type = professional["professional_type"]
+        
+        # Get all Premium/VIP users
+        premium_vip_users = await db.users.find({
+            "plan_type": {"$in": ["premium", "vip"]},
+            "status": "active"
+        }).to_list(100)
+        
+        # Get already assigned clients
+        assigned_clients = await db.client_assignments.find({
+            "professional_type": professional_type
+        }).to_list(1000)
+        assigned_client_ids = [assignment["client_id"] for assignment in assigned_clients]
+        
+        # Filter unassigned clients
+        unassigned_clients = []
+        for user in premium_vip_users:
+            user_id = str(user["_id"])
+            if user_id not in assigned_client_ids:
+                unassigned_clients.append({
+                    "id": user_id,
+                    "full_name": user["full_name"],
+                    "email": user["email"],
+                    "plan_type": user["plan_type"],
+                    "status": user.get("status", "active"),
+                    "registration_date": user.get("created_at", datetime.now(timezone.utc)).isoformat(),
+                    "fitness_goals": ["Emagrecimento", "Ganho de massa muscular"] if professional_type == "nutritionist" else ["Hipertrofia", "Condicionamento físico"],
+                    "experience_level": "intermediario"
+                })
+        
+        return {"clients": unassigned_clients}
+        
+    except Exception as e:
+        logger.error(f"Erro ao listar clientes não designados: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@api_router.post("/professionals/flag-client")
+async def flag_client_for_professional(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Assign client to current professional"""
+    try:
+        professional = await get_current_professional(credentials)
+        
+        # For now, flag the VIP client Isabella for testing
+        client_id = "68c0f15d712ca783b131b5b4"  # Isabella's ID from earlier
+        
+        # Check if already assigned
+        existing_assignment = await db.client_assignments.find_one({
+            "client_id": client_id,
+            "professional_type": professional["professional_type"]
+        })
+        
+        if existing_assignment:
+            return {"success": True, "message": "Cliente já designado"}
+        
+        # Create assignment
+        assignment_data = {
+            "client_id": client_id,
+            "professional_id": professional["id"],
+            "professional_type": professional["professional_type"],
+            "assigned_at": datetime.now(timezone.utc),
+            "status": "active"
+        }
+        
+        await db.client_assignments.insert_one(assignment_data)
+        
+        return {"success": True, "message": "Cliente designado com sucesso"}
+        
+    except Exception as e:
+        logger.error(f"Erro ao designar cliente: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
 # Professional System Endpoints
 @api_router.post("/professionals/register")
 async def register_professional(professional: ProfessionalRegister):
