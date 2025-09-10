@@ -1690,28 +1690,40 @@ async def get_unassigned_clients(credentials: HTTPAuthorizationCredentials = Dep
         raise HTTPException(status_code=500, detail=f"Erro: {str(e)}")
 
 @api_router.post("/professionals/flag-client")
-async def flag_client_for_professional(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def flag_client_for_professional(
+    request: dict,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """Assign client to current professional"""
     try:
-        professional = await get_current_professional(credentials)
+        # Get token info to identify professional
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        professional_id: str = payload.get("sub")
+        professional_type: str = payload.get("professional_type")
         
-        # For now, flag the VIP client Isabella for testing
-        client_id = "68c0f15d712ca783b131b5b4"  # Isabella's ID from earlier
+        if professional_id is None:
+            raise HTTPException(status_code=401, detail="Token inválido")
         
-        # Check if already assigned
+        # Get client_id from request body
+        client_id = request.get("client_id")
+        if not client_id:
+            raise HTTPException(status_code=400, detail="client_id é obrigatório")
+        
+        # Check if already assigned to this professional type
         existing_assignment = await db.client_assignments.find_one({
             "client_id": client_id,
-            "professional_type": professional["professional_type"]
+            "professional_type": professional_type
         })
         
         if existing_assignment:
-            return {"success": True, "message": "Cliente já designado"}
+            return {"success": True, "message": "Cliente já designado para este tipo de professional"}
         
         # Create assignment
         assignment_data = {
             "client_id": client_id,
-            "professional_id": professional["id"],
-            "professional_type": professional["professional_type"],
+            "professional_id": professional_id,
+            "professional_type": professional_type,
             "assigned_at": datetime.now(timezone.utc),
             "status": "active"
         }
@@ -1722,7 +1734,7 @@ async def flag_client_for_professional(credentials: HTTPAuthorizationCredentials
         
     except Exception as e:
         logger.error(f"Erro ao designar cliente: {e}")
-        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+        raise HTTPException(status_code=500, detail=f"Erro: {str(e)}")
 
 # Professional System Endpoints
 @api_router.post("/professionals/register")
