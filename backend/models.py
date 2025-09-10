@@ -238,6 +238,36 @@ class WorkoutPlan(BaseModel):
     end_date: Optional[datetime] = None
     active: bool = True
 
+# Professional System Models
+class Professional(BaseModel):
+    id: Optional[str] = None
+    full_name: str
+    email: str
+    password_hash: str
+    professional_type: str  # "nutritionist" or "personal"
+    cref_crn: str  # Professional registration number
+    specialization: Optional[str] = None
+    bio: Optional[str] = None
+    phone: Optional[str] = None
+    experience_years: Optional[int] = None
+    active: bool = True
+    created_at: Optional[datetime] = None
+
+class ProfessionalLogin(BaseModel):
+    email: str
+    password: str
+
+class ProfessionalRegister(BaseModel):
+    full_name: str
+    email: str
+    password: str
+    professional_type: str  # "nutritionist" or "personal"
+    cref_crn: str
+    specialization: Optional[str] = None
+    bio: Optional[str] = None
+    phone: Optional[str] = None
+    experience_years: Optional[int] = None
+
 # Admin Models
 class AdminStats(BaseModel):
     total_users: int
