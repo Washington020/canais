@@ -71,6 +71,24 @@ export default function AdminTabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="nutritionist"
+        options={{
+          title: 'Nutricionista',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="restaurant" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="personal"
+        options={{
+          title: 'Personal',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="barbell" size={20} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
