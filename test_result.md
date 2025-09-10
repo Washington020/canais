@@ -205,6 +205,8 @@ test_plan:
 agent_communication:
     - agent: "main"
       message: "IDENTIFICADO PROBLEMA RAIZ: Usuários criados via admin não recebem campos nutritionist_id/personal_id. Implementadas correções: 1) Modificado endpoint /admin/users para atribuição automática de profissionais, 2) Criado endpoint /admin/users/assign-professionals para corrigir usuários existentes. Precisa testar backend para verificar se correções funcionam."
+    - agent: "testing"
+      message: "✅ CORREÇÕES PARA PROFISSIONAIS-CLIENTES TESTADAS COM SUCESSO: Todos os problemas identificados foram resolvidos. 1) Admin login funcionando (admin@luxepass.com/admin123) ✅, 2) Profissionais criados automaticamente no startup (nutri@luxepass.com/nutri123 e personal@luxepass.com/personal123) ✅, 3) POST /api/admin/users atribui profissionais automaticamente ✅, 4) POST /api/admin/users/assign-professionals corrige usuários existentes ✅, 5) Profissionais podem fazer login e ver clientes atribuídos (3 clientes cada) ✅. PROBLEMA RESOLVIDO: Clientes criados via admin agora aparecem nas interfaces dos profissionais."
 
 backend:
   - task: "User Registration API"
