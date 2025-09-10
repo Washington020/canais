@@ -36,8 +36,9 @@ from pagarme_service import pagarme_service
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
+db_name = os.environ.get('DB_NAME', 'luxe_forma')
 client = AsyncIOMotorClient(mongo_url)
-db = client['luxe_forma']
+db = client[db_name]
 
 # Stripe API Key
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', 'sk-test-51PxqFfJchv7KIiWYvSJNK4jkqFYQ0dYLqP9t5C4WEq7mfBb1ypHxP5Q9N4S2sE2VT4nT4oT4pT5fP1Q9N4S2sE3')
