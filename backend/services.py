@@ -283,6 +283,18 @@ class GymService:
         
         await self.gyms_collection.insert_one(gym_doc)
         
+        # Criar usuário de login para a academia na tabela gym_users
+        gym_user_doc = {
+            "gym_id": gym_id,
+            "email": gym_data.email,
+            "password_hash": password_hash.decode('utf-8'),
+            "username": username,
+            "is_active": True,
+            "created_at": datetime.utcnow()
+        }
+        
+        await self.db.gym_users.insert_one(gym_user_doc)
+        
         return {
             "gym_id": gym_id,
             "name": gym_data.name,
