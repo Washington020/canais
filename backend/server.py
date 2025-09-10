@@ -269,7 +269,7 @@ async def create_test_professionals():
                 "created_at": datetime.now(timezone.utc)
             }
             await db.professionals.insert_one(nutritionist_data)
-            logger.info("✅ Nutricionista de teste criada: nutri@luxepass.com / nutri123")
+            print("✅ Nutricionista de teste criada: nutri@luxepass.com / nutri123")
         
         # Check if personal trainer exists
         personal = await db.professionals.find_one({"email": "personal@luxepass.com"})
@@ -288,10 +288,10 @@ async def create_test_professionals():
                 "created_at": datetime.now(timezone.utc)
             }
             await db.professionals.insert_one(personal_data)
-            logger.info("✅ Personal trainer de teste criado: personal@luxepass.com / personal123")
+            print("✅ Personal trainer de teste criado: personal@luxepass.com / personal123")
             
     except Exception as e:
-        logger.error(f"Erro ao criar profissionais de teste: {e}")
+        print(f"Erro ao criar profissionais de teste: {e}")
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     credentials_exception = HTTPException(
