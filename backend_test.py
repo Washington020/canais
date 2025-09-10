@@ -3758,12 +3758,14 @@ if __name__ == "__main__":
             success = tester.run_pagarme_tests()
         elif test_type == "luxepass" or test_type == "new":
             success = tester.run_luxepass_new_endpoints_test()
+        elif test_type == "professional":
+            success = tester.test_professional_client_assignment_fixes()
         else:
             success = tester.run_all_tests()
     else:
-        # Default to testing the NEW endpoints as requested in review
-        print("🎯 RUNNING LUXEPASS NEW ENDPOINTS TESTS AS REQUESTED")
+        # Default to testing the professional-client assignment fixes as requested in review
+        print("🎯 RUNNING PROFESSIONAL-CLIENT ASSIGNMENT TESTS AS REQUESTED")
         print("="*70)
-        success = tester.run_luxepass_new_endpoints_test()
+        success = tester.test_professional_client_assignment_fixes()
     
     exit(0 if success else 1)
