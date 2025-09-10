@@ -1461,17 +1461,17 @@ class FitPassTester:
             
             if response and response.status_code == 200:
                 data = response.json()
-                if "clients" in data and isinstance(data["clients"], list):
-                    client_count = len(data["clients"])
+                if "assigned_clients" in data and isinstance(data["assigned_clients"], list):
+                    client_count = len(data["assigned_clients"])
                     self.log_test("5b. Personal Trainer Client Listing", True, f"Personal trainer can see {client_count} assigned clients")
                     print(f"   ✅ Personal trainer has access to {client_count} clients")
                     
                     # Show sample client info if available
                     if client_count > 0:
-                        sample_client = data["clients"][0]
+                        sample_client = data["assigned_clients"][0]
                         print(f"      Sample client: {sample_client.get('full_name', 'N/A')} ({sample_client.get('email', 'N/A')})")
                 else:
-                    self.log_test("5b. Personal Trainer Client Listing", False, "Response missing 'clients' array")
+                    self.log_test("5b. Personal Trainer Client Listing", False, "Response missing 'assigned_clients' array")
             else:
                 error_detail = ""
                 if response:
