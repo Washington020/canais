@@ -4,7 +4,6 @@
   "description": "Access premium gyms with LuxePass - Your ultimate fitness companion with token-based gym access, subscription management, and push notifications.",
   "version": "1.0.0",
   "main": "expo-router/entry",
-  "version": "1.0.0",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -35,7 +34,7 @@
     "expo-linking": "~7.1.7",
     "expo-location": "~18.1.0",
     "expo-notifications": "~0.31.4",
-    "expo-router": "~5.1.5",
+    "expo-router": "~5.1.6",
     "expo-secure-store": "~14.2.4",
     "expo-splash-screen": "~0.30.10",
     "expo-status-bar": "~2.2.3",
