@@ -122,8 +122,7 @@ export default function NewClients() {
 
       // API call to flag client
       await axios.post(`${API_URL}/professionals/flag-client`, {
-        client_id: client.id,
-        professional_type: 'personal'
+        client_id: client.id
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
