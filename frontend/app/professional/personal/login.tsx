@@ -145,10 +145,10 @@ export default function PersonalTrainerLogin() {
 
           {/* Test Credentials */}
           <View style={styles.testCredentials}>
-            <Text style={styles.testTitle}>🧪 Credenciais de Teste:</Text>
-            <Text style={styles.testText}>Email: joao@luxepass.com</Text>
-            <Text style={styles.testText}>Senha: joao123</Text>
-            <Text style={styles.testSubtext}>Prof. João Santos - CREF-54321/SP</Text>
+            <Text style={styles.testTitle}>🧪 Credenciais de Exemplo:</Text>
+            <Text style={styles.testText}>Email: carlos@luxepass.com</Text>
+            <Text style={styles.testText}>Senha: carlos123</Text>
+            <Text style={styles.testSubtext}>Prof. Carlos Lima - CREF-77777/SP</Text>
           </View>
 
           {/* Info */}
