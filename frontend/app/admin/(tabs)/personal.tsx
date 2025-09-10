@@ -10,6 +10,8 @@ import {
   Modal,
   TextInput,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -17,71 +19,69 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import Constants from 'expo-constants';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
+const API_URL = '/api';
 
-interface User {
+interface Professional {
   id: string;
   full_name: string;
   email: string;
-  plan_type: string;
-  status: string;
+  professional_type: string;
+  cref_crn: string;
+  specialization: string;
+  phone: string;
+  experience_years: number;
+  active: boolean;
+  created_at: string;
 }
 
-interface Appointment {
-  id: string;
-  user_name: string;
-  user_email: string;
-  user_plan: string;
-  appointment_date: string;
-  status: string;
-  notes: string;
-}
-
-export default function PersonalTrainerPanel() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+export default function PersonalTrainerManagement() {
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showCreateWorkoutModal, setShowCreateWorkoutModal] = useState(false);
-  const [showCreateSlotModal, setShowCreateSlotModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Form states
+  const [formData, setFormData] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+    cref_crn: '',
+    specialization: '',
+    phone: '',
+    experience_years: '0',
+    bio: ''
+  });
 
-  const loadData = async () => {
+  const loadProfessionals = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('adminToken');
       if (!token) {
-        router.replace('/admin/login');
+        Alert.alert('Erro', 'Token não encontrado', [
+          { text: 'OK', onPress: () => router.replace('/admin/login') }
+        ]);
         return;
       }
 
-      const headers = { Authorization: `Bearer ${token}` };
-      
-      // Load users with Premium/VIP plans
-      const usersResponse = await axios.get(`${API_URL}/admin/users`, { headers });
-      const premiumUsers = usersResponse.data.users.filter(
-        (user: User) => user.plan_type !== 'basic' && user.status === 'active'
-      );
-      setUsers(premiumUsers);
+      const response = await axios.get(`${API_URL}/admin/professionals`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-      // Load personal trainer appointments
-      const appointmentsResponse = await axios.get(`${API_URL}/admin/appointments`, { headers });
-      const personalAppointments = appointmentsResponse.data.appointments.filter(
-        (apt: Appointment) => apt.appointment_type === 'personal'
+      // Filter only personal trainers
+      const personalTrainers = response.data.professionals.filter(
+        (prof: Professional) => prof.professional_type === 'personal'
       );
-      setAppointments(personalAppointments);
-
+      setProfessionals(personalTrainers);
     } catch (error: any) {
-      console.error('Error loading data:', error);
+      console.error('Error loading professionals:', error);
       if (error.response?.status === 401) {
-        router.replace('/admin/login');
+        Alert.alert('Erro', 'Sessão expirada', [
+          { text: 'OK', onPress: () => router.replace('/admin/login') }
+        ]);
+      } else {
+        Alert.alert('Erro', 'Não foi possível carregar os personal trainers');
       }
     } finally {
       setLoading(false);
@@ -89,83 +89,114 @@ export default function PersonalTrainerPanel() {
     }
   };
 
+  const handleCreateProfessional = async () => {
+    if (!formData.full_name.trim() || !formData.email.trim() || !formData.password.trim()) {
+      Alert.alert('Erro', 'Por favor, preencha nome, email e senha');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const token = await AsyncStorage.getItem('adminToken');
+      if (!token) {
+        Alert.alert('Erro', 'Token não encontrado');
+        return;
+      }
+
+      const professionalData = {
+        full_name: formData.full_name.trim(),
+        email: formData.email.trim(),
+        password: formData.password.trim(),
+        professional_type: 'personal',
+        cref_crn: formData.cref_crn.trim(),
+        specialization: formData.specialization.trim(),
+        phone: formData.phone.trim(),
+        experience_years: parseInt(formData.experience_years) || 0,
+        bio: formData.bio.trim()
+      };
+
+      const response = await axios.post(`${API_URL}/admin/professionals`, professionalData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      Alert.alert(
+        '✅ Personal Trainer Criado!',
+        `${formData.full_name} foi cadastrado com sucesso.\n\nCredenciais de Login:\nEmail: ${formData.email}\nSenha: ${formData.password}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowCreateModal(false);
+              setFormData({
+                full_name: '',
+                email: '',
+                password: '',
+                cref_crn: '',
+                specialization: '',
+                phone: '',
+                experience_years: '0',
+                bio: ''
+              });
+              loadProfessionals();
+            }
+          }
+        ]
+      );
+    } catch (error: any) {
+      console.error('Error creating professional:', error);
+      if (error.response?.data?.detail) {
+        Alert.alert('Erro', error.response.data.detail);
+      } else {
+        Alert.alert('Erro', 'Não foi possível criar o personal trainer');
+      }
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const toggleProfessionalStatus = async (professional: Professional) => {
+    const action = professional.active ? 'desativar' : 'ativar';
+    Alert.alert(
+      'Confirmar',
+      `Deseja ${action} ${professional.full_name}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('adminToken');
+              await axios.put(
+                `${API_URL}/admin/professionals/${professional.id}/status?active=${!professional.active}`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              loadProfessionals();
+            } catch (error) {
+              Alert.alert('Erro', `Não foi possível ${action} o personal trainer`);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
-    loadData();
+    loadProfessionals();
   };
 
-  const createWorkoutPlan = async (userId: string, workoutName: string, exercises: any[]) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const planData = {
-        user_id: userId,
-        workout_name: workoutName,
-        exercises: exercises,
-        start_date: new Date().toISOString(),
-        end_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
-      };
-
-      await axios.post(`${API_URL}/admin/workouts/plan`, planData, { headers });
-      
-      Alert.alert('✅ Sucesso', 'Plano de treino criado com sucesso!');
-      setShowCreateWorkoutModal(false);
-      setSelectedUser(null);
-    } catch (error: any) {
-      console.error('Error creating workout plan:', error);
-      Alert.alert('Erro', 'Não foi possível criar o plano de treino');
-    }
-  };
-
-  const createAppointmentSlot = async (date: string, time: string) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const slotDateTime = new Date(`${date}T${time}:00.000Z`);
-      
-      const slotData = {
-        professional_type: 'personal',
-        date: slotDateTime.toISOString(),
-      };
-
-      await axios.post(`${API_URL}/admin/appointment-slots`, slotData, { headers });
-      
-      Alert.alert('✅ Sucesso', 'Horário disponibilizado com sucesso!');
-      setShowCreateSlotModal(false);
-    } catch (error: any) {
-      console.error('Error creating slot:', error);
-      Alert.alert('Erro', 'Não foi possível criar o horário');
-    }
-  };
-
-  const updateAppointmentStatus = async (appointmentId: string, status: string) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      await axios.put(`${API_URL}/admin/appointments/${appointmentId}/status?status=${status}`, {}, { headers });
-      
-      setAppointments(prev => 
-        prev.map(apt => 
-          apt.id === appointmentId ? { ...apt, status } : apt
-        )
-      );
-
-      Alert.alert('✅ Sucesso', 'Status da sessão atualizado!');
-    } catch (error: any) {
-      console.error('Error updating appointment:', error);
-      Alert.alert('Erro', 'Não foi possível atualizar o status');
-    }
-  };
+  useEffect(() => {
+    loadProfessionals();
+  }, []);
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Carregando dados...</Text>
+          <ActivityIndicator size="large" color="#F59E0B" />
+          <Text style={styles.loadingText}>Carregando personal trainers...</Text>
         </View>
       </SafeAreaView>
     );
@@ -177,339 +208,234 @@ export default function PersonalTrainerPanel() {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        
-        <View style={styles.headerTitle}>
-          <Text style={styles.title}>💪 Painel Personal Trainer</Text>
-          <Text style={styles.subtitle}>Gestão de treinos e sessões</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Personal Trainers</Text>
+          <Text style={styles.headerSubtitle}>
+            Gerenciar personal trainers • {professionals.length} cadastrados
+          </Text>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => setShowCreateSlotModal(true)}
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={() => setShowCreateModal(true)}
         >
           <Ionicons name="add" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
+      {/* Professionals List */}
       <ScrollView
-        style={styles.scrollView}
+        style={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#F59E0B"
+            colors={['#F59E0B']}
+          />
         }
+        showsVerticalScrollIndicator={false}
       >
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{users.length}</Text>
-            <Text style={styles.statLabel}>Alunos Ativos</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{appointments.length}</Text>
-            <Text style={styles.statLabel}>Sessões</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              {appointments.filter(a => a.status === 'scheduled').length}
+        {professionals.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="fitness" size={64} color="#64748B" />
+            <Text style={styles.emptyTitle}>Nenhum personal trainer cadastrado</Text>
+            <Text style={styles.emptySubtitle}>
+              Clique no botão + para cadastrar o primeiro personal trainer
             </Text>
-            <Text style={styles.statLabel}>Agendadas</Text>
           </View>
-        </View>
-
-        {/* Training Sessions */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🏋️ Sessões de Treino</Text>
-            <TouchableOpacity 
-              style={styles.addSlotButton}
-              onPress={() => setShowCreateSlotModal(true)}
-            >
-              <Text style={styles.addSlotText}>+ Horário</Text>
-            </TouchableOpacity>
-          </View>
-
-          {appointments.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="barbell-outline" size={48} color="#64748B" />
-              <Text style={styles.emptyText}>Nenhuma sessão agendada</Text>
-            </View>
-          ) : (
-            appointments.map((appointment) => (
-              <View key={appointment.id} style={styles.appointmentCard}>
-                <View style={styles.appointmentHeader}>
-                  <View style={styles.appointmentInfo}>
-                    <Text style={styles.appointmentUserName}>{appointment.user_name}</Text>
-                    <Text style={styles.appointmentUserEmail}>{appointment.user_email}</Text>
-                    <Text style={styles.appointmentPlan}>
-                      Plano: {appointment.user_plan === 'premium' ? 'Premium' : 'VIP'}
-                    </Text>
-                  </View>
-                  <View style={[
-                    styles.appointmentStatus,
-                    { backgroundColor: appointment.status === 'scheduled' ? '#8B5CF6' : '#22C55E' }
-                  ]}>
-                    <Text style={styles.appointmentStatusText}>
-                      {appointment.status === 'scheduled' ? 'Agendada' : 'Concluída'}
-                    </Text>
-                  </View>
+        ) : (
+          professionals.map((professional) => (
+            <View key={professional.id} style={styles.professionalCard}>
+              <View style={styles.professionalHeader}>
+                <View style={styles.professionalInfo}>
+                  <Text style={styles.professionalName}>{professional.full_name}</Text>
+                  <Text style={styles.professionalEmail}>{professional.email}</Text>
+                  <Text style={styles.professionalCref}>{professional.cref_crn}</Text>
                 </View>
-
-                <View style={styles.appointmentDetails}>
-                  <Text style={styles.appointmentDate}>
-                    🗓️ {new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às{' '}
-                    {new Date(appointment.appointment_date).toLocaleTimeString('pt-BR', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </Text>
-                  {appointment.notes && (
-                    <Text style={styles.appointmentNotes}>📝 {appointment.notes}</Text>
-                  )}
-                </View>
-
-                <View style={styles.appointmentActions}>
-                  {appointment.status === 'scheduled' && (
-                    <TouchableOpacity 
-                      style={styles.completeButton}
-                      onPress={() => updateAppointmentStatus(appointment.id, 'completed')}
-                    >
-                      <Text style={styles.completeButtonText}>Marcar como Concluída</Text>
-                    </TouchableOpacity>
-                  )}
-                  
-                  <TouchableOpacity 
-                    style={styles.createWorkoutButton}
-                    onPress={() => {
-                      const user = users.find(u => u.full_name === appointment.user_name);
-                      if (user) {
-                        setSelectedUser(user);
-                        setShowCreateWorkoutModal(true);
-                      }
-                    }}
-                  >
-                    <Ionicons name="add-circle" size={16} color="#8B5CF6" />
-                    <Text style={styles.createWorkoutButtonText}>Criar Treino</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))
-          )}
-        </View>
-
-        {/* Active Students */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>👥 Alunos Ativos (Premium/VIP)</Text>
-          
-          {users.map((user) => (
-            <View key={user.id} style={styles.userCard}>
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>{user.full_name}</Text>
-                <Text style={styles.userEmail}>{user.email}</Text>
                 <View style={[
-                  styles.userPlan,
-                  { backgroundColor: user.plan_type === 'premium' ? '#8B5CF6' : '#FFD700' }
+                  styles.statusBadge,
+                  { backgroundColor: professional.active ? '#F59E0B' : '#EF4444' }
                 ]}>
-                  <Text style={styles.userPlanText}>
-                    {user.plan_type === 'premium' ? 'Premium' : 'VIP'}
+                  <Text style={styles.statusText}>
+                    {professional.active ? 'Ativo' : 'Inativo'}
                   </Text>
                 </View>
               </View>
-              
-              <TouchableOpacity 
-                style={styles.createWorkoutButton}
-                onPress={() => {
-                  setSelectedUser(user);
-                  setShowCreateWorkoutModal(true);
-                }}
+
+              <View style={styles.professionalDetails}>
+                <Text style={styles.detailText}>
+                  💪 {professional.specialization || 'Especialização não informada'}
+                </Text>
+                <Text style={styles.detailText}>
+                  📞 {professional.phone || 'Telefone não informado'}
+                </Text>
+                <Text style={styles.detailText}>
+                  ⏱️ {professional.experience_years} anos de experiência
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: professional.active ? '#EF4444' : '#F59E0B' }
+                ]}
+                onPress={() => toggleProfessionalStatus(professional)}
               >
-                <Ionicons name="barbell" size={16} color="#8B5CF6" />
-                <Text style={styles.createWorkoutButtonText}>Novo Treino</Text>
+                <Ionicons 
+                  name={professional.active ? "close-circle" : "checkmark-circle"} 
+                  size={16} 
+                  color="#FFFFFF" 
+                />
+                <Text style={styles.actionButtonText}>
+                  {professional.active ? 'Desativar' : 'Ativar'}
+                </Text>
               </TouchableOpacity>
             </View>
-          ))}
-        </View>
+          ))
+        )}
       </ScrollView>
 
-      {/* Create Workout Plan Modal */}
+      {/* Create Professional Modal */}
       <Modal
-        visible={showCreateWorkoutModal}
-        transparent={true}
+        visible={showCreateModal}
         animationType="slide"
-        onRequestClose={() => setShowCreateWorkoutModal(false)}
+        presentationStyle="pageSheet"
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <SafeAreaView style={styles.modalContainer}>
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalContent}
+          >
+            {/* Modal Header */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Criar Plano de Treino
-              </Text>
-              <TouchableOpacity 
-                onPress={() => setShowCreateWorkoutModal(false)}
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowCreateModal(false)}
               >
                 <Ionicons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
+              <Text style={styles.modalTitle}>Novo Personal Trainer</Text>
+              <View style={styles.modalCloseButton} />
             </View>
 
-            <ScrollView style={styles.modalBody}>
-              {selectedUser && (
-                <View style={styles.selectedUserInfo}>
-                  <Text style={styles.selectedUserName}>{selectedUser.full_name}</Text>
-                  <Text style={styles.selectedUserEmail}>{selectedUser.email}</Text>
-                </View>
-              )}
-
-              <Text style={styles.formLabel}>Treino Padrão - Push/Pull/Legs:</Text>
-              
-              <View style={styles.workoutSection}>
-                <Text style={styles.workoutSectionTitle}>💪 PUSH (Peito, Ombros, Tríceps)</Text>
-                <View style={styles.exerciseItem}>
-                  <Text style={styles.exerciseName}>• Supino Reto</Text>
-                  <Text style={styles.exerciseDetails}>4 séries x 8-10 reps</Text>
-                </View>
-                <View style={styles.exerciseItem}>
-                  <Text style={styles.exerciseName}>• Desenvolvimento Militar</Text>
-                  <Text style={styles.exerciseDetails}>3 séries x 10-12 reps</Text>
-                </View>
-                <View style={styles.exerciseItem}>
-                  <Text style={styles.exerciseName}>• Tríceps Pulley</Text>
-                  <Text style={styles.exerciseDetails}>3 séries x 12-15 reps</Text>
-                </View>
+            <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+              {/* Form Fields */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Nome Completo *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: Prof. João Silva"
+                  placeholderTextColor="#64748B"
+                  value={formData.full_name}
+                  onChangeText={(text) => setFormData({...formData, full_name: text})}
+                />
               </View>
 
-              <View style={styles.workoutSection}>
-                <Text style={styles.workoutSectionTitle}>🏃 PULL (Costas, Bíceps)</Text>
-                <View style={styles.exerciseItem}>
-                  <Text style={styles.exerciseName}>• Puxada Frente</Text>
-                  <Text style={styles.exerciseDetails}>4 séries x 8-10 reps</Text>
-                </View>
-                <View style={styles.exerciseItem}>
-                  <Text style={styles.exerciseName}>• Remada Baixa</Text>
-                  <Text style={styles.exerciseDetails}>3 séries x 10-12 reps</Text>
-                </View>
-                <View style={styles.exerciseItem}>
-                  <Text style={styles.exerciseName}>• Rosca Direta</Text>
-                  <Text style={styles.exerciseDetails}>3 séries x 12-15 reps</Text>
-                </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Email *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="joao@luxepass.com"
+                  placeholderTextColor="#64748B"
+                  value={formData.email}
+                  onChangeText={(text) => setFormData({...formData, email: text})}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
               </View>
 
-              <View style={styles.workoutSection}>
-                <Text style={styles.workoutSectionTitle}>🦵 LEGS (Pernas, Glúteos)</Text>
-                <View style={styles.exerciseItem}>
-                  <Text style={styles.exerciseName}>• Agachamento</Text>
-                  <Text style={styles.exerciseDetails}>4 séries x 10-12 reps</Text>
-                </View>
-                <View style={styles.exerciseItem}>
-                  <Text style={styles.exerciseName}>• Leg Press</Text>
-                  <Text style={styles.exerciseDetails}>3 séries x 12-15 reps</Text>
-                </View>
-                <View style={styles.exerciseItem}>
-                  <Text style={styles.exerciseName}>• Stiff</Text>
-                  <Text style={styles.exerciseDetails}>3 séries x 10-12 reps</Text>
-                </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Senha *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Senha de acesso"
+                  placeholderTextColor="#64748B"
+                  value={formData.password}
+                  onChangeText={(text) => setFormData({...formData, password: text})}
+                  secureTextEntry
+                />
               </View>
 
-              <TouchableOpacity 
-                style={styles.createButton}
-                onPress={() => {
-                  if (selectedUser) {
-                    const exercises = [
-                      { name: 'Supino Reto', sets: 4, reps: 10, muscle_group: 'chest' },
-                      { name: 'Desenvolvimento Militar', sets: 3, reps: 12, muscle_group: 'shoulders' },
-                      { name: 'Tríceps Pulley', sets: 3, reps: 15, muscle_group: 'triceps' },
-                      { name: 'Puxada Frente', sets: 4, reps: 10, muscle_group: 'back' },
-                      { name: 'Remada Baixa', sets: 3, reps: 12, muscle_group: 'back' },
-                      { name: 'Rosca Direta', sets: 3, reps: 15, muscle_group: 'biceps' },
-                      { name: 'Agachamento', sets: 4, reps: 12, muscle_group: 'legs' },
-                      { name: 'Leg Press', sets: 3, reps: 15, muscle_group: 'legs' },
-                      { name: 'Stiff', sets: 3, reps: 12, muscle_group: 'hamstrings' }
-                    ];
-                    createWorkoutPlan(selectedUser.id, 'Treino Push/Pull/Legs', exercises);
-                  }
-                }}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>CREF (Registro)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="CREF-12345/SP"
+                  placeholderTextColor="#64748B"
+                  value={formData.cref_crn}
+                  onChangeText={(text) => setFormData({...formData, cref_crn: text})}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Especialização</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: Musculação e Condicionamento"
+                  placeholderTextColor="#64748B"
+                  value={formData.specialization}
+                  onChangeText={(text) => setFormData({...formData, specialization: text})}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Telefone</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="(11) 99999-9999"
+                  placeholderTextColor="#64748B"
+                  value={formData.phone}
+                  onChangeText={(text) => setFormData({...formData, phone: text})}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Anos de Experiência</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="8"
+                  placeholderTextColor="#64748B"
+                  value={formData.experience_years}
+                  onChangeText={(text) => setFormData({...formData, experience_years: text})}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Bio/Descrição</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Breve descrição profissional..."
+                  placeholderTextColor="#64748B"
+                  value={formData.bio}
+                  onChangeText={(text) => setFormData({...formData, bio: text})}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.createProfessionalButton, creating && styles.createProfessionalButtonDisabled]}
+                onPress={handleCreateProfessional}
+                disabled={creating}
               >
-                <Text style={styles.createButtonText}>Criar Plano de Treino</Text>
+                {creating ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                    <Text style={styles.createProfessionalButtonText}>Criar Personal Trainer</Text>
+                  </>
+                )}
               </TouchableOpacity>
+
+              <View style={{ height: 100 }} />
             </ScrollView>
-          </View>
-        </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
-
-      {/* Create Appointment Slot Modal */}
-      <CreateSlotModal
-        visible={showCreateSlotModal}
-        onClose={() => setShowCreateSlotModal(false)}
-        onSubmit={createAppointmentSlot}
-      />
     </SafeAreaView>
-  );
-}
-
-// Separate component for Create Slot Modal
-function CreateSlotModal({ visible, onClose, onSubmit }: {
-  visible: boolean;
-  onClose: () => void;
-  onSubmit: (date: string, time: string) => void;
-}) {
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-
-  const handleSubmit = () => {
-    if (!date || !time) {
-      Alert.alert('Erro', 'Preencha data e horário');
-      return;
-    }
-    onSubmit(date, time);
-    setDate('');
-    setTime('');
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Disponibilizar Horário</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.modalBody}>
-            <Text style={styles.formLabel}>Data (YYYY-MM-DD):</Text>
-            <TextInput
-              style={styles.input}
-              value={date}
-              onChangeText={setDate}
-              placeholder="2025-01-25"
-              placeholderTextColor="#64748B"
-            />
-
-            <Text style={styles.formLabel}>Horário (HH:MM):</Text>
-            <TextInput
-              style={styles.input}
-              value={time}
-              onChangeText={setTime}
-              placeholder="14:00"
-              placeholderTextColor="#64748B"
-            />
-
-            <TouchableOpacity style={styles.createButton} onPress={handleSubmit}>
-              <Text style={styles.createButtonText}>Disponibilizar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
   );
 }
 
@@ -524,7 +450,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#FFFFFF',
+    color: '#94A3B8',
     fontSize: 16,
     marginTop: 16,
   },
@@ -533,308 +459,193 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerContent: {
+    flex: 1,
   },
   headerTitle: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    color: '#94A3B8',
-    fontSize: 14,
-  },
-  addButton: {
-    width: 44,
-    height: 44,
-    backgroundColor: '#8B5CF6',
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    gap: 16,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  statNumber: {
     color: '#FFFFFF',
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 4,
   },
-  statLabel: {
-    color: '#94A3B8',
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  section: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  addSlotButton: {
-    backgroundColor: '#8B5CF6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  addSlotText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    color: '#64748B',
-    fontSize: 16,
-    marginTop: 16,
-  },
-  appointmentCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  appointmentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  appointmentInfo: {
-    flex: 1,
-  },
-  appointmentUserName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  appointmentUserEmail: {
-    color: '#94A3B8',
+  headerSubtitle: {
+    color: '#F59E0B',
     fontSize: 14,
-    marginBottom: 4,
-  },
-  appointmentPlan: {
-    color: '#A1A1AA',
-    fontSize: 12,
-  },
-  appointmentStatus: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  appointmentStatusText: {
-    color: '#FFFFFF',
-    fontSize: 12,
     fontWeight: '600',
   },
-  appointmentDetails: {
-    marginBottom: 16,
-  },
-  appointmentDate: {
-    color: '#94A3B8',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  appointmentNotes: {
-    color: '#A1A1AA',
-    fontSize: 12,
-    fontStyle: 'italic',
-  },
-  appointmentActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  completeButton: {
-    flex: 1,
-    backgroundColor: '#22C55E',
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  completeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  createWorkoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-  createWorkoutButtonText: {
-    color: '#8B5CF6',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  userCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  userEmail: {
-    color: '#94A3B8',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  userPlan: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  userPlanText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  createButton: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#F59E0B',
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    width: '90%',
-    maxHeight: '80%',
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 60,
   },
-  modalTitle: {
+  emptyTitle: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
   },
-  modalBody: {
+  emptySubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  professionalCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
     padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  selectedUserInfo: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
+  professionalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  selectedUserName: {
+  professionalInfo: {
+    flex: 1,
+  },
+  professionalName: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
-  selectedUserEmail: {
+  professionalEmail: {
     color: '#94A3B8',
     fontSize: 14,
+    marginBottom: 2,
   },
-  formLabel: {
+  professionalCref: {
+    color: '#F59E0B',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 12,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  professionalDetails: {
+    marginBottom: 16,
+  },
+  detailText: {
+    color: '#E2E8F0',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#0B0D17',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalCloseButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  modalForm: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12,
-  },
-  workoutSection: {
-    marginBottom: 20,
-  },
-  workoutSectionTitle: {
-    color: '#8B5CF6',
-    fontSize: 14,
-    fontWeight: '600',
     marginBottom: 8,
-  },
-  exerciseItem: {
-    marginBottom: 8,
-  },
-  exerciseName: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  exerciseDetails: {
-    color: '#94A3B8',
-    fontSize: 12,
-    marginLeft: 16,
   },
   input: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     color: '#FFFFFF',
     fontSize: 16,
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  createButton: {
-    backgroundColor: '#8B5CF6',
-    paddingVertical: 12,
-    borderRadius: 8,
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  createProfessionalButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F59E0B',
+    paddingVertical: 16,
+    borderRadius: 12,
     marginTop: 20,
   },
-  createButtonText: {
+  createProfessionalButtonDisabled: {
+    opacity: 0.6,
+  },
+  createProfessionalButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
 });
