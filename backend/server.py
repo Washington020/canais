@@ -432,8 +432,12 @@ async def login(user_credentials: UserLogin):
         )
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    # Determine user type for token
+    user_type = "admin" if user_doc.get("email") == "admin@luxepass.com" else "user"
+    
     access_token = create_access_token(
-        data={"sub": str(user_doc["_id"])}, expires_delta=access_token_expires
+        data={"sub": str(user_doc["_id"]), "type": user_type}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
