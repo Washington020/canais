@@ -1643,12 +1643,12 @@ async def assign_professionals_to_existing_users(credentials: HTTPAuthorizationC
         # Get available professionals
         nutritionists = await db.professionals.find({
             "professional_type": "nutritionist",
-            "status": "active"
+            "active": True
         }).to_list(10)
         
         personal_trainers = await db.professionals.find({
             "professional_type": "personal",
-            "status": "active"
+            "active": True
         }).to_list(10)
         
         if not nutritionists and not personal_trainers:
