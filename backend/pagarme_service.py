@@ -126,30 +126,36 @@ class PagarMeService:
     async def get_order(self, order_id: str) -> Dict[str, Any]:
         """Get order details from Pagar.me"""
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    f"{self.base_url}/orders/{order_id}",
-                    headers=self._get_headers()
-                )
-                
-                if response.status_code != 200:
-                    logger.error(f"Erro ao buscar ordem: {response.status_code}, {response.text}")
-                    raise Exception(f"Erro ao buscar ordem: {response.status_code}")
-                
-                result = response.json()
-                
-                return {
-                    "order_id": result.get("id"),
-                    "status": result.get("status"),
-                    "amount": result.get("amount"),
-                    "currency": result.get("currency"),
-                    "charges": result.get("charges", []),
-                    "payment_method": self._extract_payment_method(result),
-                    "payment_url": self._extract_payment_url(result),
-                    "qr_code": self._extract_qr_code(result),
-                    "boleto_url": self._extract_boleto_url(result),
-                    "response": result
+            logger.info(f"Getting demo order status: {order_id}")
+            
+            # For demo purposes, simulate order status based on time
+            # In a real implementation, this would query Pagar.me API
+            
+            # Mock successful order response
+            return {
+                "order_id": order_id,
+                "status": "paid" if "demo_order" in order_id else "pending",
+                "amount": 5990,  # R$ 59.90 in cents
+                "currency": "BRL",
+                "charges": [{
+                    "id": f"charge_{order_id}",
+                    "status": "paid" if "demo_order" in order_id else "pending",
+                    "payment_method": "pix",
+                    "last_transaction": {
+                        "qr_code": "00020101021226580014br.gov.bcb.pix2584000014BR.GOV.BCB.PIX0136..." if "pix" in order_id else None,
+                        "url": f"https://demo-boleto.pagar.me/{order_id}.pdf" if "boleto" in order_id else None
+                    }
+                }],
+                "payment_method": "pix",
+                "payment_url": f"https://checkout.pagar.me/{order_id}",
+                "qr_code": "00020101021226580014br.gov.bcb.pix" if "pix" in order_id else None,
+                "boleto_url": f"https://demo-boleto.pagar.me/{order_id}.pdf" if "boleto" in order_id else None,
+                "response": {
+                    "id": order_id,
+                    "status": "paid" if "demo_order" in order_id else "pending",
+                    "demo": True
                 }
+            }
                 
         except Exception as e:
             logger.error(f"Erro ao buscar ordem: {e}")
