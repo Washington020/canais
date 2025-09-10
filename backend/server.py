@@ -1519,6 +1519,49 @@ async def update_professional_status_admin(professional_id: str, active: bool, c
         logger.error(f"Erro ao atualizar status do profissional: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
+@api_router.post("/admin/users")
+async def create_user_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Create a new user through admin interface"""
+    try:
+        # Verify admin access
+        current_user = await get_current_admin(credentials)
+        
+        # Create VIP test user
+        user_data = {
+            "full_name": "Isabella Costa VIP",
+            "email": "isabella@luxepass.com",
+            "password_hash": pwd_context.hash("isabella123"),
+            "plan_type": "vip",
+            "phone": "(11) 99999-8888",
+            "status": "active",
+            "created_at": datetime.now(timezone.utc),
+            "subscription_start": datetime.now(timezone.utc),
+            "subscription_end": datetime.now(timezone.utc) + timedelta(days=365),
+            "created_by_admin": str(current_user["id"])
+        }
+        
+        # Check if user already exists
+        existing_user = await db.users.find_one({"email": user_data["email"]})
+        if existing_user:
+            return {"success": True, "message": "Cliente VIP já existe", "user_id": str(existing_user["_id"])}
+        
+        result = await db.users.insert_one(user_data)
+        
+        return {
+            "success": True,
+            "message": f"Cliente VIP {user_data['full_name']} criado com sucesso",
+            "user": {
+                "id": str(result.inserted_id),
+                "full_name": user_data["full_name"],
+                "email": user_data["email"],
+                "plan_type": user_data["plan_type"]
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar usuário VIP: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
 # Professional System Endpoints
 @api_router.post("/professionals/register")
 async def register_professional(professional: ProfessionalRegister):
