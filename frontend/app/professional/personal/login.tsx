@@ -50,16 +50,13 @@ export default function PersonalTrainerLogin() {
       await AsyncStorage.setItem('professionalToken', access_token);
       await AsyncStorage.setItem('professional', JSON.stringify(professional));
 
-      Alert.alert(
-        '✅ Login Realizado!',
-        `Bem-vindo, ${professional.full_name}!`,
-        [
-          {
-            text: 'Continuar',
-            onPress: () => router.replace('/professional/personal/(tabs)'),
-          },
-        ]
-      );
+      // Navigate immediately to professional interface
+      router.replace('/professional/personal/(tabs)');
+      
+      // Show success message (non-blocking)
+      setTimeout(() => {
+        Alert.alert('✅ Login Realizado!', `Bem-vindo, ${professional.full_name}!`);
+      }, 100);
     } catch (error: any) {
       console.error('Login error:', error);
       if (error.response?.status === 401) {
