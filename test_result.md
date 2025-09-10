@@ -107,39 +107,60 @@ user_problem_statement: "Corrigir problemas na interface do nutricionista: (1) a
 backend:
   - task: "Admin User Creation with Professional Assignment"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
           comment: "Identificado problema: usuários criados via admin não recebem campos nutritionist_id e personal_id necessários para aparecer nas interfaces dos profissionais. Implementada correção para atribuição automática de profissionais durante criação de usuários."
+        - working: true
+          agent: "testing"
+          comment: "✅ Endpoint POST /api/admin/users funcionando corretamente. Usuários são criados com atribuição automática de profissionais. Teste confirmou que usuário VIP já existe e tem profissionais atribuídos."
 
   - task: "Professional Client Assignment Fix"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
           comment: "Criado endpoint adicional /admin/users/assign-professionals para atualizar usuários existentes que não têm profissionais atribuídos."
+        - working: true
+          agent: "testing"
+          comment: "✅ Endpoint POST /api/admin/users/assign-professionals funcionando corretamente. Atribuições de profissionais foram atualizadas para usuários existentes. Sistema encontra profissionais ativos e os atribui aos usuários premium/VIP."
 
   - task: "Professional Login and Client Listing"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
           comment: "Endpoints /professionals/login e /professionals/my-assigned-clients existem mas precisam ser testados após correção da atribuição de profissionais."
+        - working: true
+          agent: "testing"
+          comment: "✅ Endpoints /professionals/login e /professionals/my-assigned-clients funcionando perfeitamente. Nutricionista pode ver 3 clientes atribuídos, Personal trainer pode ver 3 clientes atribuídos. Profissionais foram criados automaticamente no startup e podem fazer login com credenciais nutri@luxepass.com/nutri123 e personal@luxepass.com/personal123."
+
+  - task: "Professional Accounts Creation at Startup"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ Função create_test_professionals funcionando corretamente. Profissionais são criados automaticamente no startup: Dra. Maria Nutricionista (nutri@luxepass.com) e Prof. João Personal (personal@luxepass.com). Ambos podem fazer login e acessar clientes atribuídos."
 
 frontend:
   - task: "Nutritionist Dieta Tab Interface"
