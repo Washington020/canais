@@ -1428,6 +1428,9 @@ const styles = StyleSheet.create({
   suspendButton: {
     backgroundColor: '#EF4444',
   },
+  reactivateButton: {
+    backgroundColor: '#22C55E',
+  },
   resetButton: {
     backgroundColor: '#F59E0B',
   },
