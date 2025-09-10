@@ -314,6 +314,33 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     del user_doc["_id"]
     return User(**user_doc)
 
+async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get current admin user from JWT token"""
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        user_type: str = payload.get("type")
+        
+        if user_id is None or user_type != "admin":
+            raise HTTPException(status_code=401, detail="Token inválido")
+            
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+        if user is None:
+            raise HTTPException(status_code=401, detail="Usuário não encontrado")
+            
+        # Check if user is admin
+        if user.get("email") != "admin@luxepass.com":
+            raise HTTPException(status_code=403, detail="Acesso negado: apenas administradores")
+            
+        return {
+            "id": str(user["_id"]),
+            "email": user["email"],
+            "full_name": user["full_name"]
+        }
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
 @app.get("/")
 async def root():
     return {"message": "Luxe Forma API - Sistema funcionando perfeitamente!", "status": "active"}
