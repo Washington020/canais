@@ -17,6 +17,7 @@ export default function RootLayout() {
         <Stack.Screen name="client" />
         <Stack.Screen name="admin" />
         <Stack.Screen name="gym" />
+        <Stack.Screen name="professional" />
       </Stack>
     </GestureHandlerRootView>
   );
