@@ -69,6 +69,33 @@ export default function MainSelector() {
                 <Text style={styles.appLinkSubtext}>Login obrigatório para academias</Text>
               </View>
             </TouchableOpacity>
+
+            {/* Professional Access */}
+            <View style={styles.professionalSection}>
+              <Text style={styles.professionalTitle}>👩‍⚕️ Acesso Profissionais:</Text>
+              
+              <TouchableOpacity 
+                style={styles.professionalLink}
+                onPress={() => router.push('/professional/nutritionist/login')}
+              >
+                <Text style={styles.professionalIcon}>🥗</Text>
+                <View style={styles.professionalContent}>
+                  <Text style={styles.professionalText}>Nutricionista</Text>
+                  <Text style={styles.professionalSubtext}>nutri@luxepass.com / nutri123</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.professionalLink}
+                onPress={() => router.push('/professional/personal/login')}
+              >
+                <Text style={styles.professionalIcon}>💪</Text>
+                <View style={styles.professionalContent}>
+                  <Text style={styles.professionalText}>Personal Trainer</Text>
+                  <Text style={styles.professionalSubtext}>personal@luxepass.com / personal123</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.securityInfo}>
