@@ -1,6 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
+from fastapi import HTTPException
 import secrets
 import bcrypt
 from models import *
