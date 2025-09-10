@@ -1633,6 +1633,75 @@ async def create_user_admin(credentials: HTTPAuthorizationCredentials = Depends(
         logger.error(f"Erro ao criar usuário VIP: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
+@api_router.post("/admin/users/assign-professionals")
+async def assign_professionals_to_existing_users(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Assign professionals to existing users who don't have them"""
+    try:
+        # Verify admin access
+        current_user = await get_current_admin(credentials)
+        
+        # Get available professionals
+        nutritionists = await db.professionals.find({
+            "professional_type": "nutritionist",
+            "status": "active"
+        }).to_list(10)
+        
+        personal_trainers = await db.professionals.find({
+            "professional_type": "personal",
+            "status": "active"
+        }).to_list(10)
+        
+        if not nutritionists and not personal_trainers:
+            return {"success": False, "message": "Nenhum profissional ativo encontrado"}
+        
+        # Find premium/VIP users without professional assignments
+        users_without_professionals = await db.users.find({
+            "plan_type": {"$in": ["premium", "vip"]},
+            "$or": [
+                {"nutritionist_id": {"$exists": False}},
+                {"personal_id": {"$exists": False}},
+                {"nutritionist_id": None},
+                {"personal_id": None}
+            ]
+        }).to_list(100)
+        
+        updated_count = 0
+        for user in users_without_professionals:
+            update_data = {}
+            
+            # Assign nutritionist if not already assigned
+            if nutritionists and not user.get("nutritionist_id"):
+                # Simple round-robin assignment
+                nutritionist = nutritionists[updated_count % len(nutritionists)]
+                update_data["nutritionist_id"] = str(nutritionist["_id"])
+                update_data["nutritionist_assigned_at"] = datetime.now(timezone.utc)
+            
+            # Assign personal trainer if not already assigned
+            if personal_trainers and not user.get("personal_id"):
+                # Simple round-robin assignment
+                personal_trainer = personal_trainers[updated_count % len(personal_trainers)]
+                update_data["personal_id"] = str(personal_trainer["_id"])
+                update_data["personal_assigned_at"] = datetime.now(timezone.utc)
+            
+            if update_data:
+                await db.users.update_one(
+                    {"_id": user["_id"]},
+                    {"$set": update_data}
+                )
+                updated_count += 1
+        
+        return {
+            "success": True,
+            "message": f"Atribuições de profissionais atualizadas para {updated_count} usuários",
+            "updated_users": updated_count,
+            "available_nutritionists": len(nutritionists),
+            "available_personal_trainers": len(personal_trainers)
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao atribuir profissionais: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
 @api_router.get("/professionals/clients")
 async def get_professional_clients(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Get clients assigned to current professional"""
