@@ -673,6 +673,16 @@ export default function GymsManagement() {
                     </TouchableOpacity>
                   )}
 
+                  {gym.status === 'inactive' && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.reactivateButton]}
+                      onPress={() => updateGymStatus(gym._id, 'active')}
+                    >
+                      <Ionicons name="play" size={16} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>Reativar</Text>
+                    </TouchableOpacity>
+                  )}
+
                   {/* Nova Senha - Sempre Visível */}
                   <TouchableOpacity 
                     style={[styles.actionButton, styles.resetButton]}
