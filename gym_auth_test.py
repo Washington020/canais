@@ -9,7 +9,7 @@ import json
 import os
 
 # Backend URL
-BACKEND_URL = "https://auth-repair-39.preview.emergentagent.com"
+BACKEND_URL = "https://fitness-portal-8.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 def test_gym_auth():
