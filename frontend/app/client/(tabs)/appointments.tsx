@@ -65,7 +65,7 @@ export default function Appointments() {
 
   const loadAppointments = async () => {
     try {
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await AsyncStorage.getItem('token');
       if (!token) {
         router.replace('/client/login');
         return;
@@ -89,7 +89,7 @@ export default function Appointments() {
   const loadAvailableSlots = async (professionalType: string) => {
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await AsyncStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       
       const response = await axios.get(
@@ -141,7 +141,7 @@ export default function Appointments() {
 
     setScheduling(true);
     try {
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await AsyncStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       
       const requestData = {
