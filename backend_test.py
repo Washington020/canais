@@ -3970,6 +3970,48 @@ class FitPassTester:
         
         return True
 
+    def run_professional_nutrition_tests(self):
+        """Run focused professional nutrition system tests as requested in review"""
+        print("🚀 Starting LuxePass Professional Nutrition System Tests")
+        print(f"Testing against: {API_BASE}")
+        print("Testing the new professional functionalities as specifically requested...")
+        
+        # Clear previous test results
+        self.test_results = []
+        
+        # Run the comprehensive professional nutrition tests
+        self.test_professional_nutrition_system()
+        
+        # Summary
+        print("\n" + "="*60)
+        print("📊 PROFESSIONAL NUTRITION SYSTEM TEST SUMMARY")
+        print("="*60)
+        
+        passed = sum(1 for result in self.test_results if result["success"])
+        total = len(self.test_results)
+        
+        print(f"Total Professional Tests: {total}")
+        print(f"Passed: {passed}")
+        print(f"Failed: {total - passed}")
+        print(f"Success Rate: {(passed/total)*100:.1f}%" if total > 0 else "No tests run")
+        
+        # Show failed tests
+        failed_tests = [result for result in self.test_results if not result["success"]]
+        if failed_tests:
+            print("\n❌ Failed Tests:")
+            for test in failed_tests:
+                print(f"  - {test['test']}: {test['details']}")
+        else:
+            print("\n✅ All professional nutrition endpoints are working correctly!")
+            print("The professional nutrition system is operational, including:")
+            print("  ✓ Nutritionist login and client management")
+            print("  ✓ Complete nutrition plan creation")
+            print("  ✓ Client plan visualization with nutritionist info")
+            print("  ✓ Complete client history access")
+            print("  ✓ Client transfer system with history preservation")
+        
+        return passed == total
+
 if __name__ == "__main__":
     tester = FitPassTester()
     
@@ -3994,12 +4036,14 @@ if __name__ == "__main__":
             success = tester.run_luxepass_new_endpoints_test()
         elif test_type == "professional":
             success = tester.test_professional_client_assignment_fixes()
+        elif test_type == "nutrition":
+            success = tester.run_professional_nutrition_tests()
         else:
             success = tester.run_all_tests()
     else:
-        # Default to testing the professional-client assignment fixes as requested in review
-        print("🎯 RUNNING PROFESSIONAL-CLIENT ASSIGNMENT TESTS AS REQUESTED")
+        # Default to testing the professional nutrition system as requested in review
+        print("🥗 RUNNING PROFESSIONAL NUTRITION SYSTEM TESTS AS REQUESTED IN REVIEW")
         print("="*70)
-        success = tester.test_professional_client_assignment_fixes()
+        success = tester.run_professional_nutrition_tests()
     
     exit(0 if success else 1)
