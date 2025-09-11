@@ -2219,10 +2219,10 @@ async def create_nutrition_plan_professional(
 
 @api_router.post("/professionals/workouts/create")
 async def create_workout_plan_professional(
-    plan: WorkoutPlan,
+    request: dict,
     current_professional: dict = Depends(get_current_professional)
 ):
-    """Create workout plan by personal trainer"""
+    """Create complete workout plan by personal trainer"""
     try:
         if current_professional["professional_type"] != "personal":
             raise HTTPException(status_code=403, detail="Apenas personal trainers podem criar planos de treino")
@@ -2230,25 +2230,96 @@ async def create_workout_plan_professional(
         professional_id = str(current_professional["_id"])
         professional_name = current_professional["full_name"]
         
+        # Extract data from request
+        client_id = request.get("client_id")
+        client_name = request.get("client_name", "Cliente")
+        plan_title = request.get("plan_title", "Plano de Treino")
+        plan_description = request.get("plan_description", "")
+        duration_days = request.get("duration_days", 30)
+        workout_frequency = request.get("workout_frequency", 4)
+        difficulty_level = request.get("difficulty_level", "Intermediário")
+        physical_restrictions = request.get("physical_restrictions", "")
+        medical_observations = request.get("medical_observations", "")
+        workout_days = request.get("workout_days", [])
+        instructions = request.get("instructions", "")
+        notes = request.get("notes", "")
+        
+        if not client_id:
+            raise HTTPException(status_code=400, detail="client_id é obrigatório")
+        
+        # Verify client exists and is assigned to this professional
+        client = await db.users.find_one({"_id": ObjectId(client_id)})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        if str(client.get("personal_id")) != professional_id:
+            raise HTTPException(status_code=403, detail="Este cliente não está atribuído a você")
+        
+        # Create workout plan
         plan_data = {
-            "user_id": plan.user_id,
-            "workout_name": plan.workout_name,
-            "exercises": plan.exercises,
+            "client_id": client_id,
+            "client_name": client_name,
+            "plan_title": plan_title,
+            "plan_description": plan_description,
+            "duration_days": duration_days,
+            "workout_frequency": workout_frequency,
+            "difficulty_level": difficulty_level,
+            "physical_restrictions": physical_restrictions,
+            "medical_observations": medical_observations,
+            "workout_days": workout_days,
+            "instructions": instructions,
+            "notes": notes,
             "created_by": professional_id,
             "created_by_name": professional_name,
             "created_by_cref": current_professional["cref_crn"],
+            "professional_type": "personal",
             "created_at": datetime.now(timezone.utc),
-            "start_date": plan.start_date,
-            "end_date": plan.end_date,
-            "active": True
+            "start_date": datetime.now(timezone.utc),
+            "end_date": datetime.now(timezone.utc) + timedelta(days=duration_days),
+            "active": True,
+            "status": "active"
         }
         
         result = await db.workout_plans.insert_one(plan_data)
         
+        # Update client with latest plan info
+        await db.users.update_one(
+            {"_id": ObjectId(client_id)},
+            {
+                "$set": {
+                    "latest_workout_plan_id": str(result.inserted_id),
+                    "latest_workout_plan_date": datetime.now(timezone.utc),
+                    "has_workout_plan": True
+                }
+            }
+        )
+        
+        # Create history record
+        history_record = {
+            "client_id": client_id,
+            "client_name": client_name,
+            "professional_id": professional_id,
+            "professional_name": professional_name,
+            "professional_type": "personal",
+            "action": "plan_created",
+            "plan_id": str(result.inserted_id),
+            "plan_title": plan_title,
+            "details": f"Plano de treino '{plan_title}' criado com {len(workout_days)} dias de treino e {sum(len(day.get('exercises', [])) for day in workout_days)} exercícios",
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        await db.client_history.insert_one(history_record)
+        
         return {
-            "id": str(result.inserted_id),
-            "message": f"Plano de treino criado por {professional_name}",
-            "created_by": professional_name
+            "success": True,
+            "plan_id": str(result.inserted_id),
+            "message": f"Plano de treino '{plan_title}' criado com sucesso para {client_name}",
+            "details": {
+                "workout_days_count": len(workout_days),
+                "exercises_count": sum(len(day.get('exercises', [])) for day in workout_days),
+                "duration_days": duration_days,
+                "workout_frequency": workout_frequency
+            }
         }
         
     except HTTPException:
