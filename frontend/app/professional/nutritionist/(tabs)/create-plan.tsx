@@ -156,7 +156,7 @@ export default function CreateNutritionPlan() {
       setTimeout(() => {
         Alert.alert(
           '✅ Plano Nutricional Criado!',
-          `Plano "${planTitle}" foi criado com sucesso para ${clientName}.\n\n` +
+          `Plano "${planTitle}" foi criado com sucesso para ${selectedClient?.name || "Cliente"}.\n\n` +
           `• ${meals.length} refeições programadas\n` +
           `• ${supplements.length} suplementos incluídos\n` +
           `• Meta diária: ${dailyCalories} kcal\n` +
