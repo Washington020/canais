@@ -1325,9 +1325,9 @@ class FitPassTester:
         response = self.make_request("GET", "/professionals/my-assigned-clients", auth_required=True)
         if response and response.status_code == 200:
             data = response.json()
-            if isinstance(data, list) and len(data) > 0:
-                self.assigned_client = data[0]  # Store first client for testing
-                self.log_test("2. Assigned Clients", True, f"Found {len(data)} assigned clients")
+            if "assigned_clients" in data and len(data["assigned_clients"]) > 0:
+                self.assigned_client = data["assigned_clients"][0]  # Store first client for testing
+                self.log_test("2. Assigned Clients", True, f"Found {len(data['assigned_clients'])} assigned clients")
                 print(f"   ✅ Client found: {self.assigned_client.get('full_name', 'Unknown')}")
             else:
                 self.log_test("2. Assigned Clients", False, "No assigned clients found")
