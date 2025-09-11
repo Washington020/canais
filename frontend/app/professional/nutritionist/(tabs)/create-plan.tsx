@@ -122,7 +122,7 @@ export default function CreateNutritionPlan() {
   const [loading, setLoading] = useState(false);
 
   const handleCreatePlan = useCallback(async () => {
-    if (!clientName.trim() || !planTitle.trim()) {
+    if (!selectedClient?.name?.trim() || !planTitle.trim()) {
       Alert.alert('Erro', 'Por favor, preencha o nome do cliente e título do plano');
       return;
     }
