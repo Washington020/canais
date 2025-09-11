@@ -165,7 +165,7 @@ export default function CreateNutritionPlan() {
             {
               text: 'Criar Outro',
               onPress: () => {
-                setClientName('');
+                setSelectedClient(null);
                 setPlanTitle('');
                 setPlanDescription('');
                 setDietaryRestrictions('');
