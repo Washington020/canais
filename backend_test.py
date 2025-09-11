@@ -962,7 +962,14 @@ class FitPassTester:
             except:
                 self.log_test("Schedule Appointment Endpoint", False, f"Status: 403, Error: {response.text}")
         elif response and response.status_code == 404:
-            self.log_test("Schedule Appointment Endpoint", True, "Endpoint working - professional not found (404 expected for test data)")
+            try:
+                error_detail = response.json().get("detail", "")
+                if "Profissional não encontrado" in error_detail:
+                    self.log_test("Schedule Appointment Endpoint", True, "Endpoint working - professional not found (404 expected for test data)")
+                else:
+                    self.log_test("Schedule Appointment Endpoint", False, f"Unexpected 404 error: {error_detail}")
+            except:
+                self.log_test("Schedule Appointment Endpoint", True, "Endpoint working - professional not found (404 expected for test data)")
         elif response and response.status_code == 422:
             self.log_test("Schedule Appointment Endpoint", True, "Endpoint working - validation error expected (422) for test data")
         else:
