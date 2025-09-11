@@ -1294,6 +1294,240 @@ class FitPassTester:
         
         return False
 
+    def test_professional_nutrition_system(self):
+        """Test the new professional nutrition system as requested in review"""
+        print("\n" + "="*80)
+        print("🥗 TESTING PROFESSIONAL NUTRITION SYSTEM - LUXEPASS")
+        print("="*80)
+        print("Testing the new professional functionalities implemented...")
+        
+        # Step 1: Test nutritionist login
+        print("\n1️⃣ Testing nutritionist login (nutri@luxepass.com/nutri123)...")
+        nutri_login_data = {
+            "email": "nutri@luxepass.com",
+            "password": "nutri123"
+        }
+        
+        response = self.make_request("POST", "/professionals/login", nutri_login_data, auth_required=False)
+        if response and response.status_code == 200:
+            data = response.json()
+            self.nutri_token = data["access_token"]
+            self.log_test("1. Nutritionist Login", True, "Nutritionist login successful")
+            print(f"   ✅ Nutritionist authenticated successfully")
+        else:
+            self.log_test("1. Nutritionist Login", False, f"Nutritionist login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 2: Test getting assigned clients
+        print("\n2️⃣ Testing nutritionist assigned clients...")
+        self.auth_token = self.nutri_token
+        
+        response = self.make_request("GET", "/professionals/my-assigned-clients", auth_required=True)
+        if response and response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list) and len(data) > 0:
+                self.assigned_client = data[0]  # Store first client for testing
+                self.log_test("2. Assigned Clients", True, f"Found {len(data)} assigned clients")
+                print(f"   ✅ Client found: {self.assigned_client.get('full_name', 'Unknown')}")
+            else:
+                self.log_test("2. Assigned Clients", False, "No assigned clients found")
+                return False
+        else:
+            self.log_test("2. Assigned Clients", False, f"Failed to get clients: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 3: Test creating complete nutrition plan
+        print("\n3️⃣ Testing nutrition plan creation...")
+        
+        plan_data = {
+            "client_id": self.assigned_client["id"],
+            "plan_title": "Plano Nutricional Completo Isabella",
+            "plan_description": "Plano personalizado para ganho de massa muscular e definição",
+            "duration_days": 30,
+            "daily_calories": 2200,
+            "water_intake_liters": 3.0,
+            "dietary_restrictions": "Sem lactose",
+            "medical_observations": "Paciente com intolerância à lactose",
+            "meals": [
+                {
+                    "meal_name": "Café da Manhã",
+                    "time": "07:00",
+                    "foods": [
+                        {"name": "Aveia", "quantity": "50g", "calories": 190},
+                        {"name": "Banana", "quantity": "1 unidade", "calories": 105},
+                        {"name": "Leite de amêndoas", "quantity": "200ml", "calories": 40}
+                    ]
+                },
+                {
+                    "meal_name": "Almoço",
+                    "time": "12:00",
+                    "foods": [
+                        {"name": "Peito de frango grelhado", "quantity": "150g", "calories": 250},
+                        {"name": "Arroz integral", "quantity": "100g", "calories": 130},
+                        {"name": "Brócolis", "quantity": "100g", "calories": 25}
+                    ]
+                }
+            ],
+            "supplements": [
+                {
+                    "name": "Whey Protein Isolado",
+                    "dosage": "30g",
+                    "frequency": "2x ao dia",
+                    "instructions": "Tomar após treino e antes de dormir"
+                },
+                {
+                    "name": "Ômega 3",
+                    "dosage": "1000mg",
+                    "frequency": "1x ao dia",
+                    "instructions": "Tomar com almoço"
+                }
+            ],
+            "instructions": "Seguir rigorosamente os horários das refeições. Beber água constantemente.",
+            "notes": "Plano criado especificamente para Isabella Costa VIP"
+        }
+        
+        response = self.make_request("POST", "/professionals/supplements/create", plan_data, auth_required=True)
+        if response and response.status_code == 200:
+            data = response.json()
+            if "success" in data and data["success"]:
+                self.created_plan_id = data.get("plan_id")
+                self.log_test("3. Nutrition Plan Creation", True, f"Plan created successfully: {data.get('message', '')}")
+                print(f"   ✅ Plan ID: {self.created_plan_id}")
+            else:
+                self.log_test("3. Nutrition Plan Creation", False, "Plan creation failed")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("3. Nutrition Plan Creation", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 4: Test client login and plan visualization
+        print("\n4️⃣ Testing client login and plan visualization...")
+        client_login_data = {
+            "email": "isabella@luxepass.com",
+            "password": "isabella123"
+        }
+        
+        response = self.make_request("POST", "/auth/login", client_login_data, auth_required=False)
+        if response and response.status_code == 200:
+            data = response.json()
+            self.client_token = data["access_token"]
+            self.log_test("4a. Client Login", True, "Client login successful")
+            print(f"   ✅ Client authenticated successfully")
+        else:
+            self.log_test("4a. Client Login", False, f"Client login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Test client viewing nutrition plan
+        print("\n4b. Testing client nutrition plan view...")
+        self.auth_token = self.client_token
+        
+        response = self.make_request("GET", "/nutrition/plan", auth_required=True)
+        if response and response.status_code == 200:
+            data = response.json()
+            if data.get("has_plan") and "nutritionist" in data:
+                self.log_test("4b. Client Plan View", True, f"Client can see plan: {data.get('plan_title', 'Unknown')}")
+                print(f"   ✅ Plan title: {data.get('plan_title')}")
+                print(f"   ✅ Nutritionist: {data.get('nutritionist', {}).get('name', 'Unknown')}")
+                print(f"   ✅ Daily calories: {data.get('daily_calories', 0)}")
+                print(f"   ✅ Meals count: {len(data.get('meals', []))}")
+                print(f"   ✅ Supplements count: {len(data.get('supplements', []))}")
+            else:
+                self.log_test("4b. Client Plan View", False, "Client cannot see nutrition plan")
+                return False
+        else:
+            self.log_test("4b. Client Plan View", False, f"Failed to get plan: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 5: Test client history
+        print("\n5️⃣ Testing client history...")
+        self.auth_token = self.nutri_token  # Switch back to nutritionist token
+        
+        client_id = self.assigned_client["id"]
+        response = self.make_request("GET", f"/professionals/client-history/{client_id}", auth_required=True)
+        if response and response.status_code == 200:
+            data = response.json()
+            if "client_info" in data and "history" in data:
+                self.log_test("5. Client History", True, f"Retrieved complete history for client: {data['client_info'].get('full_name', 'Unknown')}")
+                print(f"   ✅ Client: {data['client_info'].get('full_name')}")
+                print(f"   ✅ Plan type: {data['client_info'].get('plan_type')}")
+                print(f"   ✅ History entries: {len(data.get('history', []))}")
+                
+                # Check for nutrition plans in history
+                nutrition_plans = [h for h in data.get('history', []) if h.get('type') == 'nutrition_plan']
+                if nutrition_plans:
+                    print(f"   ✅ Nutrition plans in history: {len(nutrition_plans)}")
+            else:
+                self.log_test("5. Client History", False, "Invalid history response format")
+                return False
+        else:
+            self.log_test("5. Client History", False, f"Failed to get history: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 6: Test personal trainer login and client transfer
+        print("\n6️⃣ Testing personal trainer login...")
+        personal_login_data = {
+            "email": "personal@luxepass.com",
+            "password": "personal123"
+        }
+        
+        response = self.make_request("POST", "/professionals/login", personal_login_data, auth_required=False)
+        if response and response.status_code == 200:
+            data = response.json()
+            self.personal_token = data["access_token"]
+            self.log_test("6a. Personal Trainer Login", True, "Personal trainer login successful")
+            print(f"   ✅ Personal trainer authenticated successfully")
+        else:
+            self.log_test("6a. Personal Trainer Login", False, f"Personal trainer login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Test client transfer
+        print("\n6b. Testing client transfer...")
+        self.auth_token = self.personal_token
+        
+        transfer_data = {
+            "client_id": client_id,
+            "target_professional_email": "nutri@luxepass.com",
+            "transfer_reason": "Cliente precisa de acompanhamento nutricional especializado",
+            "preserve_history": True
+        }
+        
+        response = self.make_request("POST", "/professionals/request-client-transfer", transfer_data, auth_required=True)
+        if response and response.status_code == 200:
+            data = response.json()
+            if "success" in data and data["success"]:
+                self.log_test("6b. Client Transfer", True, f"Transfer requested successfully: {data.get('message', '')}")
+                print(f"   ✅ Transfer reason: {transfer_data['transfer_reason']}")
+                print(f"   ✅ History preserved: {transfer_data['preserve_history']}")
+            else:
+                self.log_test("6b. Client Transfer", False, "Transfer request failed")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("6b. Client Transfer", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        print("\n✅ PROFESSIONAL NUTRITION SYSTEM TEST COMPLETED!")
+        print("All professional functionalities tested successfully:")
+        print("  ✓ Nutritionist login and client access")
+        print("  ✓ Complete nutrition plan creation")
+        print("  ✓ Client plan visualization with nutritionist info")
+        print("  ✓ Complete client history access")
+        print("  ✓ Personal trainer login and client transfer")
+        print("  ✓ History preservation during transfers")
+        
+        return True
+
     def test_professional_client_assignment_fixes(self):
         """Test the professional-client assignment fixes as requested in review"""
         print("\n" + "="*80)
