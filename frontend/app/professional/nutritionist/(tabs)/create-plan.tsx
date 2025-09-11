@@ -720,4 +720,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
+  addMealButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.5)',
+  },
+  addMealText: {
+    color: '#22C55E',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  mealsInfo: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  mealsInfoText: {
+    color: '#22C55E',
+    fontSize: 13,
+    lineHeight: 18,
+  },
 });
