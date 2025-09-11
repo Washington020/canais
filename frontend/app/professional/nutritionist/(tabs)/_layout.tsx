@@ -102,6 +102,28 @@ export default function NutritionistTabsLayout() {
       />
       
       <Tabs.Screen
+        name="stats"
+        options={{
+          title: 'Estatísticas',
+          headerTitle: 'Minhas Estatísticas',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="stats-chart" size={size} color={color} />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Perfil',
+          headerTitle: 'Meu Perfil',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-circle" size={size} color={color} />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen
         name="schedule"
         options={{
           title: 'Agenda',
