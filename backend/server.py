@@ -1934,19 +1934,38 @@ async def flag_client_for_professional(
         if not client_id:
             raise HTTPException(status_code=400, detail="client_id é obrigatório")
         
-        # Check if already assigned to this professional type
-        existing_assignment = await db.client_assignments.find_one({
-            "client_id": client_id,
-            "professional_type": professional_type
-        })
+        # Verify client exists
+        client = await db.users.find_one({"_id": ObjectId(client_id)})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
         
-        if existing_assignment:
-            return {"success": True, "message": "Cliente já designado para este tipo de professional"}
+        # Get professional info
+        professional = await db.professionals.find_one({"_id": ObjectId(professional_id)})
+        if not professional:
+            raise HTTPException(status_code=404, detail="Profissional não encontrado")
         
-        # Create assignment
+        # Check if client is already assigned to this professional type
+        field_name = f"{professional_type}_id"
+        if client.get(field_name):
+            return {"success": True, "message": "Cliente já designado para este tipo de profissional"}
+        
+        # Update user document with professional assignment
+        update_data = {
+            field_name: professional_id,
+            f"{professional_type}_assigned_at": datetime.now(timezone.utc)
+        }
+        
+        await db.users.update_one(
+            {"_id": ObjectId(client_id)},
+            {"$set": update_data}
+        )
+        
+        # Create assignment record for history
         assignment_data = {
             "client_id": client_id,
+            "client_name": client.get("full_name", "Cliente"),
             "professional_id": professional_id,
+            "professional_name": professional.get("full_name", "Profissional"),
             "professional_type": professional_type,
             "assigned_at": datetime.now(timezone.utc),
             "status": "active"
@@ -1954,7 +1973,24 @@ async def flag_client_for_professional(
         
         await db.client_assignments.insert_one(assignment_data)
         
-        return {"success": True, "message": "Cliente designado com sucesso"}
+        # Create history record
+        history_record = {
+            "client_id": client_id,
+            "client_name": client.get("full_name", "Cliente"),
+            "professional_id": professional_id,
+            "professional_name": professional.get("full_name", "Profissional"),
+            "professional_type": professional_type,
+            "action": "client_assigned",
+            "details": f"Cliente atribuído ao {professional_type} {professional.get('full_name', 'Profissional')}",
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        await db.client_history.insert_one(history_record)
+        
+        return {
+            "success": True, 
+            "message": f"Cliente {client.get('full_name', 'Cliente')} designado com sucesso ao {professional_type} {professional.get('full_name', 'Profissional')}"
+        }
         
     except Exception as e:
         logger.error(f"Erro ao designar cliente: {e}")
