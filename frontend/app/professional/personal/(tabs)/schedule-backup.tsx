@@ -33,7 +33,7 @@ interface Appointment {
   created_at: string;
 }
 
-export default function NutritionistSchedule() {
+export default function PersonalTrainerSchedule() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
