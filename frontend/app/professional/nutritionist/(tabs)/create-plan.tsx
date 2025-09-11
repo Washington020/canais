@@ -156,8 +156,8 @@ export default function CreateNutritionPlan() {
   };
 
   const handleCreatePlan = useCallback(async () => {
-    if (!selectedClient?.name?.trim() || !planTitle.trim()) {
-      Alert.alert('Erro', 'Por favor, preencha o nome do cliente e título do plano');
+    if (!selectedClient?.id || !planTitle.trim()) {
+      Alert.alert('Erro', 'Por favor, selecione um cliente e preencha o título do plano');
       return;
     }
 
@@ -170,7 +170,8 @@ export default function CreateNutritionPlan() {
       }
 
       const planData = {
-        client_name: selectedClient?.name?.trim() || "",
+        client_id: selectedClient.id,
+        client_name: selectedClient.full_name,
         plan_title: planTitle.trim(),
         plan_description: planDescription.trim(),
         duration_days: parseInt(duration),
@@ -180,21 +181,30 @@ export default function CreateNutritionPlan() {
         medical_observations: medicalObservations.trim(),
         meals: meals,
         supplements: supplements,
-        created_by: 'marina@luxepass.com',
         professional_type: 'nutritionist',
-        instructions: 'Plano personalizado com foco em emagrecimento saudável e ganho de massa muscular. Seguir horários e quantidades recomendadas.',
-        notes: 'Cliente VIP - acompanhamento quinzenal. Ajustes conforme evolução.'
+        instructions: 'Plano personalizado criado pelo nutricionista. Seguir horários e quantidades recomendadas.',
+        notes: `Plano criado para cliente ${selectedClient.plan_type.toUpperCase()} - acompanhamento profissional.`
       };
 
-      // Para demonstração, vamos simular sucesso
-      setTimeout(() => {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(`${API_URL}/professionals/supplements/create`, planData, { headers });
+
+      if (response.data.success) {
         Alert.alert(
           '✅ Plano Nutricional Criado!',
-          `Plano "${planTitle}" foi criado com sucesso para ${selectedClient?.name || "Cliente"}.\n\n` +
-          `• ${meals.length} refeições programadas\n` +
-          `• ${supplements.length} suplementos incluídos\n` +
-          `• Meta diária: ${dailyCalories} kcal\n` +
-          `• Consumo de água: ${waterIntake}L/dia`,
+          `Plano "${planTitle}" foi criado com sucesso para ${selectedClient.full_name}.
+
+` +
+          `• ${meals.length} refeições programadas
+` +
+          `• ${supplements.length} suplementos incluídos
+` +
+          `• Meta diária: ${dailyCalories} kcal
+` +
+          `• Consumo de água: ${waterIntake}L/dia
+
+` +
+          `🎯 O plano já aparece no app do cliente!`,
           [
             {
               text: 'Criar Outro',
@@ -204,20 +214,36 @@ export default function CreateNutritionPlan() {
                 setPlanDescription('');
                 setDietaryRestrictions('');
                 setMedicalObservations('');
+                // Reset meals and supplements to default
+                setMeals([
+                  {
+                    name: 'Café da Manhã',
+                    foods: [''],
+                    time: '',
+                    calories: '',
+                    instructions: ''
+                  }
+                ]);
+                setSupplements([]);
               }
             },
             {
-              text: 'Ver Clientes',
+              text: 'Ver Meus Clientes',
               onPress: () => router.push('/professional/nutritionist/(tabs)/index')
             }
           ]
         );
-        setLoading(false);
-      }, 2000);
-
+      } else {
+        Alert.alert('Erro', response.data.message || 'Não foi possível criar o plano');
+      }
     } catch (error: any) {
       console.error('Error creating nutrition plan:', error);
-      Alert.alert('Erro', 'Não foi possível criar o plano. Tente novamente.');
+      let errorMessage = 'Não foi possível criar o plano. Tente novamente.';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+      Alert.alert('Erro', errorMessage);
+    } finally {
       setLoading(false);
     }
   }, [selectedClient, planTitle, planDescription, duration, dailyCalories, waterIntake, dietaryRestrictions, medicalObservations, meals, supplements, router]);
