@@ -62,7 +62,7 @@ export default function PersonalTrainerSchedule() {
     try {
       const token = await AsyncStorage.getItem('professionalToken');
       if (!token) {
-        router.replace('/professional/nutritionist/login');
+        router.replace('/professional/personal/login');
         return;
       }
 
@@ -73,7 +73,7 @@ export default function PersonalTrainerSchedule() {
     } catch (error: any) {
       console.error('Error loading appointments:', error);
       if (error.response?.status === 401) {
-        router.replace('/professional/nutritionist/login');
+        router.replace('/professional/personal/login');
       }
     } finally {
       setLoading(false);
