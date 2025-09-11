@@ -51,7 +51,7 @@ export default function PersonalTrainerLogin() {
       await AsyncStorage.setItem('professional', JSON.stringify(professional));
 
       // Navigate immediately to professional interface
-      router.replace('/professional/personal/(tabs)');
+      router.replace('/professional/personal/(tabs)/index');
       
       // Show success message (non-blocking)
       setTimeout(() => {
