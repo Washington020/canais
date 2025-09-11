@@ -938,14 +938,63 @@ async def get_user_workouts(current_user: User = Depends(get_current_user)):
 # Nutrition routes
 @api_router.get("/nutrition/plan")
 async def get_nutrition_plan(current_user: User = Depends(get_current_user)):
-    plan = await db.nutrition_plans.find_one({"user_id": current_user.id, "active": True})
-    
-    if not plan:
-        return {"message": "No active nutrition plan"}
-    
-    plan["id"] = str(plan["_id"])
-    del plan["_id"]
-    return plan
+    """Get user's current nutrition plan created by nutritionist"""
+    try:
+        # Look for active nutrition plan for this user
+        plan = await db.nutrition_plans.find_one({
+            "client_id": current_user.id, 
+            "active": True,
+            "status": "active"
+        })
+        
+        if not plan:
+            return {
+                "has_plan": False,
+                "message": "Nenhum plano nutricional ativo"
+            }
+        
+        # Get nutritionist info who created the plan
+        nutritionist = await db.professionals.find_one({
+            "_id": ObjectId(plan["created_by"])
+        })
+        
+        nutritionist_info = None
+        if nutritionist:
+            nutritionist_info = {
+                "name": nutritionist.get("full_name", "Nutricionista"),
+                "cref": nutritionist.get("cref_crn", ""),
+                "email": nutritionist.get("email", "")
+            }
+        
+        # Format plan data for client app
+        plan_data = {
+            "has_plan": True,
+            "plan_id": str(plan["_id"]),
+            "plan_title": plan.get("plan_title", "Plano Nutricional"),
+            "plan_description": plan.get("plan_description", ""),
+            "duration_days": plan.get("duration_days", 30),
+            "daily_calories": plan.get("daily_calories", 1800),
+            "water_intake_liters": plan.get("water_intake_liters", 2.5),
+            "dietary_restrictions": plan.get("dietary_restrictions", ""),
+            "medical_observations": plan.get("medical_observations", ""),
+            "meals": plan.get("meals", []),
+            "supplements": plan.get("supplements", []),
+            "instructions": plan.get("instructions", ""),
+            "notes": plan.get("notes", ""),
+            "created_at": plan.get("created_at").isoformat() if plan.get("created_at") else None,
+            "start_date": plan.get("start_date").isoformat() if plan.get("start_date") else None,
+            "end_date": plan.get("end_date").isoformat() if plan.get("end_date") else None,
+            "nutritionist": nutritionist_info
+        }
+        
+        return plan_data
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar plano nutricional: {e}")
+        return {
+            "has_plan": False,
+            "message": "Erro ao carregar plano nutricional"
+        }
 
 # Gym Authentication Routes
 @api_router.post("/auth/gym/login")
