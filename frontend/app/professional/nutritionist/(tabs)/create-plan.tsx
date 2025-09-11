@@ -258,7 +258,7 @@ export default function CreateNutritionPlan() {
                 placeholder="Ex: Isabella Costa VIP"
                 placeholderTextColor="#64748B"
                 value={selectedClient?.name || ""}
-                onChangeText={setClientName}
+                onChangeText={(text) => setSelectedClient(prev => ({ ...prev, name: text }))}
               />
             </View>
           </View>
