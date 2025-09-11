@@ -312,9 +312,16 @@ export default function CreateNutritionPlan() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>🍽️ Cronograma de Refeições</Text>
-              <TouchableOpacity style={styles.addButton} onPress={addMeal}>
-                <Ionicons name="add" size={16} color="#22C55E" />
+              <TouchableOpacity style={styles.addMealButton} onPress={addMeal}>
+                <Ionicons name="add-circle" size={24} color="#22C55E" />
+                <Text style={styles.addMealText}>Nova Refeição</Text>
               </TouchableOpacity>
+            </View>
+            
+            <View style={styles.mealsInfo}>
+              <Text style={styles.mealsInfoText}>
+                💡 Dica: Clique em "Nova Refeição" para adicionar mais quadrinhos de dieta conforme necessário
+              </Text>
             </View>
             
             {meals.map((meal, index) => (
