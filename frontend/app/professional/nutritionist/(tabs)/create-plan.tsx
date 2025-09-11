@@ -186,7 +186,7 @@ export default function CreateNutritionPlan() {
       Alert.alert('Erro', 'Não foi possível criar o plano. Tente novamente.');
       setLoading(false);
     }
-  }, [clientName, planTitle, planDescription, duration, dailyCalories, waterIntake, dietaryRestrictions, medicalObservations, meals, supplements, router]);
+  }, [selectedClient, planTitle, planDescription, duration, dailyCalories, waterIntake, dietaryRestrictions, medicalObservations, meals, supplements, router]);
 
   const addMeal = () => {
     setMeals([...meals, {
