@@ -133,6 +133,8 @@ export default function CreateNutritionPlan() {
         duration_days: parseInt(duration),
         daily_calories: parseInt(dailyCalories),
         water_intake_liters: parseFloat(waterIntake),
+        dietary_restrictions: dietaryRestrictions.trim(),
+        medical_observations: medicalObservations.trim(),
         meals: meals,
         supplements: supplements,
         created_by: 'marina@luxepass.com',
@@ -157,6 +159,8 @@ export default function CreateNutritionPlan() {
                 setClientName('');
                 setPlanTitle('');
                 setPlanDescription('');
+                setDietaryRestrictions('');
+                setMedicalObservations('');
               }
             },
             {
@@ -173,7 +177,7 @@ export default function CreateNutritionPlan() {
       Alert.alert('Erro', 'Não foi possível criar o plano. Tente novamente.');
       setLoading(false);
     }
-  }, [clientName, planTitle, planDescription, duration, dailyCalories, waterIntake, meals, supplements, router]);
+  }, [clientName, planTitle, planDescription, duration, dailyCalories, waterIntake, dietaryRestrictions, medicalObservations, meals, supplements, router]);
 
   const addMeal = () => {
     setMeals([...meals, {
