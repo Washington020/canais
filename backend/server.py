@@ -1869,43 +1869,46 @@ async def get_unassigned_clients(credentials: HTTPAuthorizationCredentials = Dep
         if professional_id is None:
             raise HTTPException(status_code=401, detail="Token inválido")
         
-        # Get all Premium/VIP users from database
-        premium_vip_users = await db.users.find({
+        # Build query to find unassigned clients for this professional type
+        field_name = f"{professional_type}_id"
+        query = {
             "plan_type": {"$in": ["premium", "vip"]},
             "$or": [
                 {"status": "active"},
                 {"status": {"$exists": False}},
                 {"status": None}
+            ],
+            # Client should not have this professional type assigned
+            "$or": [
+                {field_name: {"$exists": False}},
+                {field_name: None}
             ]
-        }).to_list(100)
+        }
         
-        # Get already assigned clients for this professional type
-        assigned_clients = await db.client_assignments.find({
-            "professional_type": professional_type
-        }).to_list(1000)
-        assigned_client_ids = [assignment["client_id"] for assignment in assigned_clients]
+        # Get all Premium/VIP users not assigned to this professional type
+        unassigned_users = await db.users.find(query).to_list(100)
         
-        # Filter unassigned clients
+        # Format clients for response
         unassigned_clients = []
-        for user in premium_vip_users:
+        for user in unassigned_users:
             user_id = str(user["_id"])
-            if user_id not in assigned_client_ids:
-                # Set fitness goals based on professional type
-                if professional_type == "nutritionist":
-                    fitness_goals = ["Emagrecimento", "Ganho de massa muscular", "Nutrição esportiva"]
-                else:  # personal trainer
-                    fitness_goals = ["Hipertrofia", "Condicionamento físico", "Força"]
-                
-                unassigned_clients.append({
-                    "id": user_id,
-                    "full_name": user["full_name"],
-                    "email": user["email"],
-                    "plan_type": user["plan_type"],
-                    "status": user.get("status", "active"),
-                    "registration_date": user.get("created_at", datetime.now(timezone.utc)).isoformat(),
-                    "fitness_goals": fitness_goals,
-                    "experience_level": "intermediario"
-                })
+            
+            # Set fitness goals based on professional type
+            if professional_type == "nutritionist":
+                fitness_goals = ["Emagrecimento", "Ganho de massa muscular", "Nutrição esportiva"]
+            else:  # personal trainer
+                fitness_goals = ["Hipertrofia", "Condicionamento físico", "Força"]
+            
+            unassigned_clients.append({
+                "id": user_id,
+                "full_name": user["full_name"],
+                "email": user["email"],
+                "plan_type": user["plan_type"],
+                "status": user.get("status", "active"),
+                "registration_date": user.get("created_at", datetime.now(timezone.utc)).isoformat(),
+                "fitness_goals": fitness_goals,
+                "experience_level": "intermediario"
+            })
         
         return {"clients": unassigned_clients}
         
