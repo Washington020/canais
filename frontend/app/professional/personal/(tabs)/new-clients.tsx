@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Alert,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -19,226 +19,115 @@ import Constants from 'expo-constants';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
 
-interface NewClient {
+interface AvailableClient {
   id: string;
   full_name: string;
   email: string;
-  plan: string;
-  status: string;
+  plan_type: string;
   registration_date: string;
-  fitness_goals?: string[];
-  experience_level?: string;
+  fitness_goals: string[];
+  experience_level: string;
+  status: string;
 }
 
 export default function NewClients() {
-  const [newClients, setNewClients] = useState<NewClient[]>([]);
+  const [availableClients, setAvailableClients] = useState<AvailableClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [flagging, setFlagging] = useState<string | null>(null);
+  const [assumingClient, setAssumingClient] = useState<string | null>(null);
+  
   const router = useRouter();
 
-  const loadNewClients = useCallback(async () => {
+  useEffect(() => {
+    loadAvailableClients();
+  }, []);
+
+  const loadAvailableClients = async () => {
     try {
       const token = await AsyncStorage.getItem('professionalToken');
       if (!token) {
-        Alert.alert('Erro', 'Token não encontrado', [
-          { text: 'OK', onPress: () => router.replace('/professional/personal/login') }
-        ]);
+        router.replace('/professional/personal/login');
         return;
       }
 
-      const response = await axios.get(`${API_URL}/professionals/unassigned-clients`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      // Simulate new clients data for personal trainer
-      const mockNewClients: NewClient[] = [
-        {
-          id: '4',
-          full_name: 'Pedro Costa Premium',
-          email: 'pedro@luxepass.com',
-          plan: 'premium',
-          status: 'active',
-          registration_date: '2025-01-13',
-          fitness_goals: ['Perda de peso', 'Ganho muscular', 'Condicionamento'],
-          experience_level: 'iniciante'
-        },
-        {
-          id: '5', 
-          full_name: 'Julia Santos VIP',
-          email: 'julia@luxepass.com',
-          plan: 'vip',
-          status: 'active',
-          registration_date: '2025-01-12',
-          fitness_goals: ['Tonificação', 'Flexibilidade', 'Força'],
-          experience_level: 'intermediario'
-        },
-        {
-          id: '6',
-          full_name: 'Roberto Silva Premium',
-          email: 'roberto@luxepass.com',
-          plan: 'premium',
-          status: 'active',
-          registration_date: '2025-01-11',
-          fitness_goals: ['Hipertrofia', 'Definição'],
-          experience_level: 'avancado'
-        }
-      ];
-
-      setNewClients(mockNewClients);
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/professionals/unassigned-clients`, { headers });
+      
+      console.log('Clientes disponíveis:', response.data);
+      setAvailableClients(response.data.clients || []);
     } catch (error: any) {
-      console.error('Error loading new clients:', error);
+      console.error('Error loading available clients:', error);
       if (error.response?.status === 401) {
-        Alert.alert('Erro', 'Sessão expirada', [
-          { text: 'OK', onPress: () => router.replace('/professional/personal/login') }
-        ]);
+        router.replace('/professional/personal/login');
       } else {
-        Alert.alert('Erro', 'Não foi possível carregar os novos clientes');
+        Alert.alert('Erro', 'Não foi possível carregar clientes disponíveis');
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [router]);
+  };
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = () => {
     setRefreshing(true);
-    loadNewClients();
-  }, [loadNewClients]);
-
-  useEffect(() => {
-    loadNewClients();
-  }, [loadNewClients]);
-
-  const handleFlagClient = async (client: NewClient) => {
-    setFlagging(client.id);
-    
-    try {
-      const token = await AsyncStorage.getItem('professionalToken');
-      if (!token) {
-        Alert.alert('Erro', 'Token não encontrado');
-        return;
-      }
-
-      // API call to flag client
-      await axios.post(`${API_URL}/professionals/flag-client`, {
-        client_id: client.id
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      Alert.alert(
-        '✅ Cliente Designado!',
-        `${client.full_name} foi designado(a) para você como personal trainer.`,
-        [
-          {
-            text: 'Ver Clientes',
-            onPress: () => router.push('/professional/personal/(tabs)/index')
-          },
-          { text: 'OK' }
-        ]
-      );
-
-      // Remove from new clients list
-      setNewClients(prev => prev.filter(c => c.id !== client.id));
-    } catch (error: any) {
-      console.error('Error flagging client:', error);
-      Alert.alert('Erro', 'Não foi possível designar o cliente. Tente novamente.');
-    } finally {
-      setFlagging(null);
-    }
+    loadAvailableClients();
   };
 
-  const getPlanColor = (plan: string) => {
-    switch (plan) {
-      case 'vip': return '#8B5CF6';
-      case 'premium': return '#F59E0B';
-      default: return '#64748B';
-    }
+  const assumeClient = async (clientId: string, clientName: string) => {
+    Alert.alert(
+      'Assumir Cliente',
+      `Deseja assumir ${clientName} como seu cliente?\n\nAo assumir, você se tornará responsável pelo acompanhamento físico e criação de treinos desta pessoa.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Assumir Cliente',
+          style: 'default',
+          onPress: async () => {
+            setAssumingClient(clientId);
+            try {
+              const token = await AsyncStorage.getItem('professionalToken');
+              const headers = { Authorization: `Bearer ${token}` };
+              
+              await axios.post(
+                `${API_URL}/professionals/flag-client`,
+                { client_id: clientId },
+                { headers }
+              );
+              
+              Alert.alert(
+                '✅ Cliente Assumido!',
+                `${clientName} foi adicionado à sua lista de clientes.\n\nAgora você pode criar planos de treino personalizados na aba "Criar Plano".`,
+                [
+                  { text: 'Continuar Assumindo', style: 'default' },
+                  {
+                    text: 'Ver Meus Clientes',
+                    style: 'default',
+                    onPress: () => router.push('/professional/personal/(tabs)/index')
+                  }
+                ]
+              );
+              
+              // Remove client from available list
+              setAvailableClients(prev => prev.filter(c => c.id !== clientId));
+              
+            } catch (error: any) {
+              console.error('Error assuming client:', error);
+              Alert.alert('Erro', 'Não foi possível assumir o cliente. Tente novamente.');
+            } finally {
+              setAssumingClient(null);
+            }
+          }
+        }
+      ]
+    );
   };
-
-  const getExperienceColor = (level: string) => {
-    switch (level) {
-      case 'iniciante': return '#22C55E';
-      case 'intermediario': return '#F59E0B';
-      case 'avancado': return '#EF4444';
-      default: return '#64748B';
-    }
-  };
-
-  const getExperienceText = (level: string) => {
-    switch (level) {
-      case 'iniciante': return 'Iniciante';
-      case 'intermediario': return 'Intermediário';
-      case 'avancado': return 'Avançado';
-      default: return 'N/A';
-    }
-  };
-
-  const renderNewClient = ({ item }: { item: NewClient }) => (
-    <View style={styles.clientCard}>
-      <View style={styles.clientHeader}>
-        <View style={styles.clientInfo}>
-          <Text style={styles.clientName}>{item.full_name}</Text>
-          <Text style={styles.clientEmail}>{item.email}</Text>
-          <Text style={styles.registrationDate}>
-            Registrado em {new Date(item.registration_date).toLocaleDateString('pt-BR')}
-          </Text>
-        </View>
-        <View style={[styles.planBadge, { backgroundColor: getPlanColor(item.plan) }]}>
-          <Text style={styles.planText}>{item.plan.toUpperCase()}</Text>
-        </View>
-      </View>
-      
-      {item.experience_level && (
-        <View style={styles.experienceRow}>
-          <Ionicons name="barbell" size={16} color={getExperienceColor(item.experience_level)} />
-          <Text style={[styles.experienceText, { color: getExperienceColor(item.experience_level) }]}>
-            Nível: {getExperienceText(item.experience_level)}
-          </Text>
-        </View>
-      )}
-      
-      {item.fitness_goals && item.fitness_goals.length > 0 && (
-        <View style={styles.goalsContainer}>
-          <Text style={styles.goalsTitle}>🎯 Objetivos:</Text>
-          <View style={styles.goalsList}>
-            {item.fitness_goals.map((goal, index) => (
-              <View key={index} style={styles.goalTag}>
-                <Text style={styles.goalText}>{goal}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-      
-      <TouchableOpacity
-        style={[
-          styles.flagButton,
-          flagging === item.id && styles.flagButtonLoading
-        ]}
-        onPress={() => handleFlagClient(item)}
-        disabled={flagging === item.id}
-      >
-        {flagging === item.id ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <>
-            <Ionicons name="person-add" size={20} color="#FFFFFF" />
-            <Text style={styles.flagButtonText}>Designar para Mim</Text>
-          </>
-        )}
-      </TouchableOpacity>
-    </View>
-  );
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#F59E0B" />
-          <Text style={styles.loadingText}>Carregando novos clientes...</Text>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text style={styles.loadingText}>Carregando clientes disponíveis...</Text>
         </View>
       </SafeAreaView>
     );
@@ -248,55 +137,126 @@ export default function NewClients() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Novos Clientes</Text>
-          <Text style={styles.headerSubtitle}>
-            Clientes Premium e VIP aguardando designação • {newClients.length} disponíveis
-          </Text>
-        </View>
+      {/* Header Info */}
+      <View style={styles.headerCard}>
         <View style={styles.headerIcon}>
-          <Ionicons name="person-add" size={24} color="#F59E0B" />
+          <Ionicons name="fitness" size={32} color="#3B82F6" />
+        </View>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>Assumir Novos Clientes</Text>
+          <Text style={styles.headerSubtitle}>Clientes Premium/VIP aguardando personal trainer</Text>
         </View>
       </View>
 
-      {/* Info Card */}
-      <View style={styles.infoCard}>
-        <Ionicons name="information-circle" size={20} color="#F59E0B" />
-        <Text style={styles.infoText}>
-          💪 Clique em "Designar para Mim" para acompanhar um novo cliente como personal trainer
-        </Text>
-      </View>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#3B82F6"
+          />
+        }
+      >
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{availableClients.length}</Text>
+            <Text style={styles.statLabel}>Disponíveis</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>
+              {availableClients.filter(c => c.plan_type === 'vip').length}
+            </Text>
+            <Text style={styles.statLabel}>VIP</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>
+              {availableClients.filter(c => c.plan_type === 'premium').length}
+            </Text>
+            <Text style={styles.statLabel}>Premium</Text>
+          </View>
+        </View>
 
-      {/* New Clients List */}
-      <View style={styles.content}>
-        {newClients.length === 0 ? (
+        {/* Available Clients */}
+        {availableClients.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="checkmark-circle" size={64} color="#22C55E" />
-            <Text style={styles.emptyTitle}>Todos os clientes designados!</Text>
-            <Text style={styles.emptySubtitle}>
-              Novos clientes Premium e VIP aparecerão aqui quando se cadastrarem
+            <Ionicons name="checkmark-circle" size={64} color="#3B82F6" />
+            <Text style={styles.emptyTitle}>Todos os Clientes Atendidos!</Text>
+            <Text style={styles.emptyText}>
+              Não há clientes Premium/VIP aguardando atribuição no momento. 
+              Novos clientes aparecerão aqui quando se cadastrarem.
             </Text>
           </View>
         ) : (
-          <FlatList
-            data={newClients}
-            keyExtractor={(item) => item.id}
-            renderItem={renderNewClient}
-            contentContainerStyle={styles.listContainer}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor="#F59E0B"
-                colors={['#F59E0B']}
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          />
+          <View style={styles.clientsContainer}>
+            <Text style={styles.sectionTitle}>Clientes Aguardando Personal Trainer</Text>
+            
+            {availableClients.map((client) => (
+              <View key={client.id} style={styles.clientCard}>
+                <View style={styles.clientHeader}>
+                  <View style={styles.clientInfo}>
+                    <Text style={styles.clientName}>{client.full_name}</Text>
+                    <Text style={styles.clientEmail}>{client.email}</Text>
+                    <Text style={styles.clientPlan}>
+                      Plano: {client.plan_type === 'premium' ? 'Premium' : 'VIP'}
+                    </Text>
+                  </View>
+                  <View style={[
+                    styles.planBadge,
+                    { backgroundColor: client.plan_type === 'vip' ? '#FFD700' : '#8B5CF6' }
+                  ]}>
+                    <Text style={styles.planBadgeText}>
+                      {client.plan_type.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.clientDetails}>
+                  <View style={styles.detailRow}>
+                    <Ionicons name="calendar" size={16} color="#3B82F6" />
+                    <Text style={styles.detailText}>
+                      Cadastrado: {new Date(client.registration_date).toLocaleDateString('pt-BR')}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.detailRow}>
+                    <Ionicons name="target" size={16} color="#3B82F6" />
+                    <Text style={styles.detailText}>
+                      Objetivos: {client.fitness_goals?.join(', ') || 'Não informado'}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.detailRow}>
+                    <Ionicons name="trending-up" size={16} color="#3B82F6" />
+                    <Text style={styles.detailText}>
+                      Nível: {client.experience_level || 'Iniciante'}
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.assumeButton,
+                    assumingClient === client.id && styles.assumeButtonLoading
+                  ]}
+                  onPress={() => assumeClient(client.id, client.full_name)}
+                  disabled={assumingClient === client.id}
+                >
+                  {assumingClient === client.id ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="fitness" size={18} color="#FFFFFF" />
+                      <Text style={styles.assumeButtonText}>Assumir Cliente</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
         )}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -312,179 +272,167 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#94A3B8',
+    color: '#FFFFFF',
     fontSize: 16,
     marginTop: 16,
   },
-  header: {
+  headerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 16,
+    padding: 20,
+    margin: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
   },
-  headerContent: {
+  headerIcon: {
+    width: 60,
+    height: 60,
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  headerInfo: {
     flex: 1,
   },
   headerTitle: {
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 4,
   },
   headerSubtitle: {
-    color: '#F59E0B',
+    color: '#3B82F6',
     fontSize: 14,
-    fontWeight: '600',
   },
-  headerIcon: {
-    width: 50,
-    height: 50,
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
+  scrollView: {
+    flex: 1,
   },
-  infoCard: {
+  statsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    gap: 16,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
     borderRadius: 12,
     padding: 16,
-    marginHorizontal: 24,
-    marginVertical: 16,
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: 'rgba(59, 130, 246, 0.3)',
   },
-  infoText: {
-    color: '#E2E8F0',
+  statNumber: {
+    color: '#3B82F6',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    color: '#94A3B8',
     fontSize: 12,
-    marginLeft: 12,
-    flex: 1,
-    lineHeight: 16,
+    marginTop: 4,
   },
-  content: {
-    flex: 1,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+  },
+  emptyText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 20,
+  },
+  clientsContainer: {
     paddingHorizontal: 24,
   },
-  listContainer: {
-    paddingBottom: 100,
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
   },
   clientCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
   },
   clientHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   clientInfo: {
     flex: 1,
   },
   clientName: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: 'bold',
     marginBottom: 4,
   },
   clientEmail: {
     color: '#94A3B8',
     fontSize: 14,
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  registrationDate: {
-    color: '#64748B',
+  clientPlan: {
+    color: '#A1A1AA',
     fontSize: 12,
   },
   planBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 12,
-  },
-  planText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  experienceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  experienceText: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  goalsContainer: {
-    marginBottom: 16,
-  },
-  goalsTitle: {
-    color: '#E2E8F0',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  goalsList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  goalTag: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
+    borderRadius: 6,
   },
-  goalText: {
-    color: '#F59E0B',
+  planBadgeText: {
+    color: '#FFFFFF',
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
-  flagButton: {
+  clientDetails: {
+    marginBottom: 16,
+  },
+  detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F59E0B',
-    borderRadius: 12,
-    paddingVertical: 12,
-    gap: 8,
+    marginBottom: 8,
   },
-  flagButtonLoading: {
-    backgroundColor: '#64748B',
-  },
-  flagButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  emptyState: {
+  detailText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginLeft: 8,
     flex: 1,
+  },
+  assumeButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
   },
-  emptyTitle: {
+  assumeButtonLoading: {
+    backgroundColor: '#64748B',
+  },
+  assumeButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    color: '#94A3B8',
     fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });
