@@ -41,6 +41,8 @@ export default function CreateNutritionPlan() {
   const [duration, setDuration] = useState('30');
   const [dailyCalories, setDailyCalories] = useState('1800');
   const [waterIntake, setWaterIntake] = useState('2.5');
+  const [medicalObservations, setMedicalObservations] = useState('');
+  const [dietaryRestrictions, setDietaryRestrictions] = useState('');
   
   const [meals, setMeals] = useState<Meal[]>([
     {
