@@ -122,7 +122,7 @@ export default function PersonalTrainerSchedule() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return '#22C55E';
+        return '#3B82F6';
       case 'scheduled':
         return '#F59E0B';
       case 'cancelled':
@@ -179,7 +179,7 @@ export default function PersonalTrainerSchedule() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#22C55E" />
+          <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={styles.loadingText}>Carregando agendamentos...</Text>
         </View>
       </SafeAreaView>
@@ -205,7 +205,7 @@ export default function PersonalTrainerSchedule() {
           style={styles.refreshButton}
           onPress={() => onRefresh()}
         >
-          <Ionicons name="refresh" size={20} color="#22C55E" />
+          <Ionicons name="refresh" size={20} color="#3B82F6" />
           <Text style={styles.refreshText}>Atualizar</Text>
         </TouchableOpacity>
       </View>
@@ -219,13 +219,13 @@ export default function PersonalTrainerSchedule() {
         {/* Stats Summary */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Ionicons name="calendar" size={20} color="#22C55E" />
+            <Ionicons name="calendar" size={20} color="#3B82F6" />
             <Text style={styles.statNumber}>{appointments.length}</Text>
             <Text style={styles.statLabel}>Agendamentos</Text>
           </View>
           
           <View style={styles.statCard}>
-            <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+            <Ionicons name="checkmark-circle" size={20} color="#3B82F6" />
             <Text style={styles.statNumber}>
               {appointments.filter(a => a.status === 'confirmed').length}
             </Text>
@@ -285,14 +285,14 @@ export default function PersonalTrainerSchedule() {
 
                     <View style={styles.appointmentDetails}>
                       <View style={styles.detailRow}>
-                        <Ionicons name="time" size={16} color="#22C55E" />
+                        <Ionicons name="time" size={16} color="#3B82F6" />
                         <Text style={styles.detailText}>
                           {appointment.time} • {appointment.duration}
                         </Text>
                       </View>
                       
                       <View style={styles.detailRow}>
-                        <Ionicons name="location" size={16} color="#22C55E" />
+                        <Ionicons name="location" size={16} color="#3B82F6" />
                         <Text style={styles.detailText}>
                           {appointment.meeting_type === 'presencial' ? 'Presencial' : 'Online'}
                         </Text>
@@ -300,7 +300,7 @@ export default function PersonalTrainerSchedule() {
 
                       {appointment.notes && (
                         <View style={styles.detailRow}>
-                          <Ionicons name="document-text" size={16} color="#22C55E" />
+                          <Ionicons name="document-text" size={16} color="#3B82F6" />
                           <Text style={styles.detailText}>{appointment.notes}</Text>
                         </View>
                       )}
@@ -377,22 +377,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   subtitle: {
-    color: '#22C55E',
+    color: '#3B82F6',
     fontSize: 14,
     marginTop: 4,
   },
   refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.5)',
+    borderColor: 'rgba(59, 130, 246, 0.5)',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
   },
   refreshText: {
-    color: '#22C55E',
+    color: '#3B82F6',
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
   confirmButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#22C55E',
+    backgroundColor: '#3B82F6',
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 16,
