@@ -120,7 +120,6 @@ export default function CreateNutritionPlan() {
   ]);
 
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleCreatePlan = useCallback(async () => {
     if (!clientName.trim() || !planTitle.trim()) {
