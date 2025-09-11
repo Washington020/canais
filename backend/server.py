@@ -2751,6 +2751,295 @@ async def get_client_history(
         logger.error(f"Erro ao buscar histórico do cliente: {e}")
         raise HTTPException(status_code=500, detail="Erro ao carregar histórico")
 
+# Appointment System Endpoints
+@api_router.get("/appointments/available-slots")
+async def get_available_appointment_slots(
+    professional_type: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get available appointment slots for client"""
+    try:
+        # Check if user has premium/vip plan
+        if current_user.plan_type not in ["premium", "vip"]:
+            raise HTTPException(status_code=403, detail="Agendamentos disponíveis apenas para planos Premium e VIP")
+        
+        # Check monthly quota
+        current_month = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        existing_appointments = await db.appointments.count_documents({
+            "client_id": current_user.id,
+            "professional_type": professional_type,
+            "status": {"$in": ["scheduled", "confirmed"]},
+            "appointment_date": {"$gte": current_month}
+        })
+        
+        # Check quota limits
+        if professional_type == "nutritionist":
+            quota_limit = 2
+            quota_name = "nutricionista"
+        else:  # personal trainer
+            quota_limit = 1
+            quota_name = "personal trainer"
+        
+        if existing_appointments >= quota_limit:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Você já atingiu o limite de {quota_limit} consulta(s) com {quota_name} neste mês"
+            )
+        
+        # Get available professionals
+        professionals = await db.professionals.find({
+            "professional_type": professional_type,
+            "status": "active"
+        }).to_list(20)
+        
+        if not professionals:
+            return {"available_slots": [], "quota_used": existing_appointments, "quota_limit": quota_limit}
+        
+        # Generate available time slots (simplified)
+        available_slots = []
+        current_date = datetime.now(timezone.utc)
+        
+        for i in range(14):  # Next 14 days
+            slot_date = current_date + timedelta(days=i+1)
+            if slot_date.weekday() < 5:  # Monday to Friday
+                for hour in [9, 10, 11, 14, 15, 16, 17]:  # Available hours
+                    slot_datetime = slot_date.replace(hour=hour, minute=0, second=0, microsecond=0)
+                    
+                    # Check if slot is already taken
+                    existing_appointment = await db.appointments.find_one({
+                        "appointment_date": slot_datetime,
+                        "status": {"$in": ["scheduled", "confirmed"]}
+                    })
+                    
+                    if not existing_appointment:
+                        for professional in professionals:
+                            available_slots.append({
+                                "id": f"{professional['_id']}_{slot_datetime.isoformat()}",
+                                "professional_id": str(professional["_id"]),
+                                "professional_name": professional["full_name"],
+                                "professional_cref": professional["cref_crn"],
+                                "date": slot_datetime.date().isoformat(),
+                                "time": slot_datetime.time().isoformat()[:5],
+                                "datetime": slot_datetime.isoformat(),
+                                "duration": "60 minutos"
+                            })
+        
+        return {
+            "available_slots": available_slots[:50],  # Limit to 50 slots
+            "quota_used": existing_appointments,
+            "quota_limit": quota_limit,
+            "professional_type": professional_type
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao buscar horários disponíveis: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar horários")
+
+@api_router.post("/appointments/schedule")
+async def schedule_appointment(
+    request: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Schedule an appointment with professional"""
+    try:
+        professional_id = request.get("professional_id")
+        appointment_datetime = request.get("appointment_datetime")
+        professional_type = request.get("professional_type")
+        notes = request.get("notes", "")
+        
+        if not all([professional_id, appointment_datetime, professional_type]):
+            raise HTTPException(status_code=400, detail="Dados obrigatórios: professional_id, appointment_datetime, professional_type")
+        
+        # Check if user has premium/vip plan
+        if current_user.plan_type not in ["premium", "vip"]:
+            raise HTTPException(status_code=403, detail="Agendamentos disponíveis apenas para planos Premium e VIP")
+        
+        # Parse appointment datetime
+        appointment_dt = datetime.fromisoformat(appointment_datetime.replace('Z', '+00:00'))
+        
+        # Check monthly quota
+        current_month = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        existing_appointments = await db.appointments.count_documents({
+            "client_id": current_user.id,
+            "professional_type": professional_type,
+            "status": {"$in": ["scheduled", "confirmed"]},
+            "appointment_date": {"$gte": current_month}
+        })
+        
+        quota_limit = 2 if professional_type == "nutritionist" else 1
+        if existing_appointments >= quota_limit:
+            raise HTTPException(status_code=400, detail=f"Limite de agendamentos atingido para este mês")
+        
+        # Verify professional exists
+        professional = await db.professionals.find_one({"_id": ObjectId(professional_id)})
+        if not professional:
+            raise HTTPException(status_code=404, detail="Profissional não encontrado")
+        
+        # Check if slot is still available
+        existing_appointment = await db.appointments.find_one({
+            "appointment_date": appointment_dt,
+            "professional_id": professional_id,
+            "status": {"$in": ["scheduled", "confirmed"]}
+        })
+        
+        if existing_appointment:
+            raise HTTPException(status_code=400, detail="Horário não está mais disponível")
+        
+        # Create appointment
+        appointment_data = {
+            "client_id": current_user.id,
+            "client_name": current_user.full_name,
+            "client_email": current_user.email,
+            "client_plan": current_user.plan_type,
+            "professional_id": professional_id,
+            "professional_name": professional["full_name"],
+            "professional_type": professional_type,
+            "professional_cref": professional["cref_crn"],
+            "appointment_date": appointment_dt,
+            "duration_minutes": 60,
+            "notes": notes,
+            "status": "scheduled",
+            "created_at": datetime.now(timezone.utc),
+            "meeting_type": "presencial"
+        }
+        
+        result = await db.appointments.insert_one(appointment_data)
+        
+        # Create history record
+        history_record = {
+            "client_id": current_user.id,
+            "client_name": current_user.full_name,
+            "professional_id": professional_id,
+            "professional_name": professional["full_name"],
+            "professional_type": professional_type,
+            "action": "appointment_scheduled",
+            "details": f"Consulta agendada para {appointment_dt.strftime('%d/%m/%Y às %H:%M')}",
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        await db.client_history.insert_one(history_record)
+        
+        return {
+            "success": True,
+            "appointment_id": str(result.inserted_id),
+            "message": f"Consulta agendada com sucesso para {appointment_dt.strftime('%d/%m/%Y às %H:%M')}",
+            "appointment": {
+                "id": str(result.inserted_id),
+                "professional_name": professional["full_name"],
+                "date": appointment_dt.date().isoformat(),
+                "time": appointment_dt.time().isoformat()[:5],
+                "professional_type": professional_type
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao agendar consulta: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao agendar consulta")
+
+@api_router.get("/appointments/my-appointments")
+async def get_my_appointments(current_user: User = Depends(get_current_user)):
+    """Get client's appointments"""
+    try:
+        appointments = await db.appointments.find({
+            "client_id": current_user.id
+        }).sort("appointment_date", 1).to_list(50)
+        
+        formatted_appointments = []
+        for appointment in appointments:
+            formatted_appointments.append({
+                "id": str(appointment["_id"]),
+                "professional_name": appointment["professional_name"],
+                "professional_type": appointment["professional_type"],
+                "professional_cref": appointment["professional_cref"],
+                "date": appointment["appointment_date"].date().isoformat(),
+                "time": appointment["appointment_date"].time().isoformat()[:5],
+                "duration": f"{appointment['duration_minutes']} minutos",
+                "status": appointment["status"],
+                "notes": appointment.get("notes", ""),
+                "meeting_type": appointment.get("meeting_type", "presencial")
+            })
+        
+        return {"appointments": formatted_appointments}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar agendamentos: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar agendamentos")
+
+@api_router.get("/professionals/my-appointments")
+async def get_professional_appointments(current_professional: dict = Depends(get_current_professional)):
+    """Get professional's scheduled appointments"""
+    try:
+        professional_id = str(current_professional["_id"])
+        
+        appointments = await db.appointments.find({
+            "professional_id": professional_id,
+            "status": {"$in": ["scheduled", "confirmed"]}
+        }).sort("appointment_date", 1).to_list(100)
+        
+        formatted_appointments = []
+        for appointment in appointments:
+            formatted_appointments.append({
+                "id": str(appointment["_id"]),
+                "client_name": appointment["client_name"],
+                "client_email": appointment["client_email"],
+                "client_plan": appointment["client_plan"],
+                "date": appointment["appointment_date"].date().isoformat(),
+                "time": appointment["appointment_date"].time().isoformat()[:5],
+                "duration": f"{appointment['duration_minutes']} minutos",
+                "status": appointment["status"],
+                "notes": appointment.get("notes", ""),
+                "meeting_type": appointment.get("meeting_type", "presencial"),
+                "created_at": appointment["created_at"].isoformat()
+            })
+        
+        return {"appointments": formatted_appointments}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar agendamentos: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar agendamentos")
+
+@api_router.post("/professionals/appointments/{appointment_id}/confirm")
+async def confirm_appointment(
+    appointment_id: str,
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Confirm appointment by professional"""
+    try:
+        professional_id = str(current_professional["_id"])
+        
+        # Verify appointment exists and belongs to this professional
+        appointment = await db.appointments.find_one({
+            "_id": ObjectId(appointment_id),
+            "professional_id": professional_id
+        })
+        
+        if not appointment:
+            raise HTTPException(status_code=404, detail="Agendamento não encontrado")
+        
+        # Update appointment status
+        await db.appointments.update_one(
+            {"_id": ObjectId(appointment_id)},
+            {
+                "$set": {
+                    "status": "confirmed",
+                    "confirmed_at": datetime.now(timezone.utc),
+                    "confirmed_by": professional_id
+                }
+            }
+        )
+        
+        return {"success": True, "message": "Agendamento confirmado com sucesso"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao confirmar agendamento: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao confirmar agendamento")
+
 # Admin endpoints for managing transfer requests
 @api_router.get("/admin/transfer-requests")
 async def get_transfer_requests():
