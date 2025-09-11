@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
@@ -26,39 +26,151 @@ interface Exercise {
   sets: string;
   reps: string;
   rest: string;
-  notes?: string;
+  weight: string;
+  instructions: string;
 }
 
 interface WorkoutDay {
-  day: string;
+  name: string;
   focus: string;
   exercises: Exercise[];
 }
 
 export default function CreateWorkoutPlan() {
-  const [clientName, setClientName] = useState('');
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  // Estados para cliente selecionado
+  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [availableClients, setAvailableClients] = useState<any[]>([]);
+  const [loadingClients, setLoadingClients] = useState(true);
+  
+  // Estados do plano
   const [planTitle, setPlanTitle] = useState('');
   const [planDescription, setPlanDescription] = useState('');
   const [duration, setDuration] = useState('30');
-  const [difficulty, setDifficulty] = useState('intermediario');
+  const [workoutFrequency, setWorkoutFrequency] = useState('4');
+  const [difficultyLevel, setDifficultyLevel] = useState('Intermediário');
+  const [medicalObservations, setMedicalObservations] = useState('');
+  const [physicalRestrictions, setPhysicalRestrictions] = useState('');
+  
   const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>([
     {
-      day: 'Segunda-feira',
-      focus: 'Peito e Tríceps',
+      name: 'Dia 1 - Peito e Tríceps',
+      focus: 'Upper Body',
       exercises: [
-        { name: 'Supino Reto', sets: '4', reps: '10-12', rest: '60s', notes: 'Controle na descida' },
-        { name: 'Supino Inclinado', sets: '3', reps: '10-12', rest: '60s', notes: '' },
-        { name: 'Crucifixo', sets: '3', reps: '12-15', rest: '45s', notes: '' },
-        { name: 'Tríceps Testa', sets: '3', reps: '12-15', rest: '45s', notes: '' },
+        {
+          name: 'Supino Reto',
+          sets: '4',
+          reps: '12',
+          rest: '90s',
+          weight: '80kg',
+          instructions: 'Controle a descida, explosivo na subida'
+        }
       ]
     }
   ]);
+  
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  
+  // Carregar clientes atribuídos ao personal trainer
+  useEffect(() => {
+    loadMyClients();
+    
+    // Se chegou via parâmetro, pré-selecionar cliente
+    if (params.clientId && params.clientName) {
+      setSelectedClient({
+        id: params.clientId,
+        name: decodeURIComponent(params.clientName as string)
+      });
+      setPlanTitle(`Plano de Treino para ${decodeURIComponent(params.clientName as string)}`);
+    }
+  }, [params]);
+
+  const loadMyClients = async () => {
+    try {
+      const token = await AsyncStorage.getItem('professionalToken');
+      if (!token) {
+        router.replace('/professional/personal/login');
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/professionals/my-assigned-clients`, { headers });
+      
+      setAvailableClients(response.data.assigned_clients || []);
+    } catch (error: any) {
+      console.error('Error loading clients:', error);
+      Alert.alert('Erro', 'Não foi possível carregar seus clientes');
+    } finally {
+      setLoadingClients(false);
+    }
+  };
+
+  const addWorkoutDay = () => {
+    const newDay: WorkoutDay = {
+      name: `Dia ${workoutDays.length + 1}`,
+      focus: 'Definir foco',
+      exercises: [
+        {
+          name: 'Novo exercício',
+          sets: '3',
+          reps: '12',
+          rest: '60s',
+          weight: '',
+          instructions: ''
+        }
+      ]
+    };
+    setWorkoutDays([...workoutDays, newDay]);
+  };
+
+  const removeWorkoutDay = (index: number) => {
+    if (workoutDays.length > 1) {
+      setWorkoutDays(workoutDays.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateWorkoutDay = (index: number, field: keyof WorkoutDay, value: string) => {
+    const updatedDays = [...workoutDays];
+    updatedDays[index] = { ...updatedDays[index], [field]: value };
+    setWorkoutDays(updatedDays);
+  };
+
+  const addExercise = (dayIndex: number) => {
+    const newExercise: Exercise = {
+      name: 'Novo exercício',
+      sets: '3',
+      reps: '12',
+      rest: '60s',
+      weight: '',
+      instructions: ''
+    };
+    const updatedDays = [...workoutDays];
+    updatedDays[dayIndex].exercises.push(newExercise);
+    setWorkoutDays(updatedDays);
+  };
+
+  const removeExercise = (dayIndex: number, exerciseIndex: number) => {
+    const updatedDays = [...workoutDays];
+    if (updatedDays[dayIndex].exercises.length > 1) {
+      updatedDays[dayIndex].exercises.splice(exerciseIndex, 1);
+      setWorkoutDays(updatedDays);
+    }
+  };
+
+  const updateExercise = (dayIndex: number, exerciseIndex: number, field: keyof Exercise, value: string) => {
+    const updatedDays = [...workoutDays];
+    updatedDays[dayIndex].exercises[exerciseIndex] = {
+      ...updatedDays[dayIndex].exercises[exerciseIndex],
+      [field]: value
+    };
+    setWorkoutDays(updatedDays);
+  };
 
   const handleCreatePlan = useCallback(async () => {
-    if (!clientName.trim() || !planTitle.trim()) {
-      Alert.alert('Erro', 'Por favor, preencha o nome do cliente e título do plano');
+    if (!selectedClient?.id || !planTitle.trim()) {
+      Alert.alert('Erro', 'Por favor, selecione um cliente e preencha o título do plano');
       return;
     }
 
@@ -71,77 +183,81 @@ export default function CreateWorkoutPlan() {
       }
 
       const planData = {
-        client_name: clientName.trim(),
+        client_id: selectedClient.id,
+        client_name: selectedClient.full_name,
         plan_title: planTitle.trim(),
         plan_description: planDescription.trim(),
         duration_days: parseInt(duration),
-        difficulty_level: difficulty,
-        workout_schedule: workoutDays,
-        created_by: 'current_personal_trainer',
-        professional_type: 'personal'
+        workout_frequency: parseInt(workoutFrequency),
+        difficulty_level: difficultyLevel,
+        physical_restrictions: physicalRestrictions.trim(),
+        medical_observations: medicalObservations.trim(),
+        workout_days: workoutDays,
+        professional_type: 'personal',
+        instructions: 'Plano personalizado criado pelo personal trainer. Seguir técnica correta e respeitar tempos de descanso.',
+        notes: `Plano criado para cliente ${selectedClient.plan_type.toUpperCase()} - acompanhamento profissional.`
       };
 
-      const response = await axios.post(`${API_URL}/admin/workouts/plan`, planData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(`${API_URL}/professionals/workouts/create`, planData, { headers });
 
-      Alert.alert(
-        '✅ Plano Criado!',
-        `Plano de treino "${planTitle}" foi criado com sucesso para ${clientName}.`,
-        [
-          {
-            text: 'Criar Outro',
-            onPress: () => {
-              setClientName('');
-              setPlanTitle('');
-              setPlanDescription('');
-              setDuration('30');
-              setDifficulty('intermediario');
+      if (response.data.success) {
+        Alert.alert(
+          '✅ Plano de Treino Criado!',
+          `Plano "${planTitle}" foi criado com sucesso para ${selectedClient.full_name}.\n\n` +
+          `• ${workoutDays.length} dias de treino programados\n` +
+          `• ${workoutDays.reduce((total, day) => total + day.exercises.length, 0)} exercícios incluídos\n` +
+          `• Frequência semanal: ${workoutFrequency}x\n` +
+          `• Nível: ${difficultyLevel}\n\n` +
+          `🎯 O plano já aparece no app do cliente!`,
+          [
+            {
+              text: 'Criar Outro',
+              onPress: () => {
+                setSelectedClient(null);
+                setPlanTitle('');
+                setPlanDescription('');
+                setPhysicalRestrictions('');
+                setMedicalObservations('');
+                // Reset workout days to default
+                setWorkoutDays([
+                  {
+                    name: 'Dia 1 - Peito e Tríceps',
+                    focus: 'Upper Body',
+                    exercises: [
+                      {
+                        name: 'Supino Reto',
+                        sets: '4',
+                        reps: '12',
+                        rest: '90s',
+                        weight: '80kg',
+                        instructions: 'Controle a descida, explosivo na subida'
+                      }
+                    ]
+                  }
+                ]);
+              }
+            },
+            {
+              text: 'Ver Meus Clientes',
+              onPress: () => router.push('/professional/personal/(tabs)/index')
             }
-          },
-          {
-            text: 'Ver Clientes',
-            onPress: () => router.push('/professional/personal/(tabs)/index')
-          }
-        ]
-      );
+          ]
+        );
+      } else {
+        Alert.alert('Erro', response.data.message || 'Não foi possível criar o plano');
+      }
     } catch (error: any) {
       console.error('Error creating workout plan:', error);
-      Alert.alert('Erro', 'Não foi possível criar o plano. Tente novamente.');
+      let errorMessage = 'Não foi possível criar o plano. Tente novamente.';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+      Alert.alert('Erro', errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [clientName, planTitle, planDescription, duration, difficulty, workoutDays, router]);
-
-  const addExercise = (dayIndex: number) => {
-    const newWorkoutDays = [...workoutDays];
-    newWorkoutDays[dayIndex].exercises.push({
-      name: '',
-      sets: '3',
-      reps: '10-12',
-      rest: '60s',
-      notes: ''
-    });
-    setWorkoutDays(newWorkoutDays);
-  };
-
-  const updateExercise = (dayIndex: number, exerciseIndex: number, field: keyof Exercise, value: string) => {
-    const newWorkoutDays = [...workoutDays];
-    newWorkoutDays[dayIndex].exercises[exerciseIndex][field] = value;
-    setWorkoutDays(newWorkoutDays);
-  };
-
-  const removeExercise = (dayIndex: number, exerciseIndex: number) => {
-    const newWorkoutDays = [...workoutDays];
-    newWorkoutDays[dayIndex].exercises.splice(exerciseIndex, 1);
-    setWorkoutDays(newWorkoutDays);
-  };
-
-  const getDifficultyOptions = () => [
-    { label: 'Iniciante', value: 'iniciante', color: '#22C55E' },
-    { label: 'Intermediário', value: 'intermediario', color: '#F59E0B' },
-    { label: 'Avançado', value: 'avancado', color: '#EF4444' },
-  ];
+  }, [selectedClient, planTitle, planDescription, duration, workoutFrequency, difficultyLevel, physicalRestrictions, medicalObservations, workoutDays, router]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -151,38 +267,80 @@ export default function CreateWorkoutPlan() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Criar Plano de Treino</Text>
-            <Text style={styles.headerSubtitle}>Plano personalizado para seu cliente</Text>
-          </View>
-          <View style={styles.headerIcon}>
-            <Ionicons name="add-circle" size={24} color="#F59E0B" />
-          </View>
-        </View>
-
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Client Info */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>👤 Informações do Cliente</Text>
-            
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Nome do Cliente</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ex: Ana Silva Premium"
-                placeholderTextColor="#64748B"
-                value={clientName}
-                onChangeText={setClientName}
-              />
+          {/* Header Card */}
+          <View style={styles.headerCard}>
+            <View style={styles.headerIcon}>
+              <Ionicons name="fitness" size={32} color="#3B82F6" />
             </View>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>Criar Plano de Treino</Text>
+              <Text style={styles.headerSubtitle}>Desenvolvimento personalizado para seu cliente</Text>
+            </View>
+          </View>
+
+          {/* Client Selection */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>👤 Selecionar Cliente</Text>
+            
+            {loadingClients ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#3B82F6" />
+                <Text style={styles.loadingText}>Carregando seus clientes...</Text>
+              </View>
+            ) : availableClients.length === 0 ? (
+              <View style={styles.emptyClientsContainer}>
+                <Ionicons name="fitness-outline" size={48} color="#64748B" />
+                <Text style={styles.emptyClientsTitle}>Nenhum Cliente Atribuído</Text>
+                <Text style={styles.emptyClientsText}>Vá para a aba "Novos" para assumir clientes primeiro</Text>
+                <TouchableOpacity 
+                  style={styles.goToClientsButton}
+                  onPress={() => router.push('/professional/personal/(tabs)/new-clients')}
+                >
+                  <Text style={styles.goToClientsText}>Assumir Clientes</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.inputLabel}>Escolha o Cliente para Criar o Plano</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.clientsScroll}>
+                  {availableClients.map((client) => (
+                    <TouchableOpacity
+                      key={client.id}
+                      style={[
+                        styles.clientCard,
+                        selectedClient?.id === client.id && styles.selectedClientCard
+                      ]}
+                      onPress={() => {
+                        setSelectedClient(client);
+                        setPlanTitle(`Plano de Treino para ${client.full_name}`);
+                      }}
+                    >
+                      <View style={[
+                        styles.clientBadge,
+                        { backgroundColor: client.plan_type === 'vip' ? '#FFD700' : '#8B5CF6' }
+                      ]}>
+                        <Text style={styles.clientBadgeText}>{client.plan_type.toUpperCase()}</Text>
+                      </View>
+                      <Text style={styles.clientCardName}>{client.full_name}</Text>
+                      <Text style={styles.clientCardEmail}>{client.email}</Text>
+                      {selectedClient?.id === client.id && (
+                        <View style={styles.selectedIndicator}>
+                          <Ionicons name="checkmark-circle" size={20} color="#3B82F6" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                
+                {selectedClient && (
+                  <View style={styles.selectedClientInfo}>
+                    <Text style={styles.selectedClientTitle}>✅ Cliente Selecionado:</Text>
+                    <Text style={styles.selectedClientName}>{selectedClient.full_name}</Text>
+                  </View>
+                )}
+              </>
+            )}
           </View>
 
           {/* Plan Details */}
@@ -193,7 +351,7 @@ export default function CreateWorkoutPlan() {
               <Text style={styles.inputLabel}>Título do Plano</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Ex: Plano Hipertrofia Iniciante"
+                placeholder="Ex: Plano de Hipertrofia Avançado"
                 placeholderTextColor="#64748B"
                 value={planTitle}
                 onChangeText={setPlanTitle}
@@ -204,7 +362,7 @@ export default function CreateWorkoutPlan() {
               <Text style={styles.inputLabel}>Descrição</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                placeholder="Descrição dos objetivos e metodologia do plano..."
+                placeholder="Descreva os objetivos e metodologia do plano..."
                 placeholderTextColor="#64748B"
                 value={planDescription}
                 onChangeText={setPlanDescription}
@@ -214,7 +372,7 @@ export default function CreateWorkoutPlan() {
             </View>
 
             <View style={styles.row}>
-              <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
+              <View style={[styles.inputContainer, {flex: 1, marginRight: 8}]}>
                 <Text style={styles.inputLabel}>Duração (dias)</Text>
                 <TextInput
                   style={styles.input}
@@ -226,112 +384,202 @@ export default function CreateWorkoutPlan() {
                 />
               </View>
 
-              <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.inputLabel}>Dificuldade</Text>
-                <View style={styles.difficultyContainer}>
-                  {getDifficultyOptions().map((option) => (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[
-                        styles.difficultyOption,
-                        difficulty === option.value && { backgroundColor: option.color }
-                      ]}
-                      onPress={() => setDifficulty(option.value)}
-                    >
-                      <Text style={[
-                        styles.difficultyText,
-                        difficulty === option.value && { color: '#FFFFFF' }
-                      ]}>
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              <View style={[styles.inputContainer, {flex: 1, marginLeft: 8}]}>
+                <Text style={styles.inputLabel}>Frequência Semanal</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="4"
+                  placeholderTextColor="#64748B"
+                  value={workoutFrequency}
+                  onChangeText={setWorkoutFrequency}
+                  keyboardType="numeric"
+                />
               </View>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Nível de Dificuldade</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Iniciante, Intermediário ou Avançado"
+                placeholderTextColor="#64748B"
+                value={difficultyLevel}
+                onChangeText={setDifficultyLevel}
+              />
             </View>
           </View>
 
-          {/* Workout Schedule */}
+          {/* Medical Observations */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🏋️ Cronograma de Treinos</Text>
+            <Text style={styles.sectionTitle}>🏥 Observações Médicas</Text>
             
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Restrições Físicas</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Ex: Problemas de joelho, lesões anteriores, limitações de movimento..."
+                placeholderTextColor="#64748B"
+                value={physicalRestrictions}
+                onChangeText={setPhysicalRestrictions}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Observações Importantes</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Ex: Medicamentos, cirurgias recentes, condições médicas específicas..."
+                placeholderTextColor="#64748B"
+                value={medicalObservations}
+                onChangeText={setMedicalObservations}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+          </View>
+
+          {/* Workout Days */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>💪 Cronograma de Treinos</Text>
+              <TouchableOpacity style={styles.addWorkoutButton} onPress={addWorkoutDay}>
+                <Ionicons name="add-circle" size={24} color="#3B82F6" />
+                <Text style={styles.addWorkoutText}>Novo Dia</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.workoutsInfo}>
+              <Text style={styles.workoutsInfoText}>
+                💡 Dica: Clique em "Novo Dia" para adicionar mais dias de treino conforme necessário
+              </Text>
+            </View>
+
             {workoutDays.map((day, dayIndex) => (
-              <View key={dayIndex} style={styles.dayContainer}>
-                <View style={styles.dayHeader}>
-                  <Text style={styles.dayTitle}>{day.day}</Text>
-                  <Text style={styles.dayFocus}>{day.focus}</Text>
+              <View key={dayIndex} style={styles.workoutDayContainer}>
+                <View style={styles.workoutDayHeader}>
+                  <TextInput
+                    style={styles.workoutDayNameInput}
+                    placeholder={`Dia ${dayIndex + 1}`}
+                    placeholderTextColor="#64748B"
+                    value={day.name}
+                    onChangeText={(text) => updateWorkoutDay(dayIndex, 'name', text)}
+                  />
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => removeWorkoutDay(dayIndex)}
+                  >
+                    <Ionicons name="trash" size={16} color="#EF4444" />
+                  </TouchableOpacity>
                 </View>
 
-                {day.exercises.map((exercise, exerciseIndex) => (
-                  <View key={exerciseIndex} style={styles.exerciseContainer}>
-                    <View style={styles.exerciseHeader}>
+                <View style={styles.workoutDayDetails}>
+                  <View style={styles.detailRow}>
+                    <View style={styles.detailInput}>
+                      <Text style={styles.detailLabel}>Foco do Treino</Text>
                       <TextInput
-                        style={styles.exerciseNameInput}
-                        placeholder="Nome do exercício"
+                        style={styles.detailField}
+                        placeholder="Ex: Upper Body, Lower Body"
                         placeholderTextColor="#64748B"
-                        value={exercise.name}
-                        onChangeText={(value) => updateExercise(dayIndex, exerciseIndex, 'name', value)}
+                        value={day.focus}
+                        onChangeText={(text) => updateWorkoutDay(dayIndex, 'focus', text)}
                       />
-                      <TouchableOpacity
-                        style={styles.removeButton}
-                        onPress={() => removeExercise(dayIndex, exerciseIndex)}
-                      >
-                        <Ionicons name="close" size={16} color="#EF4444" />
-                      </TouchableOpacity>
                     </View>
-
-                    <View style={styles.exerciseDetails}>
-                      <View style={styles.detailInput}>
-                        <Text style={styles.detailLabel}>Séries</Text>
-                        <TextInput
-                          style={styles.detailField}
-                          placeholder="3"
-                          placeholderTextColor="#64748B"
-                          value={exercise.sets}
-                          onChangeText={(value) => updateExercise(dayIndex, exerciseIndex, 'sets', value)}
-                        />
-                      </View>
-
-                      <View style={styles.detailInput}>
-                        <Text style={styles.detailLabel}>Reps</Text>
-                        <TextInput
-                          style={styles.detailField}
-                          placeholder="10-12"
-                          placeholderTextColor="#64748B"
-                          value={exercise.reps}
-                          onChangeText={(value) => updateExercise(dayIndex, exerciseIndex, 'reps', value)}
-                        />
-                      </View>
-
-                      <View style={styles.detailInput}>
-                        <Text style={styles.detailLabel}>Descanso</Text>
-                        <TextInput
-                          style={styles.detailField}
-                          placeholder="60s"
-                          placeholderTextColor="#64748B"
-                          value={exercise.rest}
-                          onChangeText={(value) => updateExercise(dayIndex, exerciseIndex, 'rest', value)}
-                        />
-                      </View>
-                    </View>
-
-                    <TextInput
-                      style={styles.notesInput}
-                      placeholder="Observações (opcional)"
-                      placeholderTextColor="#64748B"
-                      value={exercise.notes}
-                      onChangeText={(value) => updateExercise(dayIndex, exerciseIndex, 'notes', value)}
-                    />
                   </View>
-                ))}
+                </View>
 
-                <TouchableOpacity
-                  style={styles.addExerciseButton}
-                  onPress={() => addExercise(dayIndex)}
-                >
-                  <Ionicons name="add" size={16} color="#F59E0B" />
-                  <Text style={styles.addExerciseText}>Adicionar Exercício</Text>
-                </TouchableOpacity>
+                {/* Exercises */}
+                <View style={styles.exercisesContainer}>
+                  <View style={styles.exercisesHeader}>
+                    <Text style={styles.exercisesTitle}>Exercícios</Text>
+                    <TouchableOpacity
+                      style={styles.addExerciseButton}
+                      onPress={() => addExercise(dayIndex)}
+                    >
+                      <Ionicons name="add" size={16} color="#3B82F6" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {day.exercises.map((exercise, exerciseIndex) => (
+                    <View key={exerciseIndex} style={styles.exerciseContainer}>
+                      <View style={styles.exerciseHeader}>
+                        <TextInput
+                          style={styles.exerciseNameInput}
+                          placeholder="Nome do exercício"
+                          placeholderTextColor="#64748B"
+                          value={exercise.name}
+                          onChangeText={(text) => updateExercise(dayIndex, exerciseIndex, 'name', text)}
+                        />
+                        <TouchableOpacity
+                          style={styles.removeExerciseButton}
+                          onPress={() => removeExercise(dayIndex, exerciseIndex)}
+                        >
+                          <Ionicons name="close" size={16} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={styles.exerciseDetails}>
+                        <View style={styles.exerciseDetailRow}>
+                          <View style={styles.exerciseDetailInput}>
+                            <Text style={styles.detailLabel}>Séries</Text>
+                            <TextInput
+                              style={styles.detailField}
+                              placeholder="3"
+                              placeholderTextColor="#64748B"
+                              value={exercise.sets}
+                              onChangeText={(text) => updateExercise(dayIndex, exerciseIndex, 'sets', text)}
+                            />
+                          </View>
+                          <View style={styles.exerciseDetailInput}>
+                            <Text style={styles.detailLabel}>Repetições</Text>
+                            <TextInput
+                              style={styles.detailField}
+                              placeholder="12"
+                              placeholderTextColor="#64748B"
+                              value={exercise.reps}
+                              onChangeText={(text) => updateExercise(dayIndex, exerciseIndex, 'reps', text)}
+                            />
+                          </View>
+                        </View>
+
+                        <View style={styles.exerciseDetailRow}>
+                          <View style={styles.exerciseDetailInput}>
+                            <Text style={styles.detailLabel}>Descanso</Text>
+                            <TextInput
+                              style={styles.detailField}
+                              placeholder="60s"
+                              placeholderTextColor="#64748B"
+                              value={exercise.rest}
+                              onChangeText={(text) => updateExercise(dayIndex, exerciseIndex, 'rest', text)}
+                            />
+                          </View>
+                          <View style={styles.exerciseDetailInput}>
+                            <Text style={styles.detailLabel}>Peso</Text>
+                            <TextInput
+                              style={styles.detailField}
+                              placeholder="80kg"
+                              placeholderTextColor="#64748B"
+                              value={exercise.weight}
+                              onChangeText={(text) => updateExercise(dayIndex, exerciseIndex, 'weight', text)}
+                            />
+                          </View>
+                        </View>
+
+                        <View style={styles.inputContainer}>
+                          <Text style={styles.detailLabel}>Instruções</Text>
+                          <TextInput
+                            style={styles.notesInput}
+                            placeholder="Dicas de execução, cuidados especiais..."
+                            placeholderTextColor="#64748B"
+                            value={exercise.instructions}
+                            onChangeText={(text) => updateExercise(dayIndex, exerciseIndex, 'instructions', text)}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </View>
               </View>
             ))}
           </View>
@@ -345,11 +593,9 @@ export default function CreateWorkoutPlan() {
             {loading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <>
-                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                <Text style={styles.createButtonText}>Criar Plano de Treino</Text>
-              </>
+              <Ionicons name="fitness" size={20} color="#FFFFFF" />
             )}
+            <Text style={styles.createButtonText}>Criar Plano de Treino</Text>
           </TouchableOpacity>
 
           <View style={{ height: 100 }} />
@@ -367,63 +613,62 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  header: {
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  headerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 22,
+  headerIcon: {
+    width: 60,
+    height: 60,
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
-  headerContent: {
+  headerInfo: {
     flex: 1,
   },
   headerTitle: {
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   headerSubtitle: {
-    color: '#F59E0B',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  headerIcon: {
-    width: 44,
-    height: 44,
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
+    color: '#3B82F6',
+    fontSize: 14,
   },
   section: {
-    marginVertical: 16,
+    marginBottom: 24,
   },
   sectionTitle: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
   },
   inputContainer: {
     marginBottom: 16,
   },
   inputLabel: {
-    color: '#E2E8F0',
+    color: '#94A3B8',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
@@ -431,40 +676,154 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    padding: 16,
     color: '#FFFFFF',
     fontSize: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    marginBottom: 16,
   },
-  difficultyContainer: {
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  loadingContainer: {
     flexDirection: 'row',
-    gap: 4,
-  },
-  difficultyOption: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-    paddingVertical: 8,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    padding: 20,
   },
-  difficultyText: {
-    color: '#94A3B8',
-    fontSize: 10,
+  loadingText: {
+    color: '#64748B',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  emptyClientsContainer: {
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: 'rgba(100, 116, 139, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.3)',
+  },
+  emptyClientsTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyClientsText: {
+    color: '#64748B',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  goToClientsButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  goToClientsText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '600',
   },
-  dayContainer: {
+  clientsScroll: {
+    marginVertical: 16,
+  },
+  clientCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 12,
+    width: 200,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    position: 'relative',
+  },
+  selectedClientCard: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderColor: '#3B82F6',
+  },
+  clientBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  clientBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  clientCardName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  clientCardEmail: {
+    color: '#64748B',
+    fontSize: 12,
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  selectedClientInfo: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+  },
+  selectedClientTitle: {
+    color: '#3B82F6',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  selectedClientName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  addWorkoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.5)',
+  },
+  addWorkoutText: {
+    color: '#3B82F6',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  workoutsInfo: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  workoutsInfoText: {
+    color: '#3B82F6',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  workoutDayContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
     padding: 16,
@@ -472,106 +831,146 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  dayHeader: {
-    marginBottom: 16,
-  },
-  dayTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  dayFocus: {
-    color: '#F59E0B',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  exerciseContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  exerciseHeader: {
+  workoutDayHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  exerciseNameInput: {
+  workoutDayNameInput: {
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    padding: 12,
     color: '#FFFFFF',
-    fontSize: 14,
-    marginRight: 8,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   removeButton: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    borderRadius: 16,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.5)',
   },
-  exerciseDetails: {
+  workoutDayDetails: {
+    marginBottom: 12,
+  },
+  detailRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
+    gap: 12,
   },
   detailInput: {
     flex: 1,
   },
   detailLabel: {
     color: '#94A3B8',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   detailField: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    borderRadius: 8,
+    padding: 10,
     color: '#FFFFFF',
-    fontSize: 12,
-    textAlign: 'center',
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  exercisesContainer: {
+    marginTop: 12,
+  },
+  exercisesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  exercisesTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  addExerciseButton: {
+    width: 24,
+    height: 24,
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.5)',
+  },
+  exerciseContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  exerciseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  exerciseNameInput: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 6,
+    padding: 10,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  removeExerciseButton: {
+    width: 24,
+    height: 24,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.5)',
+  },
+  exerciseDetails: {
+    gap: 12,
+  },
+  exerciseDetailRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  exerciseDetailInput: {
+    flex: 1,
   },
   notesInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    color: '#FFFFFF',
-    fontSize: 12,
-  },
-  addExerciseButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
     borderRadius: 8,
-    paddingVertical: 8,
+    padding: 12,
+    color: '#FFFFFF',
+    fontSize: 14,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-    borderStyle: 'dashed',
-  },
-  addExerciseText: {
-    color: '#F59E0B',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#3B82F6',
     borderRadius: 12,
-    paddingVertical: 16,
-    marginTop: 24,
-    gap: 8,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 24,
   },
   createButtonDisabled: {
     backgroundColor: '#64748B',
@@ -579,6 +978,7 @@ const styles = StyleSheet.create({
   createButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });
