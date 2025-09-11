@@ -2274,13 +2274,20 @@ async def get_assigned_clients(current_professional: dict = Depends(get_current_
 
 @api_router.post("/professionals/request-client-transfer")
 async def request_client_transfer(
-    client_id: str,
-    reason: str,
+    request: dict,
     current_professional: dict = Depends(get_current_professional)
 ):
-    """Request to transfer a client to another professional"""
+    """Transfer a client back to available pool for other professionals"""
     try:
+        client_id = request.get("client_id")
+        reason = request.get("reason", "")
+        preserve_history = request.get("preserve_history", True)
+        
+        if not client_id or not reason:
+            raise HTTPException(status_code=400, detail="client_id e reason são obrigatórios")
+        
         professional_type = current_professional["professional_type"]
+        professional_id = str(current_professional["_id"])
         professional_name = current_professional["full_name"]
         
         # Get client info
@@ -2288,32 +2295,50 @@ async def request_client_transfer(
         if not client:
             raise HTTPException(status_code=404, detail="Cliente não encontrado")
         
-        # Create transfer request
-        transfer_request = {
+        # Verify this professional owns this client
+        field_name = f"{professional_type}_id"
+        if str(client.get(field_name)) != professional_id:
+            raise HTTPException(status_code=403, detail="Você não pode transferir este cliente")
+        
+        # Create transfer history record
+        transfer_record = {
             "client_id": client_id,
             "client_name": client.get("full_name", "Cliente"),
-            "current_professional_id": str(current_professional["_id"]),
-            "current_professional_name": professional_name,
+            "from_professional_id": professional_id,
+            "from_professional_name": professional_name,
             "professional_type": professional_type,
             "reason": reason,
-            "status": "pending",
-            "created_at": datetime.now(timezone.utc),
-            "request_type": "transfer"
+            "transferred_at": datetime.now(timezone.utc),
+            "preserve_history": preserve_history
         }
         
-        result = await db.admin_requests.insert_one(transfer_request)
+        await db.client_transfers.insert_one(transfer_record)
+        
+        # Remove professional assignment from client
+        update_data = {
+            f"{professional_type}_id": None,
+            f"{professional_type}_assigned_at": None,
+            f"last_transfer_at": datetime.now(timezone.utc),
+            f"transfer_reason": reason
+        }
+        
+        await db.users.update_one(
+            {"_id": ObjectId(client_id)},
+            {"$set": update_data}
+        )
         
         return {
             "success": True,
-            "message": "Solicitação de transferência enviada para análise",
-            "request_id": str(result.inserted_id)
+            "message": f"Cliente {client.get('full_name')} transferido com sucesso. Cliente está agora disponível para outros {professional_type}s.",
+            "client_name": client.get("full_name"),
+            "transfer_id": str(transfer_record.get("_id"))
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro ao solicitar transferência: {e}")
-        raise HTTPException(status_code=500, detail="Erro ao criar solicitação")
+        logger.error(f"Erro ao transferir cliente: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao transferir cliente")
 
 # Admin endpoints for managing transfer requests
 @api_router.get("/admin/transfer-requests")
