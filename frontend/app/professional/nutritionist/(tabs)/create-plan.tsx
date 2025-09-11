@@ -441,6 +441,37 @@ export default function CreateNutritionPlan() {
             ))}
           </View>
 
+          {/* Medical Observations */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🏥 Observações Médicas</Text>
+            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Restrições Alimentares</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Ex: Diabetes, Hipertensão, Intolerância à lactose, Doença celíaca..."
+                placeholderTextColor="#64748B"
+                value={dietaryRestrictions}
+                onChangeText={setDietaryRestrictions}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Observações Importantes</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Ex: Medicamentos que afetam apetite, cirurgias recentes, alergias alimentares..."
+                placeholderTextColor="#64748B"
+                value={medicalObservations}
+                onChangeText={setMedicalObservations}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+          </View>
+
           {/* Create Button */}
           <TouchableOpacity
             style={[styles.createButton, loading && styles.createButtonDisabled]}
