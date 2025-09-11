@@ -996,6 +996,65 @@ async def get_nutrition_plan(current_user: User = Depends(get_current_user)):
             "message": "Erro ao carregar plano nutricional"
         }
 
+@api_router.get("/workout/plan")
+async def get_workout_plan(current_user: User = Depends(get_current_user)):
+    """Get user's current workout plan created by personal trainer"""
+    try:
+        # Look for active workout plan for this user
+        plan = await db.workout_plans.find_one({
+            "client_id": current_user.id, 
+            "active": True,
+            "status": "active"
+        })
+        
+        if not plan:
+            return {
+                "has_plan": False,
+                "message": "Nenhum plano de treino ativo"
+            }
+        
+        # Get personal trainer info who created the plan
+        personal_trainer = await db.professionals.find_one({
+            "_id": ObjectId(plan["created_by"])
+        })
+        
+        trainer_info = None
+        if personal_trainer:
+            trainer_info = {
+                "name": personal_trainer.get("full_name", "Personal Trainer"),
+                "cref": personal_trainer.get("cref_crn", ""),
+                "email": personal_trainer.get("email", "")
+            }
+        
+        # Format plan data for client app
+        plan_data = {
+            "has_plan": True,
+            "plan_id": str(plan["_id"]),
+            "plan_title": plan.get("plan_title", "Plano de Treino"),
+            "plan_description": plan.get("plan_description", ""),
+            "duration_days": plan.get("duration_days", 30),
+            "workout_frequency": plan.get("workout_frequency", 4),
+            "difficulty_level": plan.get("difficulty_level", "Intermediário"),
+            "physical_restrictions": plan.get("physical_restrictions", ""),
+            "medical_observations": plan.get("medical_observations", ""),
+            "workout_days": plan.get("workout_days", []),
+            "instructions": plan.get("instructions", ""),
+            "notes": plan.get("notes", ""),
+            "created_at": plan.get("created_at").isoformat() if plan.get("created_at") else None,
+            "start_date": plan.get("start_date").isoformat() if plan.get("start_date") else None,
+            "end_date": plan.get("end_date").isoformat() if plan.get("end_date") else None,
+            "personal_trainer": trainer_info
+        }
+        
+        return plan_data
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar plano de treino: {e}")
+        return {
+            "has_plan": False,
+            "message": "Erro ao carregar plano de treino"
+        }
+
 # Gym Authentication Routes
 @api_router.post("/auth/gym/login")
 async def gym_login(credentials: GymLogin):
