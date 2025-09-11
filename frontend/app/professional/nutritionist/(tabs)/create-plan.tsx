@@ -281,20 +281,68 @@ export default function CreateNutritionPlan() {
             </View>
           </View>
 
-          {/* Client Info */}
+          {/* Client Selection */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>👤 Informações do Cliente</Text>
+            <Text style={styles.sectionTitle}>👤 Selecionar Cliente</Text>
             
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Nome do Cliente</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ex: Isabella Costa VIP"
-                placeholderTextColor="#64748B"
-                value={selectedClient?.name || ""}
-                onChangeText={(text) => setSelectedClient(prev => ({ ...prev, name: text }))}
-              />
-            </View>
+            {loadingClients ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#22C55E" />
+                <Text style={styles.loadingText}>Carregando seus clientes...</Text>
+              </View>
+            ) : availableClients.length === 0 ? (
+              <View style={styles.emptyClientsContainer}>
+                <Ionicons name="person-add-outline" size={48} color="#64748B" />
+                <Text style={styles.emptyClientsTitle}>Nenhum Cliente Atribuído</Text>
+                <Text style={styles.emptyClientsText}>Vá para a aba "Novos" para assumir clientes primeiro</Text>
+                <TouchableOpacity 
+                  style={styles.goToClientsButton}
+                  onPress={() => router.push('/professional/nutritionist/(tabs)/new-clients')}
+                >
+                  <Text style={styles.goToClientsText}>Assumir Clientes</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.inputLabel}>Escolha o Cliente para Criar o Plano</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.clientsScroll}>
+                  {availableClients.map((client) => (
+                    <TouchableOpacity
+                      key={client.id}
+                      style={[
+                        styles.clientCard,
+                        selectedClient?.id === client.id && styles.selectedClientCard
+                      ]}
+                      onPress={() => {
+                        setSelectedClient(client);
+                        setPlanTitle(`Plano Nutricional para ${client.full_name}`);
+                      }}
+                    >
+                      <View style={[
+                        styles.clientBadge,
+                        { backgroundColor: client.plan_type === 'vip' ? '#FFD700' : '#8B5CF6' }
+                      ]}>
+                        <Text style={styles.clientBadgeText}>{client.plan_type.toUpperCase()}</Text>
+                      </View>
+                      <Text style={styles.clientCardName}>{client.full_name}</Text>
+                      <Text style={styles.clientCardEmail}>{client.email}</Text>
+                      {selectedClient?.id === client.id && (
+                        <View style={styles.selectedIndicator}>
+                          <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                
+                {selectedClient && (
+                  <View style={styles.selectedClientInfo}>
+                    <Text style={styles.selectedClientTitle}>✅ Cliente Selecionado:</Text>
+                    <Text style={styles.selectedClientName}>{selectedClient.full_name}</Text>
+                  </View>
+                )}
+              </>
+            )}
           </View>
 
           {/* Plan Details */}
