@@ -37,14 +37,22 @@ interface Supplement {
 }
 
 export default function CreateNutritionPlan() {
-  const [clientName, setClientName] = useState('Isabella Costa VIP');
-  const [planTitle, setPlanTitle] = useState('Plano Nutricional para Emagrecimento e Massa Muscular');
-  const [planDescription, setPlanDescription] = useState('');
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  // Estados para cliente selecionado
+  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [availableClients, setAvailableClients] = useState<any[]>([]);
+  const [loadingClients, setLoadingClients] = useState(true);
+  
+  // Estados do plano
+  const [planTitle, setPlanTitle] = useState(');
+  const [planDescription, setPlanDescription] = useState(');
   const [duration, setDuration] = useState('30');
   const [dailyCalories, setDailyCalories] = useState('1800');
   const [waterIntake, setWaterIntake] = useState('2.5');
-  const [medicalObservations, setMedicalObservations] = useState('');
-  const [dietaryRestrictions, setDietaryRestrictions] = useState('');
+  const [medicalObservations, setMedicalObservations] = useState(');
+  const [dietaryRestrictions, setDietaryRestrictions] = useState(');
   
   const [meals, setMeals] = useState<Meal[]>([
     {
