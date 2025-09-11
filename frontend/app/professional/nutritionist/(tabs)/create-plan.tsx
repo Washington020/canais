@@ -257,7 +257,7 @@ export default function CreateNutritionPlan() {
                 style={styles.input}
                 placeholder="Ex: Isabella Costa VIP"
                 placeholderTextColor="#64748B"
-                value={clientName}
+                value={selectedClient?.name || ""}
                 onChangeText={setClientName}
               />
             </View>
