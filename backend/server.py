@@ -2460,6 +2460,128 @@ async def request_client_transfer(
         logger.error(f"Erro ao transferir cliente: {e}")
         raise HTTPException(status_code=500, detail="Erro ao transferir cliente")
 
+@api_router.get("/professionals/client-history/{client_id}")
+async def get_client_history(
+    client_id: str,
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Get complete history of a client for professional review"""
+    try:
+        # Verify client exists
+        client = await db.users.find_one({"_id": ObjectId(client_id)})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        # Get client history records
+        history_records = await db.client_history.find({
+            "client_id": client_id
+        }).sort("created_at", -1).to_list(100)
+        
+        # Get transfer history
+        transfer_records = await db.client_transfers.find({
+            "client_id": client_id
+        }).sort("transferred_at", -1).to_list(50)
+        
+        # Get all nutrition plans (active and inactive)
+        nutrition_plans = await db.nutrition_plans.find({
+            "client_id": client_id
+        }).sort("created_at", -1).to_list(50)
+        
+        # Get all workout plans
+        workout_plans = await db.workout_plans.find({
+            "client_id": client_id
+        }).sort("created_at", -1).to_list(50)
+        
+        # Format history data
+        formatted_history = []
+        
+        # Add nutrition plans to history
+        for plan in nutrition_plans:
+            formatted_history.append({
+                "type": "nutrition_plan",
+                "date": plan.get("created_at"),
+                "title": f"Plano Nutricional: {plan.get('plan_title', 'Sem título')}",
+                "details": f"Criado por {plan.get('created_by_name', 'Profissional')} - {len(plan.get('meals', []))} refeições, {len(plan.get('supplements', []))} suplementos",
+                "professional": plan.get("created_by_name", ""),
+                "professional_type": "nutritionist",
+                "status": plan.get("status", "active"),
+                "data": {
+                    "plan_id": str(plan["_id"]),
+                    "daily_calories": plan.get("daily_calories"),
+                    "duration_days": plan.get("duration_days"),
+                    "dietary_restrictions": plan.get("dietary_restrictions", ""),
+                    "medical_observations": plan.get("medical_observations", "")
+                }
+            })
+        
+        # Add workout plans to history
+        for plan in workout_plans:
+            formatted_history.append({
+                "type": "workout_plan",
+                "date": plan.get("created_at"),
+                "title": f"Plano de Treino: {plan.get('plan_title', 'Sem título')}",
+                "details": f"Criado por {plan.get('created_by_name', 'Profissional')} - {len(plan.get('exercises', []))} exercícios",
+                "professional": plan.get("created_by_name", ""),
+                "professional_type": "personal",
+                "status": plan.get("status", "active"),
+                "data": {
+                    "plan_id": str(plan["_id"]),
+                    "duration_days": plan.get("duration_days"),
+                    "difficulty_level": plan.get("difficulty_level", "")
+                }
+            })
+        
+        # Add transfer records to history
+        for transfer in transfer_records:
+            formatted_history.append({
+                "type": "transfer",
+                "date": transfer.get("transferred_at"),
+                "title": "Transferência de Profissional",
+                "details": f"Transferido de {transfer.get('from_professional_name', 'Profissional anterior')} - Motivo: {transfer.get('reason', 'Não informado')}",
+                "professional": transfer.get("from_professional_name", ""),
+                "professional_type": transfer.get("professional_type", ""),
+                "status": "completed",
+                "data": {
+                    "reason": transfer.get("reason", ""),
+                    "preserve_history": transfer.get("preserve_history", True)
+                }
+            })
+        
+        # Add general history records
+        for record in history_records:
+            formatted_history.append({
+                "type": record.get("action", "general"),
+                "date": record.get("created_at"),
+                "title": record.get("details", "Atividade registrada"),
+                "details": record.get("details", ""),
+                "professional": record.get("professional_name", ""),
+                "professional_type": record.get("professional_type", ""),
+                "status": "completed",
+                "data": record
+            })
+        
+        # Sort all history by date (most recent first)
+        formatted_history.sort(key=lambda x: x["date"] or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        
+        return {
+            "client_id": client_id,
+            "client_name": client.get("full_name", "Cliente"),
+            "client_email": client.get("email", ""),
+            "client_plan_type": client.get("plan_type", "basic"),
+            "total_records": len(formatted_history),
+            "current_nutritionist": client.get("nutritionist_id"),
+            "current_personal": client.get("personal_id"),
+            "has_nutrition_plan": client.get("has_nutrition_plan", False),
+            "latest_nutrition_plan_date": client.get("latest_nutrition_plan_date"),
+            "history": formatted_history
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao buscar histórico do cliente: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar histórico")
+
 # Admin endpoints for managing transfer requests
 @api_router.get("/admin/transfer-requests")
 async def get_transfer_requests():
