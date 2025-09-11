@@ -24,15 +24,17 @@ interface AvailableClient {
   full_name: string;
   email: string;
   plan_type: string;
-  created_at: string;
-  subscription_end?: string;
-  tokens_available: number;
+  registration_date: string;
+  fitness_goals: string[];
+  experience_level: string;
+  status: string;
 }
 
 export default function NewClients() {
   const [availableClients, setAvailableClients] = useState<AvailableClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [assumingClient, setAssumingClient] = useState<string | null>(null);
   
   const router = useRouter();
 
@@ -51,11 +53,14 @@ export default function NewClients() {
       const headers = { Authorization: `Bearer ${token}` };
       const response = await axios.get(`${API_URL}/professionals/unassigned-clients`, { headers });
       
+      console.log('Clientes disponíveis:', response.data);
       setAvailableClients(response.data.clients || []);
     } catch (error: any) {
       console.error('Error loading available clients:', error);
       if (error.response?.status === 401) {
         router.replace('/professional/nutritionist/login');
+      } else {
+        Alert.alert('Erro', 'Não foi possível carregar clientes disponíveis');
       }
     } finally {
       setLoading(false);
@@ -68,36 +73,48 @@ export default function NewClients() {
     loadAvailableClients();
   };
 
-  const claimClient = async (clientId: string, clientName: string) => {
+  const assumeClient = async (clientId: string, clientName: string) => {
     Alert.alert(
       'Assumir Cliente',
-      `Deseja assumir ${clientName} como sua cliente?\n\nVocê será responsável pela criação e acompanhamento dos planos de suplementação.`,
+      `Deseja assumir ${clientName} como seu cliente?\n\nAo assumir, você se tornará responsável pelo acompanhamento nutricional desta pessoa.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Assumir',
+          text: 'Assumir Cliente',
+          style: 'default',
           onPress: async () => {
+            setAssumingClient(clientId);
             try {
               const token = await AsyncStorage.getItem('professionalToken');
               const headers = { Authorization: `Bearer ${token}` };
               
-              const response = await axios.post(
+              await axios.post(
                 `${API_URL}/professionals/flag-client`,
                 { client_id: clientId },
                 { headers }
               );
               
-              Alert.alert('Sucesso!', response.data.message);
+              Alert.alert(
+                '✅ Cliente Assumido!',
+                `${clientName} foi adicionado à sua lista de clientes.\n\nAgora você pode criar planos nutricionais personalizados na aba "Criar Dieta".`,
+                [
+                  { text: 'Continuar Assumindo', style: 'default' },
+                  {
+                    text: 'Ver Meus Clientes',
+                    style: 'default',
+                    onPress: () => router.push('/professional/nutritionist/(tabs)/index')
+                  }
+                ]
+              );
               
               // Remove client from available list
-              setAvailableClients(prev => prev.filter(client => client.id !== clientId));
+              setAvailableClients(prev => prev.filter(c => c.id !== clientId));
+              
             } catch (error: any) {
-              console.error('Error claiming client:', error);
-              if (error.response?.data?.detail) {
-                Alert.alert('Erro', error.response.data.detail);
-              } else {
-                Alert.alert('Erro', 'Não foi possível assumir o cliente');
-              }
+              console.error('Error assuming client:', error);
+              Alert.alert('Erro', 'Não foi possível assumir o cliente. Tente novamente.');
+            } finally {
+              setAssumingClient(null);
             }
           }
         }
@@ -120,47 +137,60 @@ export default function NewClients() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Novos Clientes</Text>
-        <Text style={styles.subtitle}>Clientes Premium/VIP sem nutricionista</Text>
+      {/* Header Info */}
+      <View style={styles.headerCard}>
+        <View style={styles.headerIcon}>
+          <Ionicons name="person-add" size={32} color="#22C55E" />
+        </View>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>Assumir Novos Clientes</Text>
+          <Text style={styles.headerSubtitle}>Clientes Premium/VIP aguardando nutricionista</Text>
+        </View>
       </View>
 
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#22C55E"
+          />
         }
       >
-        {/* Info Card */}
-        <View style={styles.infoCard}>
-          <Ionicons name="information-circle" size={24} color="#22C55E" />
-          <View style={styles.infoText}>
-            <Text style={styles.infoTitle}>Como funciona?</Text>
-            <Text style={styles.infoDescription}>
-              • Apenas clientes Premium e VIP aparecem aqui{'\n'}
-              • Clique em "Assumir" para se tornar a nutricionista do cliente{'\n'}
-              • Você poderá criar planos de suplementação personalizados{'\n'}
-              • O cliente verá seu nome e CRN nos planos criados
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{availableClients.length}</Text>
+            <Text style={styles.statLabel}>Disponíveis</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>
+              {availableClients.filter(c => c.plan_type === 'vip').length}
             </Text>
+            <Text style={styles.statLabel}>VIP</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>
+              {availableClients.filter(c => c.plan_type === 'premium').length}
+            </Text>
+            <Text style={styles.statLabel}>Premium</Text>
           </View>
         </View>
 
         {/* Available Clients */}
         {availableClients.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="checkmark-circle-outline" size={64} color="#22C55E" />
-            <Text style={styles.emptyTitle}>Todos os clientes têm nutricionista!</Text>
+            <Ionicons name="checkmark-circle" size={64} color="#22C55E" />
+            <Text style={styles.emptyTitle}>Todos os Clientes Atendidos!</Text>
             <Text style={styles.emptyText}>
-              No momento não há clientes Premium ou VIP disponíveis para assumir.
-              Novos clientes aparecerão aqui automaticamente.
+              Não há clientes Premium/VIP aguardando atribuição no momento. 
+              Novos clientes aparecerão aqui quando se cadastrarem.
             </Text>
           </View>
         ) : (
           <View style={styles.clientsContainer}>
-            <Text style={styles.sectionTitle}>
-              {availableClients.length} cliente{availableClients.length > 1 ? 's' : ''} disponível{availableClients.length > 1 ? 'eis' : ''}
-            </Text>
+            <Text style={styles.sectionTitle}>Clientes Aguardando Nutricionista</Text>
             
             {availableClients.map((client) => (
               <View key={client.id} style={styles.clientCard}>
@@ -172,54 +202,55 @@ export default function NewClients() {
                       Plano: {client.plan_type === 'premium' ? 'Premium' : 'VIP'}
                     </Text>
                   </View>
-                  
-                  <View style={styles.clientBadgeContainer}>
-                    <View style={[
-                      styles.planBadge,
-                      { backgroundColor: client.plan_type === 'vip' ? '#FFD700' : '#8B5CF6' }
-                    ]}>
-                      <Text style={styles.planBadgeText}>
-                        {client.plan_type.toUpperCase()}
-                      </Text>
-                    </View>
-                    
-                    <View style={styles.newBadge}>
-                      <Text style={styles.newBadgeText}>NOVO</Text>
-                    </View>
+                  <View style={[
+                    styles.planBadge,
+                    { backgroundColor: client.plan_type === 'vip' ? '#FFD700' : '#8B5CF6' }
+                  ]}>
+                    <Text style={styles.planBadgeText}>
+                      {client.plan_type.toUpperCase()}
+                    </Text>
                   </View>
                 </View>
 
                 <View style={styles.clientDetails}>
                   <View style={styles.detailRow}>
-                    <Ionicons name="calendar" size={16} color="#94A3B8" />
+                    <Ionicons name="calendar" size={16} color="#22C55E" />
                     <Text style={styles.detailText}>
-                      Cadastrou-se: {new Date(client.created_at).toLocaleDateString('pt-BR')}
+                      Cadastrado: {new Date(client.registration_date).toLocaleDateString('pt-BR')}
                     </Text>
                   </View>
                   
                   <View style={styles.detailRow}>
-                    <Ionicons name="ticket" size={16} color="#94A3B8" />
+                    <Ionicons name="target" size={16} color="#22C55E" />
                     <Text style={styles.detailText}>
-                      Tokens disponíveis: {client.tokens_available}
+                      Objetivos: {client.fitness_goals?.join(', ') || 'Não informado'}
                     </Text>
                   </View>
                   
-                  {client.subscription_end && (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="time" size={16} color="#94A3B8" />
-                      <Text style={styles.detailText}>
-                        Assinatura até: {new Date(client.subscription_end).toLocaleDateString('pt-BR')}
-                      </Text>
-                    </View>
-                  )}
+                  <View style={styles.detailRow}>
+                    <Ionicons name="trending-up" size={16} color="#22C55E" />
+                    <Text style={styles.detailText}>
+                      Nível: {client.experience_level || 'Iniciante'}
+                    </Text>
+                  </View>
                 </View>
 
-                <TouchableOpacity 
-                  style={styles.claimButton}
-                  onPress={() => claimClient(client.id, client.full_name)}
+                <TouchableOpacity
+                  style={[
+                    styles.assumeButton,
+                    assumingClient === client.id && styles.assumeButtonLoading
+                  ]}
+                  onPress={() => assumeClient(client.id, client.full_name)}
+                  disabled={assumingClient === client.id}
                 >
-                  <Ionicons name="person-add" size={16} color="#FFFFFF" />
-                  <Text style={styles.claimButtonText}>Assumir Cliente</Text>
+                  {assumingClient === client.id ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="person-add" size={18} color="#FFFFFF" />
+                      <Text style={styles.assumeButtonText}>Assumir Cliente</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
             ))}
@@ -245,48 +276,65 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 16,
   },
-  header: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  headerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 16,
+    padding: 20,
+    margin: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
   },
-  title: {
+  headerIcon: {
+    width: 60,
+    height: 60,
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerTitle: {
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
+    marginBottom: 4,
   },
-  subtitle: {
-    color: '#94A3B8',
+  headerSubtitle: {
+    color: '#22C55E',
     fontSize: 14,
-    marginTop: 4,
   },
   scrollView: {
     flex: 1,
   },
-  infoCard: {
+  statsContainer: {
     flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    gap: 16,
+  },
+  statCard: {
+    flex: 1,
     backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
     borderRadius: 12,
     padding: 16,
-    margin: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
   },
-  infoText: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  infoTitle: {
+  statNumber: {
     color: '#22C55E',
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
   },
-  infoDescription: {
+  statLabel: {
     color: '#94A3B8',
     fontSize: 12,
-    lineHeight: 18,
+    marginTop: 4,
   },
   emptyState: {
     alignItems: 'center',
@@ -298,7 +346,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginTop: 16,
-    textAlign: 'center',
   },
   emptyText: {
     color: '#94A3B8',
@@ -311,8 +358,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   sectionTitle: {
-    color: '#22C55E',
-    fontSize: 16,
+    color: '#FFFFFF',
+    fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
   },
@@ -346,10 +393,6 @@ const styles = StyleSheet.create({
     color: '#A1A1AA',
     fontSize: 12,
   },
-  clientBadgeContainer: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
   planBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -358,17 +401,6 @@ const styles = StyleSheet.create({
   planBadgeText: {
     color: '#FFFFFF',
     fontSize: 10,
-    fontWeight: 'bold',
-  },
-  newBadge: {
-    backgroundColor: '#22C55E',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  newBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 8,
     fontWeight: 'bold',
   },
   clientDetails: {
@@ -383,16 +415,21 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 12,
     marginLeft: 8,
+    flex: 1,
   },
-  claimButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  assumeButton: {
     backgroundColor: '#22C55E',
-    paddingVertical: 12,
     borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  claimButtonText: {
+  assumeButtonLoading: {
+    backgroundColor: '#64748B',
+  },
+  assumeButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: 'bold',
