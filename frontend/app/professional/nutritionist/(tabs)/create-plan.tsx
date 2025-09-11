@@ -136,7 +136,7 @@ export default function CreateNutritionPlan() {
       }
 
       const planData = {
-        client_name: clientName.trim(),
+        client_name: selectedClient?.name?.trim() || "",
         plan_title: planTitle.trim(),
         plan_description: planDescription.trim(),
         duration_days: parseInt(duration),
