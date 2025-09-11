@@ -27,6 +27,11 @@ export default function NutritionistLogin() {
   const router = useRouter();
 
   const handleLogin = async () => {
+    console.log('=== NUTRICIONISTA LOGIN DEBUG ===');
+    console.log('API_URL:', API_URL);
+    console.log('Email:', email);
+    console.log('Password length:', password.length);
+    
     if (!email.trim() || !password.trim()) {
       Alert.alert('Erro', 'Por favor, preencha email e senha');
       return;
@@ -34,10 +39,15 @@ export default function NutritionistLogin() {
 
     setLoading(true);
     try {
+      console.log('Fazendo requisição para:', `${API_URL}/professionals/login`);
+      
       const response = await axios.post(`${API_URL}/professionals/login`, {
         email: email.trim(),
         password: password.trim(),
       });
+
+      console.log('Resposta recebida:', response.status);
+      console.log('Data:', response.data);
 
       const { access_token, professional } = response.data;
 
@@ -46,10 +56,14 @@ export default function NutritionistLogin() {
         return;
       }
 
+      console.log('Salvando token e dados do profissional...');
+      
       // Save token and professional info
       await AsyncStorage.setItem('professionalToken', access_token);
       await AsyncStorage.setItem('professional', JSON.stringify(professional));
 
+      console.log('Navegando para interface...');
+      
       // Navigate immediately to professional interface
       router.replace('/professional/nutritionist/(tabs)');
       
@@ -58,13 +72,18 @@ export default function NutritionistLogin() {
         Alert.alert('✅ Login Realizado!', `Bem-vinda, ${professional.full_name}!`);
       }, 100);
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('=== LOGIN ERROR ===');
+      console.error('Error:', error);
+      console.error('Response:', error.response?.data);
+      console.error('Status:', error.response?.status);
+      
       if (error.response?.status === 401) {
         Alert.alert('Erro', 'Email ou senha incorretos');
       } else {
-        Alert.alert('Erro', 'Não foi possível fazer login. Tente novamente.');
+        Alert.alert('Erro', `Não foi possível fazer login. Erro: ${error.message}`);
       }
     } finally {
+      console.log('Finalizando login...');
       setLoading(false);
     }
   };
