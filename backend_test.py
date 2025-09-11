@@ -4365,9 +4365,9 @@ if __name__ == "__main__":
         else:
             success = tester.run_all_tests()
     else:
-        # Default to testing the professional nutrition system as requested in review
-        print("🥗 RUNNING PROFESSIONAL NUTRITION SYSTEM TESTS AS REQUESTED IN REVIEW")
+        # Default to testing the scheduling system as requested in review
+        print("📅 RUNNING SCHEDULING SYSTEM TESTS AS REQUESTED IN REVIEW")
         print("="*70)
-        success = tester.run_professional_nutrition_tests()
+        success = tester.run_scheduling_system_tests()
     
     exit(0 if success else 1)
