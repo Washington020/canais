@@ -2056,45 +2056,116 @@ async def get_professional_appointments(current_professional: dict = Depends(get
 
 # Enhanced supplement and workout creation with professional info
 @api_router.post("/professionals/supplements/create")
-async def create_supplement_plan_professional(
-    plan: SupplementPlan,
+async def create_nutrition_plan_professional(
+    request: dict,
     current_professional: dict = Depends(get_current_professional)
 ):
-    """Create supplement plan by nutritionist"""
+    """Create complete nutrition plan by nutritionist"""
     try:
         if current_professional["professional_type"] != "nutritionist":
-            raise HTTPException(status_code=403, detail="Apenas nutricionistas podem criar planos de suplementação")
+            raise HTTPException(status_code=403, detail="Apenas nutricionistas podem criar planos nutricionais")
         
         professional_id = str(current_professional["_id"])
         professional_name = current_professional["full_name"]
         
+        # Extract data from request
+        client_id = request.get("client_id")
+        client_name = request.get("client_name", "Cliente")
+        plan_title = request.get("plan_title", "Plano Nutricional")
+        plan_description = request.get("plan_description", "")
+        duration_days = request.get("duration_days", 30)
+        daily_calories = request.get("daily_calories", 1800)
+        water_intake_liters = request.get("water_intake_liters", 2.5)
+        dietary_restrictions = request.get("dietary_restrictions", "")
+        medical_observations = request.get("medical_observations", "")
+        meals = request.get("meals", [])
+        supplements = request.get("supplements", [])
+        instructions = request.get("instructions", "")
+        notes = request.get("notes", "")
+        
+        if not client_id:
+            raise HTTPException(status_code=400, detail="client_id é obrigatório")
+        
+        # Verify client exists and is assigned to this professional
+        client = await db.users.find_one({"_id": ObjectId(client_id)})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        if str(client.get("nutritionist_id")) != professional_id:
+            raise HTTPException(status_code=403, detail="Este cliente não está atribuído a você")
+        
+        # Create nutrition plan
         plan_data = {
-            "user_id": plan.user_id,
-            "supplements": plan.supplements,
+            "client_id": client_id,
+            "client_name": client_name,
+            "plan_title": plan_title,
+            "plan_description": plan_description,
+            "duration_days": duration_days,
+            "daily_calories": daily_calories,
+            "water_intake_liters": water_intake_liters,
+            "dietary_restrictions": dietary_restrictions,
+            "medical_observations": medical_observations,
+            "meals": meals,
+            "supplements": supplements,
+            "instructions": instructions,
+            "notes": notes,
             "created_by": professional_id,
             "created_by_name": professional_name,
             "created_by_cref": current_professional["cref_crn"],
+            "professional_type": "nutritionist",
             "created_at": datetime.now(timezone.utc),
-            "start_date": plan.start_date,
-            "end_date": plan.end_date,
-            "active": True
+            "start_date": datetime.now(timezone.utc),
+            "end_date": datetime.now(timezone.utc) + timedelta(days=duration_days),
+            "active": True,
+            "status": "active"
         }
         
-        result = await db.supplement_plans.insert_one(plan_data)
+        result = await db.nutrition_plans.insert_one(plan_data)
         
-        # Create daily supplement logs
-        await create_supplement_logs_for_plan(str(result.inserted_id), plan)
+        # Update client with latest plan info
+        await db.users.update_one(
+            {"_id": ObjectId(client_id)},
+            {
+                "$set": {
+                    "latest_nutrition_plan_id": str(result.inserted_id),
+                    "latest_nutrition_plan_date": datetime.now(timezone.utc),
+                    "has_nutrition_plan": True
+                }
+            }
+        )
+        
+        # Create history record
+        history_record = {
+            "client_id": client_id,
+            "client_name": client_name,
+            "professional_id": professional_id,
+            "professional_name": professional_name,
+            "professional_type": "nutritionist",
+            "action": "plan_created",
+            "plan_id": str(result.inserted_id),
+            "plan_title": plan_title,
+            "details": f"Plano nutricional '{plan_title}' criado com {len(meals)} refeições e {len(supplements)} suplementos",
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        await db.client_history.insert_one(history_record)
         
         return {
-            "id": str(result.inserted_id),
-            "message": f"Plano de suplementação criado por {professional_name}",
-            "created_by": professional_name
+            "success": True,
+            "plan_id": str(result.inserted_id),
+            "message": f"Plano nutricional '{plan_title}' criado com sucesso para {client_name}",
+            "details": {
+                "meals_count": len(meals),
+                "supplements_count": len(supplements),
+                "duration_days": duration_days,
+                "daily_calories": daily_calories
+            }
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro ao criar plano de suplementação: {e}")
+        logger.error(f"Erro ao criar plano nutricional: {e}")
         raise HTTPException(status_code=500, detail="Erro ao criar plano")
 
 @api_router.post("/professionals/workouts/create")
