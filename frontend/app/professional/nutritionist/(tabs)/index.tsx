@@ -154,12 +154,70 @@ export default function MyClients() {
     );
   };
 
-  const viewClientHistory = (clientId: string, clientName: string) => {
-    Alert.alert(
-      '📊 Histórico do Cliente',
-      `Histórico completo de ${clientName}:\n\n• Planos nutricionais anteriores\n• Progresso e evolução\n• Observações médicas\n• Transferências realizadas\n\n(Esta funcionalidade será implementada em breve)`,
-      [{ text: 'OK', style: 'default' }]
-    );
+  const viewClientHistory = async (clientId: string, clientName: string) => {
+    try {
+      const token = await AsyncStorage.getItem('professionalToken');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const response = await axios.get(`${API_URL}/professionals/client-history/${clientId}`, { headers });
+      const history = response.data;
+      
+      // Format history for display
+      let historyText = `📊 HISTÓRICO COMPLETO - ${clientName}\n\n`;
+      historyText += `📋 Total de registros: ${history.total_records}\n`;
+      historyText += `🏥 Plano nutricional ativo: ${history.has_nutrition_plan ? 'Sim' : 'Não'}\n\n`;
+      
+      if (history.history && history.history.length > 0) {
+        historyText += `📝 ÚLTIMAS ATIVIDADES:\n\n`;
+        
+        // Show last 5 activities
+        const recentHistory = history.history.slice(0, 5);
+        recentHistory.forEach((record: any, index: number) => {
+          const date = new Date(record.date).toLocaleDateString('pt-BR');
+          historyText += `${index + 1}. ${record.title}\n`;
+          historyText += `   📅 ${date}\n`;
+          historyText += `   👨‍⚕️ ${record.professional || 'Sistema'}\n`;
+          if (record.details) {
+            historyText += `   📋 ${record.details}\n`;
+          }
+          historyText += `\n`;
+        });
+        
+        if (history.total_records > 5) {
+          historyText += `... e mais ${history.total_records - 5} registros\n\n`;
+        }
+      } else {
+        historyText += `ℹ️ Nenhum histórico encontrado para este cliente.\n\n`;
+      }
+      
+      historyText += `💡 Este histórico completo permite que qualquer profissional continue o acompanhamento adequadamente.`;
+      
+      Alert.alert(
+        '📊 Histórico do Cliente',
+        historyText,
+        [
+          { 
+            text: 'Fechar', 
+            style: 'cancel' 
+          },
+          {
+            text: 'Ver Detalhes',
+            style: 'default',
+            onPress: () => {
+              // Future: Navigate to detailed history screen
+              Alert.alert('Em Breve', 'Tela detalhada de histórico será implementada em breve');
+            }
+          }
+        ]
+      );
+      
+    } catch (error: any) {
+      console.error('Error loading client history:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível carregar o histórico do cliente. Tente novamente.'
+      );
+    }
   };
 
   if (loading) {
