@@ -5,139 +5,189 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
+  RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from 'expo-status-r';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import Constants from 'expo-constants';
 
-interface TimeSlot {
-  time: string;
-  available: boolean;
-  client?: string;
-  type?: 'consultation' | 'followup';
-}
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
 
-interface DaySchedule {
+interface Appointment {
+  id: string;
+  client_name: string;
+  client_email: string;
+  client_plan: string;
   date: string;
-  day: string;
-  slots: TimeSlot[];
+  time: string;
+  duration: string;
+  status: string;
+  notes: string;
+  meeting_type: string;
+  created_at: string;
 }
 
 export default function NutritionistSchedule() {
-  const [schedule, setSchedule] = useState<DaySchedule[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDay, setSelectedDay] = useState<string>('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [professional, setProfessional] = useState<any>(null);
+  const [confirmingAppointment, setConfirmingAppointment] = useState<string | null>(null);
+  
   const router = useRouter();
 
   useEffect(() => {
-    loadSchedule();
+    loadProfessionalData();
+    loadAppointments();
   }, []);
 
-  const loadSchedule = async () => {
+  const loadProfessionalData = async () => {
     try {
-      // Simular dados de agenda para demonstração
-      const mockSchedule: DaySchedule[] = [
-        {
-          date: '2025-01-15',
-          day: 'Segunda-feira',
-          slots: [
-            { time: '08:00', available: false, client: 'Isabella Costa VIP', type: 'consultation' },
-            { time: '09:00', available: true },
-            { time: '10:00', available: true },
-            { time: '11:00', available: false, client: 'Ana Silva Premium', type: 'followup' },
-            { time: '14:00', available: true },
-            { time: '15:00', available: true },
-            { time: '16:00', available: true },
-            { time: '17:00', available: false, client: 'Carlos Santos VIP', type: 'consultation' },
-          ]
-        },
-        {
-          date: '2025-01-16',
-          day: 'Terça-feira',
-          slots: [
-            { time: '08:00', available: true },
-            { time: '09:00', available: true },
-            { time: '10:00', available: false, client: 'Isabella Costa VIP', type: 'followup' },
-            { time: '11:00', available: true },
-            { time: '14:00', available: true },
-            { time: '15:00', available: true },
-            { time: '16:00', available: true },
-            { time: '17:00', available: true },
-          ]
-        },
-        {
-          date: '2025-01-17',
-          day: 'Quarta-feira',
-          slots: [
-            { time: '08:00', available: true },
-            { time: '09:00', available: true },
-            { time: '10:00', available: true },
-            { time: '11:00', available: true },
-            { time: '14:00', available: false, client: 'Maria Oliveira Premium', type: 'consultation' },
-            { time: '15:00', available: true },
-            { time: '16:00', available: true },
-            { time: '17:00', available: true },
-          ]
-        },
-      ];
-
-      setSchedule(mockSchedule);
-      setSelectedDay(mockSchedule[0].date);
+      const professionalData = await AsyncStorage.getItem('professional');
+      if (professionalData) {
+        setProfessional(JSON.parse(professionalData));
+      }
     } catch (error) {
-      console.error('Error loading schedule:', error);
+      console.error('Error loading professional data:', error);
+    }
+  };
+
+  const loadAppointments = async () => {
+    try {
+      const token = await AsyncStorage.getItem('professionalToken');
+      if (!token) {
+        router.replace('/professional/nutritionist/login');
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/professionals/my-appointments`, { headers });
+      
+      setAppointments(response.data.appointments || []);
+    } catch (error: any) {
+      console.error('Error loading appointments:', error);
+      if (error.response?.status === 401) {
+        router.replace('/professional/nutritionist/login');
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const toggleSlotAvailability = (dayIndex: number, slotIndex: number) => {
-    const newSchedule = [...schedule];
-    const slot = newSchedule[dayIndex].slots[slotIndex];
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadAppointments();
+  };
+
+  const confirmAppointment = async (appointmentId: string) => {
+    setConfirmingAppointment(appointmentId);
+    try {
+      const token = await AsyncStorage.getItem('professionalToken');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      await axios.post(
+        `${API_URL}/professionals/appointments/${appointmentId}/confirm`,
+        {},
+        { headers }
+      );
+      
+      Alert.alert('✅ Sucesso', 'Agendamento confirmado com sucesso!');
+      loadAppointments(); // Reload to update status
+      
+    } catch (error: any) {
+      console.error('Error confirming appointment:', error);
+      Alert.alert('Erro', 'Não foi possível confirmar o agendamento');
+    } finally {
+      setConfirmingAppointment(null);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return '#22C55E';
+      case 'scheduled':
+        return '#F59E0B';
+      case 'cancelled':
+        return '#EF4444';
+      default:
+        return '#64748B';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return 'Confirmado';
+      case 'scheduled':
+        return 'Agendado';
+      case 'cancelled':
+        return 'Cancelado';
+      default:
+        return status;
+    }
+  };
+
+  const getPlanColor = (planType: string) => {
+    switch (planType) {
+      case 'vip':
+        return '#FFD700';
+      case 'premium':
+        return '#8B5CF6';
+      default:
+        return '#64748B';
+    }
+  };
+
+  const groupAppointmentsByDate = (appointments: Appointment[]) => {
+    const grouped: { [key: string]: Appointment[] } = {};
     
-    if (slot.client) {
-      Alert.alert('Aviso', 'Este horário já está ocupado por um cliente');
-      return;
-    }
-
-    slot.available = !slot.available;
-    setSchedule(newSchedule);
-
-    const status = slot.available ? 'disponível' : 'bloqueado';
-    Alert.alert('Sucesso', `Horário ${slot.time} marcado como ${status}`);
-  };
-
-  const getSlotColor = (slot: TimeSlot) => {
-    if (slot.client) return '#EF4444'; // Ocupado - vermelho
-    if (slot.available) return '#22C55E'; // Disponível - verde  
-    return '#64748B'; // Bloqueado - cinza
-  };
-
-  const getSlotText = (slot: TimeSlot) => {
-    if (slot.client) return slot.client;
-    return slot.available ? 'Disponível' : 'Bloqueado';
-  };
-
-  const getSlotIcon = (slot: TimeSlot) => {
-    if (slot.client) {
-      return slot.type === 'consultation' ? 'person-add' : 'refresh';
-    }
-    return slot.available ? 'checkmark-circle' : 'close-circle';
+    appointments.forEach(appointment => {
+      const date = appointment.date;
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(appointment);
+    });
+    
+    // Sort dates and sort appointments within each date by time
+    Object.keys(grouped).forEach(date => {
+      grouped[date].sort((a, b) => a.time.localeCompare(b.time));
+    });
+    
+    return grouped;
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar style="light" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#22C55E" />
-          <Text style={styles.loadingText}>Carregando agenda...</Text>
+          <Text style={styles.loadingText}>Carregando agendamentos...</Text>
         </View>
       </SafeAreaView>
     );
   }
+
+  const groupedAppointments = groupAppointmentsByDate(appointments);
+  const sortedDates = Object.keys(groupedAppointments).sort();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -145,125 +195,154 @@ export default function NutritionistSchedule() {
       
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Minha Agenda</Text>
-          <Text style={styles.headerSubtitle}>
-            Horários fixos: Seg-Sex 8h-18h • Consultas de 1h
+        <View>
+          <Text style={styles.title}>Minha Agenda</Text>
+          <Text style={styles.subtitle}>
+            {professional?.full_name} - {professional?.cref_crn}
           </Text>
         </View>
-        <View style={styles.headerIcon}>
-          <Ionicons name="calendar" size={24} color="#22C55E" />
-        </View>
+        <TouchableOpacity 
+          style={styles.refreshButton}
+          onPress={() => onRefresh()}
+        >
+          <Ionicons name="refresh" size={20} color="#22C55E" />
+          <Text style={styles.refreshText}>Atualizar</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Days Navigation */}
-      <ScrollView 
-        horizontal 
-        style={styles.daysNavigation}
-        showsHorizontalScrollIndicator={false}
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        {schedule.map((day, index) => (
-          <TouchableOpacity
-            key={day.date}
-            style={[
-              styles.dayButton,
-              selectedDay === day.date && styles.dayButtonActive
-            ]}
-            onPress={() => setSelectedDay(day.date)}
-          >
-            <Text style={[
-              styles.dayButtonText,
-              selectedDay === day.date && styles.dayButtonTextActive
-            ]}>
-              {day.day}
+        {/* Stats Summary */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Ionicons name="calendar" size={20} color="#22C55E" />
+            <Text style={styles.statNumber}>{appointments.length}</Text>
+            <Text style={styles.statLabel}>Agendamentos</Text>
+          </View>
+          
+          <View style={styles.statCard}>
+            <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+            <Text style={styles.statNumber}>
+              {appointments.filter(a => a.status === 'confirmed').length}
             </Text>
-            <Text style={[
-              styles.dayButtonDate,
-              selectedDay === day.date && styles.dayButtonDateActive
-            ]}>
-              {new Date(day.date).getDate()}
+            <Text style={styles.statLabel}>Confirmados</Text>
+          </View>
+          
+          <View style={styles.statCard}>
+            <Ionicons name="time" size={20} color="#F59E0B" />
+            <Text style={styles.statNumber}>
+              {appointments.filter(a => a.status === 'scheduled').length}
             </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            <Text style={styles.statLabel}>Pendentes</Text>
+          </View>
+        </View>
 
-      {/* Schedule Grid */}
-      <ScrollView style={styles.scheduleContainer} showsVerticalScrollIndicator={false}>
-        {schedule
-          .filter(day => day.date === selectedDay)
-          .map((day, dayIndex) => (
-            <View key={day.date} style={styles.daySchedule}>
-              <Text style={styles.dayTitle}>{day.day} - {new Date(day.date).toLocaleDateString('pt-BR')}</Text>
-              
-              <View style={styles.slotsGrid}>
-                {day.slots.map((slot, slotIndex) => (
-                  <TouchableOpacity
-                    key={slotIndex}
-                    style={[
-                      styles.timeSlot,
-                      { backgroundColor: getSlotColor(slot) + '20', borderColor: getSlotColor(slot) }
-                    ]}
-                    onPress={() => toggleSlotAvailability(dayIndex, slotIndex)}
-                    disabled={!!slot.client}
-                  >
-                    <View style={styles.slotHeader}>
-                      <Text style={styles.slotTime}>{slot.time}</Text>
-                      <Ionicons 
-                        name={getSlotIcon(slot)} 
-                        size={16} 
-                        color={getSlotColor(slot)} 
-                      />
+        {/* Appointments List */}
+        {appointments.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={64} color="#64748B" />
+            <Text style={styles.emptyTitle}>Nenhum Agendamento</Text>
+            <Text style={styles.emptyText}>
+              Você não tem consultas agendadas no momento. Os agendamentos aparecerão aqui quando os clientes marcarem consultas.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.appointmentsContainer}>
+            {sortedDates.map((date) => (
+              <View key={date} style={styles.dateSection}>
+                <Text style={styles.dateHeader}>
+                  {formatDate(date)}
+                </Text>
+                
+                {groupedAppointments[date].map((appointment) => (
+                  <View key={appointment.id} style={styles.appointmentCard}>
+                    <View style={styles.appointmentHeader}>
+                      <View style={styles.appointmentInfo}>
+                        <Text style={styles.clientName}>{appointment.client_name}</Text>
+                        <Text style={styles.clientEmail}>{appointment.client_email}</Text>
+                      </View>
+                      <View style={styles.badgeContainer}>
+                        <View style={[
+                          styles.planBadge,
+                          { backgroundColor: getPlanColor(appointment.client_plan) }
+                        ]}>
+                          <Text style={styles.planBadgeText}>
+                            {appointment.client_plan.toUpperCase()}
+                          </Text>
+                        </View>
+                        <View style={[
+                          styles.statusBadge,
+                          { backgroundColor: getStatusColor(appointment.status) }
+                        ]}>
+                          <Text style={styles.statusText}>{getStatusText(appointment.status)}</Text>
+                        </View>
+                      </View>
                     </View>
-                    
-                    <Text style={[styles.slotText, { color: getSlotColor(slot) }]}>
-                      {getSlotText(slot)}
-                    </Text>
-                    
-                    {slot.client && (
-                      <View style={styles.appointmentType}>
-                        <Text style={styles.appointmentTypeText}>
-                          {slot.type === 'consultation' ? '📋 Consulta' : '🔄 Retorno'}
+
+                    <View style={styles.appointmentDetails}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="time" size={16} color="#22C55E" />
+                        <Text style={styles.detailText}>
+                          {appointment.time} • {appointment.duration}
                         </Text>
                       </View>
+                      
+                      <View style={styles.detailRow}>
+                        <Ionicons name="location" size={16} color="#22C55E" />
+                        <Text style={styles.detailText}>
+                          {appointment.meeting_type === 'presencial' ? 'Presencial' : 'Online'}
+                        </Text>
+                      </View>
+
+                      {appointment.notes && (
+                        <View style={styles.detailRow}>
+                          <Ionicons name="document-text" size={16} color="#22C55E" />
+                          <Text style={styles.detailText}>{appointment.notes}</Text>
+                        </View>
+                      )}
+                      
+                      <View style={styles.detailRow}>
+                        <Ionicons name="calendar" size={16} color="#64748B" />
+                        <Text style={styles.detailTextSecondary}>
+                          Agendado em: {new Date(appointment.created_at).toLocaleDateString('pt-BR')}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {appointment.status === 'scheduled' && (
+                      <View style={styles.appointmentActions}>
+                        <TouchableOpacity
+                          style={[
+                            styles.confirmButton,
+                            confirmingAppointment === appointment.id && styles.confirmButtonLoading
+                          ]}
+                          onPress={() => confirmAppointment(appointment.id)}
+                          disabled={confirmingAppointment === appointment.id}
+                        >
+                          {confirmingAppointment === appointment.id ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <>
+                              <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+                              <Text style={styles.confirmButtonText}>Confirmar Consulta</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      </View>
                     )}
-                  </TouchableOpacity>
+                  </View>
                 ))}
               </View>
+            ))}
+          </View>
+        )}
 
-              {/* Summary */}
-              <View style={styles.summary}>
-                <View style={styles.summaryItem}>
-                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
-                  <Text style={styles.summaryText}>
-                    {day.slots.filter(s => s.available && !s.client).length} Disponíveis
-                  </Text>
-                </View>
-                
-                <View style={styles.summaryItem}>
-                  <Ionicons name="person" size={16} color="#EF4444" />
-                  <Text style={styles.summaryText}>
-                    {day.slots.filter(s => s.client).length} Agendados
-                  </Text>
-                </View>
-                
-                <View style={styles.summaryItem}>
-                  <Ionicons name="close-circle" size={16} color="#64748B" />
-                  <Text style={styles.summaryText}>
-                    {day.slots.filter(s => !s.available && !s.client).length} Bloqueados
-                  </Text>
-                </View>
-              </View>
-            </View>
-          ))}
+        <View style={{ height: 50 }} />
       </ScrollView>
-
-      {/* Info Card */}
-      <View style={styles.infoCard}>
-        <Ionicons name="information-circle" size={20} color="#22C55E" />
-        <Text style={styles.infoText}>
-          💡 Toque nos horários para marcar como disponível/bloqueado. Clientes VIP/Premium podem agendar consultas através do app.
-        </Text>
-      </View>
     </SafeAreaView>
   );
 }
@@ -279,158 +358,193 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#94A3B8',
+    color: '#FFFFFF',
     fontSize: 16,
     marginTop: 16,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
+  title: {
     color: '#FFFFFF',
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 4,
   },
-  headerSubtitle: {
+  subtitle: {
+    color: '#22C55E',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.5)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  refreshText: {
     color: '#22C55E',
     fontSize: 12,
     fontWeight: '600',
+    marginLeft: 4,
   },
-  headerIcon: {
-    width: 50,
-    height: 50,
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  daysNavigation: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-  },
-  dayButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginRight: 12,
-    alignItems: 'center',
-    minWidth: 80,
-  },
-  dayButtonActive: {
-    backgroundColor: '#22C55E',
-  },
-  dayButtonText: {
-    color: '#94A3B8',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  dayButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  dayButtonDate: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  dayButtonDateActive: {
-    color: '#FFFFFF',
-  },
-  scheduleContainer: {
+  scrollView: {
     flex: 1,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    gap: 16,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  statNumber: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginVertical: 4,
+  },
+  statLabel: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+  },
+  emptyText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 20,
+  },
+  appointmentsContainer: {
     paddingHorizontal: 24,
   },
-  daySchedule: {
-    marginBottom: 24,
+  dateSection: {
+    marginBottom: 32,
   },
-  dayTitle: {
+  dateHeader: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
+    textTransform: 'capitalize',
   },
-  slotsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  timeSlot: {
-    width: '47%',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  appointmentCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
-    minHeight: 100,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  slotHeader: {
+  appointmentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
-  slotTime: {
+  appointmentInfo: {
+    flex: 1,
+  },
+  clientName: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  slotText: {
-    fontSize: 12,
-    fontWeight: '600',
     marginBottom: 4,
   },
-  appointmentType: {
-    marginTop: 8,
+  clientEmail: {
+    color: '#64748B',
+    fontSize: 12,
   },
-  appointmentTypeText: {
+  badgeContainer: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  planBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  planBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusText: {
+    color: '#FFFFFF',
     fontSize: 10,
+    fontWeight: 'bold',
+  },
+  appointmentDetails: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailText: {
     color: '#94A3B8',
-    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 8,
   },
-  summary: {
+  detailTextSecondary: {
+    color: '#64748B',
+    fontSize: 12,
+    marginLeft: 8,
+  },
+  appointmentActions: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
+    justifyContent: 'flex-end',
   },
-  summaryItem: {
+  confirmButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    backgroundColor: '#22C55E',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-  summaryText: {
-    color: '#E2E8F0',
+  confirmButtonLoading: {
+    backgroundColor: '#64748B',
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '600',
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 24,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
-  },
-  infoText: {
-    color: '#E2E8F0',
-    fontSize: 12,
-    marginLeft: 12,
-    flex: 1,
-    lineHeight: 16,
+    fontWeight: 'bold',
+    marginLeft: 4,
   },
 });
