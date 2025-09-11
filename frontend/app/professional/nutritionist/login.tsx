@@ -65,7 +65,7 @@ export default function NutritionistLogin() {
       console.log('Navegando para interface...');
       
       // Navigate immediately to professional interface
-      router.replace('/professional/nutritionist/(tabs)');
+      router.replace('/professional/nutritionist/(tabs)/index');
       
       // Show success message (non-blocking)
       setTimeout(() => {
