@@ -35,6 +35,7 @@ export default function MyClients() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [professional, setProfessional] = useState<any>(null);
+  const [transferringClient, setTransferringClient] = useState<string | null>(null);
   
   const router = useRouter();
 
@@ -82,52 +83,82 @@ export default function MyClients() {
     loadClients();
   };
 
-  const requestTransfer = (clientId: string, clientName: string) => {
+  const transferClient = async (clientId: string, clientName: string) => {
     Alert.prompt(
-      'Solicitar Transferência',
-      `Por que deseja transferir ${clientName}?`,
+      '🔄 Transferir Cliente',
+      `Motivo da transferência de ${clientName}:\n\n(O cliente voltará para a fila de disponíveis e poderá ser assumido por outro nutricionista. Todo o histórico será preservado.)`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Enviar',
+          text: 'Transferir',
+          style: 'destructive',
           onPress: async (reason) => {
-            if (!reason) return;
+            if (!reason || reason.trim().length < 10) {
+              Alert.alert('Erro', 'Por favor, informe um motivo detalhado (mínimo 10 caracteres)');
+              return;
+            }
             
+            setTransferringClient(clientId);
             try {
               const token = await AsyncStorage.getItem('professionalToken');
               const headers = { Authorization: `Bearer ${token}` };
               
               await axios.post(
-                `${API_URL}/professionals/request-client-transfer?client_id=${clientId}&reason=${encodeURIComponent(reason)}`,
-                {},
+                `${API_URL}/professionals/request-client-transfer`,
+                {
+                  client_id: clientId,
+                  reason: reason.trim(),
+                  preserve_history: true
+                },
                 { headers }
               );
               
-              Alert.alert('Sucesso', 'Solicitação enviada para análise do administrador');
-            } catch (error) {
-              Alert.alert('Erro', 'Não foi possível enviar a solicitação');
+              Alert.alert(
+                '✅ Transferência Solicitada',
+                `${clientName} foi transferido com sucesso.\n\nMotivo: ${reason}\n\nO cliente está agora disponível para outros nutricionistas e todo o histórico foi preservado.`
+              );
+              
+              // Remove client from current list
+              setClients(prev => prev.filter(c => c.id !== clientId));
+              
+            } catch (error: any) {
+              console.error('Error transferring client:', error);
+              Alert.alert('Erro', 'Não foi possível transferir o cliente. Tente novamente.');
+            } finally {
+              setTransferringClient(null);
             }
           }
         }
       ],
-      'plain-text'
+      'plain-text',
+      '',
+      'default'
     );
   };
 
   const createPlan = (clientId: string, clientName: string) => {
     Alert.alert(
-      'Criar Plano',
-      `Criar plano de suplementação para ${clientName}?`,
+      '📋 Criar Plano Nutricional',
+      `Criar novo plano para ${clientName}?\n\nVocê será direcionado para a interface de criação de dieta personalizada.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Criar',
+          text: 'Criar Plano',
+          style: 'default',
           onPress: () => {
             // Navigate to create plan screen with client data
             router.push(`/professional/nutritionist/(tabs)/create-plan?clientId=${clientId}&clientName=${encodeURIComponent(clientName)}`);
           }
         }
       ]
+    );
+  };
+
+  const viewClientHistory = (clientId: string, clientName: string) => {
+    Alert.alert(
+      '📊 Histórico do Cliente',
+      `Histórico completo de ${clientName}:\n\n• Planos nutricionais anteriores\n• Progresso e evolução\n• Observações médicas\n• Transferências realizadas\n\n(Esta funcionalidade será implementada em breve)`,
+      [{ text: 'OK', style: 'default' }]
     );
   };
 
@@ -155,13 +186,11 @@ export default function MyClients() {
           </Text>
         </View>
         <TouchableOpacity 
-          style={styles.logoutButton}
-          onPress={async () => {
-            await AsyncStorage.multiRemove(['professionalToken', 'professional']);
-            router.replace('/professional/nutritionist/login');
-          }}
+          style={styles.newClientButton}
+          onPress={() => router.push('/professional/nutritionist/(tabs)/new-clients')}
         >
-          <Ionicons name="log-out" size={20} color="#EF4444" />
+          <Ionicons name="person-add" size={20} color="#22C55E" />
+          <Text style={styles.newClientText}>Assumir</Text>
         </TouchableOpacity>
       </View>
 
@@ -192,11 +221,18 @@ export default function MyClients() {
         {/* Clients List */}
         {clients.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={64} color="#64748B" />
+            <Ionicons name="person-add-outline" size={64} color="#64748B" />
             <Text style={styles.emptyTitle}>Nenhum Cliente Atribuído</Text>
             <Text style={styles.emptyText}>
               Vá para a aba "Novos" para assumir clientes que ainda não têm nutricionista
             </Text>
+            <TouchableOpacity 
+              style={styles.assumeClientsButton}
+              onPress={() => router.push('/professional/nutritionist/(tabs)/new-clients')}
+            >
+              <Ionicons name="person-add" size={18} color="#FFFFFF" />
+              <Text style={styles.assumeClientsText}>Assumir Clientes</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.clientsContainer}>
@@ -257,16 +293,34 @@ export default function MyClients() {
                     style={styles.createPlanButton}
                     onPress={() => createPlan(client.id, client.full_name)}
                   >
-                    <Ionicons name="add-circle" size={16} color="#22C55E" />
-                    <Text style={styles.createPlanText}>Criar Plano</Text>
+                    <Ionicons name="restaurant" size={16} color="#22C55E" />
+                    <Text style={styles.createPlanText}>Criar Dieta</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
-                    style={styles.transferButton}
-                    onPress={() => requestTransfer(client.id, client.full_name)}
+                    style={styles.historyButton}
+                    onPress={() => viewClientHistory(client.id, client.full_name)}
                   >
-                    <Ionicons name="swap-horizontal" size={16} color="#F59E0B" />
-                    <Text style={styles.transferText}>Transferir</Text>
+                    <Ionicons name="document-text" size={16} color="#3B82F6" />
+                    <Text style={styles.historyText}>Histórico</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[
+                      styles.transferButton,
+                      transferringClient === client.id && styles.transferButtonLoading
+                    ]}
+                    onPress={() => transferClient(client.id, client.full_name)}
+                    disabled={transferringClient === client.id}
+                  >
+                    {transferringClient === client.id ? (
+                      <ActivityIndicator size="small" color="#F59E0B" />
+                    ) : (
+                      <>
+                        <Ionicons name="swap-horizontal" size={16} color="#F59E0B" />
+                        <Text style={styles.transferText}>Transferir</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -312,8 +366,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
   },
-  logoutButton: {
-    padding: 8,
+  newClientButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.5)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  newClientText: {
+    color: '#22C55E',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   scrollView: {
     flex: 1,
@@ -360,6 +427,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     lineHeight: 20,
+  },
+  assumeClientsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#22C55E',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    marginTop: 20,
+  },
+  assumeClientsText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   clientsContainer: {
     paddingHorizontal: 24,
@@ -438,6 +520,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 4,
   },
+  historyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.5)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  historyText: {
+    color: '#3B82F6',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
   transferButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -448,6 +547,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
+  },
+  transferButtonLoading: {
+    backgroundColor: 'rgba(100, 116, 139, 0.2)',
+    borderColor: 'rgba(100, 116, 139, 0.5)',
   },
   transferText: {
     color: '#F59E0B',
