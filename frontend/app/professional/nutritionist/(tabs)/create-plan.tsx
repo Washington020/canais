@@ -120,6 +120,40 @@ export default function CreateNutritionPlan() {
   ]);
 
   const [loading, setLoading] = useState(false);
+  
+  // Carregar clientes atribuídos ao nutricionista
+  useEffect(() => {
+    loadMyClients();
+    
+    // Se chegou via parâmetro, pré-selecionar cliente
+    if (params.clientId && params.clientName) {
+      setSelectedClient({
+        id: params.clientId,
+        name: decodeURIComponent(params.clientName as string)
+      });
+      setPlanTitle(`Plano Nutricional para ${decodeURIComponent(params.clientName as string)}`);
+    }
+  }, [params]);
+
+  const loadMyClients = async () => {
+    try {
+      const token = await AsyncStorage.getItem('professionalToken');
+      if (!token) {
+        router.replace('/professional/nutritionist/login');
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/professionals/my-assigned-clients`, { headers });
+      
+      setAvailableClients(response.data.assigned_clients || []);
+    } catch (error: any) {
+      console.error('Error loading clients:', error);
+      Alert.alert('Erro', 'Não foi possível carregar seus clientes');
+    } finally {
+      setLoadingClients(false);
+    }
+  };
 
   const handleCreatePlan = useCallback(async () => {
     if (!selectedClient?.name?.trim() || !planTitle.trim()) {
