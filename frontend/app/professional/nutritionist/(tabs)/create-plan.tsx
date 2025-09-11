@@ -36,6 +36,7 @@ interface Supplement {
   instructions?: string;
 }
 
+
 export default function CreateNutritionPlan() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -46,14 +47,13 @@ export default function CreateNutritionPlan() {
   const [loadingClients, setLoadingClients] = useState(true);
   
   // Estados do plano
-  const [planTitle, setPlanTitle] = useState(');
-  const [planDescription, setPlanDescription] = useState(');
+  const [planTitle, setPlanTitle] = useState('');
+  const [planDescription, setPlanDescription] = useState('');
   const [duration, setDuration] = useState('30');
   const [dailyCalories, setDailyCalories] = useState('1800');
   const [waterIntake, setWaterIntake] = useState('2.5');
-  const [medicalObservations, setMedicalObservations] = useState(');
-  const [dietaryRestrictions, setDietaryRestrictions] = useState(');
-  
+  const [medicalObservations, setMedicalObservations] = useState('');
+  const [dietaryRestrictions, setDietaryRestrictions] = useState('');
   const [meals, setMeals] = useState<Meal[]>([
     {
       name: 'Café da Manhã',
