@@ -102,9 +102,21 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Test the FitPass Brasil backend API with comprehensive coverage of authentication, user management, token generation/validation, gym management, workout tracking, nutrition plans, and admin functionality."
+user_problem_statement: "Test the FitPass Brasil backend API with comprehensive coverage of authentication, user management, token generation/validation, gym management, workout tracking, nutrition plans, and admin functionality. Focus on professional management system - fix client assignment and visibility issues."
 
 backend:
+  - task: "Professional Client Assignment System Fix"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main" 
+          comment: "Fixed inconsistency between flag-client endpoint (saving to client_assignments) and my-assigned-clients endpoint (reading from users). Updated both endpoints to use client_assignments collection consistently. Added client validation and improved data structure. Ready for testing."
+
   - task: "User Registration API"
     implemented: true
     working: true
