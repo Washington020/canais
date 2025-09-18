@@ -114,8 +114,8 @@ export default function Financial() {
         router.replace('/client/login');
       }
       // Set fallback values to prevent crashes
-      setPlans([]);
-      setTransactions([]);
+      setPlans(ensureArray([]));
+      setTransactions(ensureArray([]));
     } finally {
       setLoading(false);
       setRefreshing(false);
