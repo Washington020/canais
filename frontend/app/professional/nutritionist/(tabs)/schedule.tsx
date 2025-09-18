@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Modal,
   RefreshControl,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -72,6 +71,8 @@ export default function NutritionistSchedule() {
       if (error.response?.status === 401) {
         router.replace('/professional/nutritionist/login');
       }
+      // Set empty array on error to prevent crashes
+      setAppointments([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -89,6 +90,14 @@ export default function NutritionistSchedule() {
       setStats(response.data);
     } catch (error: any) {
       console.error('Error loading stats:', error);
+      // Set default stats on error
+      setStats({
+        total_appointments_month: 0,
+        completed_appointments: 0,
+        scheduled_appointments: 0,
+        total_clients_served: 0,
+        monthly_hours: 0
+      });
     }
   };
 
@@ -209,6 +218,11 @@ export default function NutritionistSchedule() {
     return dates;
   };
 
+  const getTodaysAppointments = () => {
+    const today = new Date().toISOString().split('T')[0];
+    return (appointments || []).filter(apt => apt.appointment_date === today);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -245,15 +259,15 @@ export default function NutritionistSchedule() {
         {stats && (
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.total_appointments_month}</Text>
+              <Text style={styles.statNumber}>{stats.total_appointments_month || 0}</Text>
               <Text style={styles.statLabel}>Consultas/Mês</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.total_clients_served}</Text>
+              <Text style={styles.statNumber}>{stats.total_clients_served || 0}</Text>
               <Text style={styles.statLabel}>Clientes</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.monthly_hours.toFixed(0)}h</Text>
+              <Text style={styles.statNumber}>{(stats.monthly_hours || 0).toFixed(0)}h</Text>
               <Text style={styles.statLabel}>Horas/Mês</Text>
             </View>
           </View>
@@ -322,50 +336,48 @@ export default function NutritionistSchedule() {
         {/* Today's Appointments */}
         <View style={styles.todaySection}>
           <Text style={styles.sectionTitle}>Consultas de Hoje</Text>
-          {(appointments || []).filter(apt => apt.appointment_date === new Date().toISOString().split('T')[0]).length === 0 ? (
+          {getTodaysAppointments().length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="calendar-outline" size={48} color="#64748B" />
               <Text style={styles.emptyText}>Nenhuma consulta agendada para hoje</Text>
             </View>
           ) : (
-            (appointments || [])
-              .filter(apt => apt.appointment_date === new Date().toISOString().split('T')[0])
-              .map((appointment) => (
-                <View key={appointment.id} style={styles.appointmentCard}>
-                  <View style={styles.appointmentHeader}>
-                    <View style={styles.timeContainer}>
-                      <Ionicons name="time" size={16} color="#22C55E" />
-                      <Text style={styles.appointmentTime}>{appointment.appointment_time}</Text>
-                    </View>
-                    <View style={[
-                      styles.statusBadge,
-                      { backgroundColor: appointment.status === 'completed' ? '#22C55E' : '#3B82F6' }
-                    ]}>
-                      <Text style={styles.statusText}>
-                        {appointment.status === 'completed' ? 'Concluída' : 'Agendada'}
-                      </Text>
-                    </View>
+            getTodaysAppointments().map((appointment) => (
+              <View key={appointment.id} style={styles.appointmentCard}>
+                <View style={styles.appointmentHeader}>
+                  <View style={styles.timeContainer}>
+                    <Ionicons name="time" size={16} color="#22C55E" />
+                    <Text style={styles.appointmentTime}>{appointment.appointment_time}</Text>
                   </View>
-                  
-                  <Text style={styles.clientName}>{appointment.client_name}</Text>
-                  <Text style={styles.clientContact}>{appointment.client_email}</Text>
-                  <Text style={styles.clientContact}>{appointment.client_phone}</Text>
-                  
-                  {appointment.notes && (
-                    <Text style={styles.appointmentNotes}>{appointment.notes}</Text>
-                  )}
-                  
-                  {appointment.status !== 'completed' && (
-                    <TouchableOpacity 
-                      style={styles.completeButton}
-                      onPress={() => markAppointmentComplete(appointment.id)}
-                    >
-                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
-                      <Text style={styles.completeButtonText}>Marcar como Concluída</Text>
-                    </TouchableOpacity>
-                  )}
+                  <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: appointment.status === 'completed' ? '#22C55E' : '#3B82F6' }
+                  ]}>
+                    <Text style={styles.statusText}>
+                      {appointment.status === 'completed' ? 'Concluída' : 'Agendada'}
+                    </Text>
+                  </View>
                 </View>
-              ))
+                
+                <Text style={styles.clientName}>{appointment.client_name}</Text>
+                <Text style={styles.clientContact}>{appointment.client_email}</Text>
+                <Text style={styles.clientContact}>{appointment.client_phone}</Text>
+                
+                {appointment.notes && (
+                  <Text style={styles.appointmentNotes}>{appointment.notes}</Text>
+                )}
+                
+                {appointment.status !== 'completed' && (
+                  <TouchableOpacity 
+                    style={styles.completeButton}
+                    onPress={() => markAppointmentComplete(appointment.id)}
+                  >
+                    <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+                    <Text style={styles.completeButtonText}>Marcar como Concluída</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))
           )}
         </View>
       </ScrollView>
