@@ -493,7 +493,7 @@ async def login(user_credentials: UserLogin):
         result = await db.users.insert_one(client_user)
         user_doc = await db.users.find_one({"_id": result.inserted_id})
     
-    if not user_doc or not verify_password(user_credentials.password, user_doc["hashed_password"]):
+    if not user_doc or not verify_password(user_credentials.password, user_doc.get("hashed_password", user_doc.get("password_hash", ""))):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
