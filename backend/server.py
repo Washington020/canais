@@ -3474,6 +3474,11 @@ async def get_available_appointment_slots(
             "available": True
         }).to_list(100)
         
+        # Convert ObjectId to string for JSON serialization
+        for slot in available_slots:
+            slot["id"] = str(slot["_id"])
+            del slot["_id"]
+        
         return {"available_slots": available_slots}
         
     except Exception as e:
