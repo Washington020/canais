@@ -1658,7 +1658,8 @@ async def get_unassigned_clients(credentials: HTTPAuthorizationCredentials = Dep
         
         # Get already assigned clients for this professional type
         assigned_clients = await db.client_assignments.find({
-            "professional_type": professional_type
+            "professional_type": professional_type,
+            "status": "active"
         }).to_list(1000)
         assigned_client_ids = [assignment["client_id"] for assignment in assigned_clients]
         
@@ -1667,22 +1668,21 @@ async def get_unassigned_clients(credentials: HTTPAuthorizationCredentials = Dep
         for user in premium_vip_users:
             user_id = str(user["_id"])
             if user_id not in assigned_client_ids:
-                # Set fitness goals based on professional type
-                if professional_type == "nutritionist":
-                    fitness_goals = ["Emagrecimento", "Ganho de massa muscular", "Nutrição esportiva"]
-                else:  # personal trainer
-                    fitness_goals = ["Hipertrofia", "Condicionamento físico", "Força"]
-                
                 unassigned_clients.append({
                     "id": user_id,
-                    "full_name": user["full_name"],
-                    "email": user["email"],
-                    "plan_type": user["plan_type"],
-                    "status": user.get("status", "active"),
-                    "registration_date": user.get("created_at", datetime.now(timezone.utc)).isoformat(),
-                    "fitness_goals": fitness_goals,
-                    "experience_level": "intermediario"
+                    "full_name": user.get("full_name", "Usuário"),
+                    "email": user.get("email", ""),
+                    "plan_type": user.get("plan_type", "basic"),
+                    "created_at": user.get("created_at", datetime.now(timezone.utc)).isoformat(),
+                    "tokens_available": user.get("tokens_available", 0),
+                    "subscription_end": user.get("subscription_end").isoformat() if user.get("subscription_end") else None
                 })
+        
+        return {"clients": unassigned_clients}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar clientes não atribuídos: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar clientes disponíveis")
         
         return {"clients": unassigned_clients}
         
