@@ -4361,6 +4361,8 @@ if __name__ == "__main__":
             success = tester.run_luxepass_new_endpoints_test()
         elif test_type == "professional" or test_type == "prof":
             success = tester.run_professional_management_tests()
+        elif test_type == "appointments" or test_type == "appointment":
+            success = tester.run_appointment_scheduling_tests()
         else:
             success = tester.run_all_tests()
     else:
