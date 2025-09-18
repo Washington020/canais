@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Calendar } from 'react-native-calendars';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
@@ -45,10 +44,9 @@ export default function PersonalTrainerSchedule() {
   const [stats, setStats] = useState<AppointmentStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [showDayModal, setShowDayModal] = useState(false);
   const [availabilityModal, setAvailabilityModal] = useState(false);
-  const [selectedDayAppointments, setSelectedDayAppointments] = useState<Appointment[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const router = useRouter();
 
   useEffect(() => {
@@ -106,12 +104,12 @@ export default function PersonalTrainerSchedule() {
       
       await axios.put(`${API_URL}/appointments/${appointmentId}/complete`, {}, { headers });
       
-      Alert.alert('Sucesso', 'Consulta marcada como concluída');
+      Alert.alert('Sucesso', 'Treino marcado como concluído');
       loadAppointments();
       loadStats();
     } catch (error: any) {
       console.error('Error completing appointment:', error);
-      Alert.alert('Erro', 'Não foi possível marcar como concluída');
+      Alert.alert('Erro', 'Não foi possível marcar como concluído');
     }
   };
 
@@ -135,7 +133,7 @@ export default function PersonalTrainerSchedule() {
       
       await axios.post(`${API_URL}/professionals/availability`, availabilityData, { headers });
       
-      Alert.alert('Sucesso', `Horários disponibilizados para ${date}`);
+      Alert.alert('Sucesso', `Horários disponibilizados para ${new Date(date).toLocaleDateString('pt-BR')}`);
       setAvailabilityModal(false);
     } catch (error: any) {
       console.error('Error setting availability:', error);
@@ -143,27 +141,71 @@ export default function PersonalTrainerSchedule() {
     }
   };
 
-  const onDayPress = (day: any) => {
-    const dayAppointments = appointments.filter(apt => apt.appointment_date === day.dateString);
-    setSelectedDate(day.dateString);
-    setSelectedDayAppointments(dayAppointments);
-    setShowDayModal(true);
+  const generateCalendarDates = () => {
+    const dates = [];
+    const today = new Date();
+    const currentMonth = new Date(selectedYear, selectedMonth, 1);
+    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(selectedYear, selectedMonth, day);
+      const dateString = date.toISOString().split('T')[0];
+      const appointmentsOnDate = appointments.filter(apt => apt.appointment_date === dateString);
+      
+      dates.push({
+        day,
+        date: dateString,
+        appointments: appointmentsOnDate,
+        isPast: date < today,
+        isToday: dateString === today.toISOString().split('T')[0]
+      });
+    }
+    
+    return dates;
   };
 
-  const getMarkedDates = () => {
-    const marked: any = {};
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const nextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
+
+  const prevMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+  };
+
+  const generateAvailableDates = () => {
+    const dates = [];
+    const today = new Date();
     
-    appointments.forEach(apt => {
-      if (!marked[apt.appointment_date]) {
-        marked[apt.appointment_date] = {
-          marked: true,
-          dotColor: apt.status === 'completed' ? '#22C55E' : '#F59E0B',
-          activeOpacity: 0.7
-        };
-      }
-    });
+    for (let i = 1; i <= 30; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      
+      // Skip weekends
+      if (date.getDay() === 0 || date.getDay() === 6) continue;
+      
+      const dateString = date.toISOString().split('T')[0];
+      dates.push({
+        date: dateString,
+        label: date.toLocaleDateString('pt-BR')
+      });
+    }
     
-    return marked;
+    return dates;
   };
 
   if (loading) {
@@ -216,34 +258,64 @@ export default function PersonalTrainerSchedule() {
           </View>
         )}
 
-        {/* Calendar */}
+        {/* Calendar Header */}
         <View style={styles.calendarContainer}>
-          <Calendar
-            onDayPress={onDayPress}
-            markedDates={getMarkedDates()}
-            theme={{
-              backgroundColor: 'transparent',
-              calendarBackground: 'rgba(255, 255, 255, 0.1)',
-              textSectionTitleColor: '#FFFFFF',
-              selectedDayBackgroundColor: '#F59E0B',
-              selectedDayTextColor: '#FFFFFF',
-              todayTextColor: '#F59E0B',
-              dayTextColor: '#FFFFFF',
-              textDisabledColor: 'rgba(255, 255, 255, 0.3)',
-              dotColor: '#F59E0B',
-              selectedDotColor: '#FFFFFF',
-              arrowColor: '#F59E0B',
-              monthTextColor: '#FFFFFF',
-              indicatorColor: '#F59E0B',
-              textDayFontWeight: '300',
-              textMonthFontWeight: 'bold',
-              textDayHeaderFontWeight: '500',
-              textDayFontSize: 16,
-              textMonthFontSize: 18,
-              textDayHeaderFontSize: 13
-            }}
-            style={styles.calendar}
-          />
+          <View style={styles.calendarHeader}>
+            <TouchableOpacity onPress={prevMonth} style={styles.monthButton}>
+              <Ionicons name="chevron-back" size={24} color="#F59E0B" />
+            </TouchableOpacity>
+            
+            <Text style={styles.monthTitle}>
+              {monthNames[selectedMonth]} {selectedYear}
+            </Text>
+            
+            <TouchableOpacity onPress={nextMonth} style={styles.monthButton}>
+              <Ionicons name="chevron-forward" size={24} color="#F59E0B" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Calendar Grid */}
+          <View style={styles.calendar}>
+            <View style={styles.weekHeader}>
+              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                <Text key={day} style={styles.weekDay}>{day}</Text>
+              ))}
+            </View>
+            
+            <View style={styles.calendarGrid}>
+              {generateCalendarDates().map((dateInfo, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.dateCell,
+                    dateInfo.isToday && styles.todayCell,
+                    dateInfo.appointments.length > 0 && styles.appointmentCell
+                  ]}
+                  onPress={() => {
+                    if (dateInfo.appointments.length > 0) {
+                      Alert.alert(
+                        `Treinos - ${dateInfo.date}`,
+                        dateInfo.appointments.map(apt => 
+                          `${apt.appointment_time}h - ${apt.client_name}`
+                        ).join('\n')
+                      );
+                    }
+                  }}
+                >
+                  <Text style={[
+                    styles.dateText,
+                    dateInfo.isToday && styles.todayText,
+                    dateInfo.isPast && styles.pastText
+                  ]}>
+                    {dateInfo.day}
+                  </Text>
+                  {dateInfo.appointments.length > 0 && (
+                    <View style={styles.appointmentDot} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         </View>
 
         {/* Today's Appointments */}
@@ -297,72 +369,6 @@ export default function PersonalTrainerSchedule() {
         </View>
       </ScrollView>
 
-      {/* Day Modal */}
-      <Modal
-        visible={showDayModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowDayModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Treinos - {new Date(selectedDate).toLocaleDateString('pt-BR')}
-              </Text>
-              <TouchableOpacity onPress={() => setShowDayModal(false)}>
-                <Ionicons name="close" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.modalScroll}>
-              {selectedDayAppointments.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="fitness-outline" size={48} color="#64748B" />
-                  <Text style={styles.emptyText}>Nenhum treino neste dia</Text>
-                </View>
-              ) : (
-                selectedDayAppointments.map((appointment) => (
-                  <View key={appointment.id} style={styles.appointmentCard}>
-                    <View style={styles.appointmentHeader}>
-                      <View style={styles.timeContainer}>
-                        <Ionicons name="time" size={16} color="#F59E0B" />
-                        <Text style={styles.appointmentTime}>{appointment.appointment_time}</Text>
-                      </View>
-                      <View style={[
-                        styles.statusBadge,
-                        { backgroundColor: appointment.status === 'completed' ? '#22C55E' : '#F59E0B' }
-                      ]}>
-                        <Text style={styles.statusText}>
-                          {appointment.status === 'completed' ? 'Concluído' : 'Agendado'}
-                        </Text>
-                      </View>
-                    </View>
-                    
-                    <Text style={styles.clientName}>{appointment.client_name}</Text>
-                    <Text style={styles.clientContact}>{appointment.client_email}</Text>
-                    <Text style={styles.clientContact}>{appointment.client_phone}</Text>
-                    
-                    {appointment.status !== 'completed' && (
-                      <TouchableOpacity 
-                        style={styles.completeButton}
-                        onPress={() => {
-                          markAppointmentComplete(appointment.id);
-                          setShowDayModal(false);
-                        }}
-                      >
-                        <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
-                        <Text style={styles.completeButtonText}>Marcar como Concluído</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
       {/* Availability Modal */}
       <Modal
         visible={availabilityModal}
@@ -384,38 +390,26 @@ export default function PersonalTrainerSchedule() {
                 Selecione as datas que deseja disponibilizar horários (Segunda a Sexta, 8h às 19h):
               </Text>
               
-              <Calendar
-                onDayPress={(day) => {
-                  Alert.alert(
-                    'Disponibilizar Horários',
-                    `Deseja disponibilizar horários para ${new Date(day.dateString).toLocaleDateString('pt-BR')}?\n\nHorários: 8h às 19h (exceto 12h-13h - almoço)`,
-                    [
-                      { text: 'Cancelar', style: 'cancel' },
-                      { text: 'Confirmar', onPress: () => setAvailability(day.dateString) }
-                    ]
-                  );
-                }}
-                theme={{
-                  backgroundColor: 'transparent',
-                  calendarBackground: 'rgba(255, 255, 255, 0.1)',
-                  textSectionTitleColor: '#FFFFFF',
-                  selectedDayBackgroundColor: '#F59E0B',
-                  selectedDayTextColor: '#FFFFFF',
-                  todayTextColor: '#F59E0B',
-                  dayTextColor: '#FFFFFF',
-                  textDisabledColor: 'rgba(255, 255, 255, 0.3)',
-                  arrowColor: '#F59E0B',
-                  monthTextColor: '#FFFFFF',
-                  textDayFontWeight: '300',
-                  textMonthFontWeight: 'bold',
-                  textDayHeaderFontWeight: '500',
-                  textDayFontSize: 14,
-                  textMonthFontSize: 16,
-                  textDayHeaderFontSize: 12
-                }}
-                minDate={new Date().toISOString().split('T')[0]}
-                maxDate={new Date(2028, 11, 31).toISOString().split('T')[0]}
-              />
+              {generateAvailableDates().map((dateInfo, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.dateOption}
+                  onPress={() => {
+                    Alert.alert(
+                      'Disponibilizar Horários',
+                      `Deseja disponibilizar horários para ${dateInfo.label}?\n\nHorários: 8h às 19h (exceto 12h-13h - almoço)`,
+                      [
+                        { text: 'Cancelar', style: 'cancel' },
+                        { text: 'Confirmar', onPress: () => setAvailability(dateInfo.date) }
+                      ]
+                    );
+                  }}
+                >
+                  <Ionicons name="calendar" size={20} color="#F59E0B" />
+                  <Text style={styles.dateOptionText}>{dateInfo.label}</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         </View>
@@ -494,9 +488,73 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 20,
   },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  monthButton: {
+    padding: 8,
+  },
+  monthTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   calendar: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
-    padding: 10,
+    padding: 16,
+  },
+  weekHeader: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  weekDay: {
+    flex: 1,
+    textAlign: 'center',
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dateCell: {
+    width: '14.28%',
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  todayCell: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderRadius: 8,
+  },
+  appointmentCell: {
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderRadius: 8,
+  },
+  dateText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  todayText: {
+    color: '#F59E0B',
+    fontWeight: 'bold',
+  },
+  pastText: {
+    color: '#64748B',
+  },
+  appointmentDot: {
+    position: 'absolute',
+    bottom: 4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#3B82F6',
   },
   todaySection: {
     paddingHorizontal: 24,
@@ -617,5 +675,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 20,
     lineHeight: 20,
+  },
+  dateOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  dateOptionText: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginLeft: 12,
   },
 });
