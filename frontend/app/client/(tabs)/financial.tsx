@@ -66,6 +66,17 @@ export default function Financial() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
+  // Helper function to ensure we always have a valid array
+  const ensureArray = (data: any): any[] => {
+    return Array.isArray(data) ? data : [];
+  };
+
+  // Helper function to safely find a plan
+  const findPlan = (planId: string | undefined) => {
+    if (!planId) return null;
+    return ensureArray(plans).find(p => p.id === planId);
+  };
+
   // Check for payment return (from Stripe)
   useEffect(() => {
     if (params.session_id) {
