@@ -3481,6 +3481,8 @@ async def get_available_appointment_slots(
         
         return {"available_slots": available_slots}
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Erro ao buscar horários disponíveis: {e}")
         raise HTTPException(status_code=500, detail="Erro ao buscar horários disponíveis")
