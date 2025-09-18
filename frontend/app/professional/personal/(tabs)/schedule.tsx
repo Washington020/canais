@@ -327,7 +327,7 @@ export default function PersonalTrainerSchedule() {
               <Text style={styles.emptyText}>Nenhum treino agendado para hoje</Text>
             </View>
           ) : (
-            appointments
+            (appointments || [])
               .filter(apt => apt.appointment_date === new Date().toISOString().split('T')[0])
               .map((appointment) => (
                 <View key={appointment.id} style={styles.appointmentCard}>
