@@ -100,6 +100,9 @@ export default function Financial() {
       if (error.response?.status === 401) {
         router.replace('/client/login');
       }
+      // Set fallback values to prevent crashes
+      setPlans([]);
+      setTransactions([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
