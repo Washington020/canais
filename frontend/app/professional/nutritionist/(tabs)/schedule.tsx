@@ -322,7 +322,7 @@ export default function NutritionistSchedule() {
         {/* Today's Appointments */}
         <View style={styles.todaySection}>
           <Text style={styles.sectionTitle}>Consultas de Hoje</Text>
-          {appointments.filter(apt => apt.appointment_date === new Date().toISOString().split('T')[0]).length === 0 ? (
+          {(appointments || []).filter(apt => apt.appointment_date === new Date().toISOString().split('T')[0]).length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="calendar-outline" size={48} color="#64748B" />
               <Text style={styles.emptyText}>Nenhuma consulta agendada para hoje</Text>
