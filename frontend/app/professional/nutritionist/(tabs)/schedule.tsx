@@ -328,7 +328,7 @@ export default function NutritionistSchedule() {
               <Text style={styles.emptyText}>Nenhuma consulta agendada para hoje</Text>
             </View>
           ) : (
-            appointments
+            (appointments || [])
               .filter(apt => apt.appointment_date === new Date().toISOString().split('T')[0])
               .map((appointment) => (
                 <View key={appointment.id} style={styles.appointmentCard}>
