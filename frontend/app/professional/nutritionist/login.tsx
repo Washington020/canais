@@ -146,9 +146,9 @@ export default function NutritionistLogin() {
           {/* Test Credentials */}
           <View style={styles.testCredentials}>
             <Text style={styles.testTitle}>🧪 Credenciais de Exemplo:</Text>
-            <Text style={styles.testText}>Email: marina@luxepass.com</Text>
-            <Text style={styles.testText}>Senha: marina123</Text>
-            <Text style={styles.testSubtext}>Dra. Marina Santos - CRN-55555/SP</Text>
+            <Text style={styles.testText}>Email: nutri@luxepass.com</Text>
+            <Text style={styles.testText}>Senha: nutri123</Text>
+            <Text style={styles.testSubtext}>Dra. Ana Nutricionista - CRN-12345/SP</Text>
           </View>
 
           {/* Info */}
