@@ -484,98 +484,15 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Professional Client Assignment System Fix"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
-  - task: "Advanced Token Generation API"
-    implemented: true
-    working: true
-    file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-        - working: true
-          agent: "testing"
-          comment: "✅ Advanced token generation endpoint working perfectly. Successfully generates tokens with all security features: unique token_id, token_code, hash_unique, JWT signatures, encryption, nonce protection, usage limits (daily=3, monthly=60), security scores (100), metadata with features ['jwt', 'encryption', 'nonce', 'audit'], and QR code generation. All advanced security components operational."
-
-  - task: "Advanced Token Validation API"
-    implemented: true
-    working: true
-    file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-        - working: true
-          agent: "testing"
-          comment: "✅ Advanced token validation endpoint working perfectly. Successfully validates tokens with comprehensive security checks: JWT verification, encryption validation, nonce verification, usage limit enforcement, audit logging, and proper token marking as used. All advanced security validation components operational."
-
-  - task: "Payment Methods Listing API"
-    implemented: true
-    working: true
-    file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-        - working: true
-          agent: "testing"
-          comment: "✅ GET /api/payments/methods endpoint working correctly. Returns all available payment methods (stripe, pix, boleto) with proper structure including name, description, currency, and availability status. Stripe: 'Cartão de Crédito Internacional', PIX: 'PIX', Boleto: 'Boleto Bancário'."
-
-  - task: "Pagar.me Checkout Session Creation API"
-    implemented: true
-    working: true
-    file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-        - working: true
-          agent: "testing"
-          comment: "✅ POST /api/payments/pagarme/checkout/session endpoint working correctly. Accepts proper request format with plan_id, origin_url, and payment_method. Handles authentication properly with cliente@luxepass.com/cliente123. Returns appropriate error handling for API issues. Endpoint structure is correct for production use. Expected API errors in test environment due to test credentials."
-
-  - task: "Pagar.me Order Status Verification API"
-    implemented: true
-    working: true
-    file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-        - working: true
-          agent: "testing"
-          comment: "✅ GET /api/payments/pagarme/order/{order_id} endpoint working correctly. Accepts proper URL format and handles authentication properly. Returns appropriate error handling for API issues and non-existent orders. Endpoint structure is correct for production use. Expected API errors in test environment due to test credentials."
-
-  - task: "Pagar.me Service Integration"
-    implemented: true
-    working: true
-    file: "/app/backend/pagarme_service.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-        - working: true
-          agent: "testing"
-          comment: "✅ Pagar.me service integration working correctly. Service class properly handles API calls, order creation, and status checking. Error handling is appropriate for production use. Integration with backend endpoints is functional. Multiple payment methods (PIX, Boleto) are supported correctly."
-          agent: "testing"
-          comment: "✅ Advanced token validation endpoint working perfectly. Successfully validates tokens with complete security checks: JWT signature verification, expiration validation, usage limits enforcement, security score calculation (100), validation count tracking, and comprehensive audit logging. Returns complete token_info, user details, and validation metadata including client_ip and security_warnings. Fixed datetime comparison issue for timezone-aware validation."
-
-  - task: "Token Audit Logs System"
-    implemented: true
-    working: true
-    file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-        - working: true
-          agent: "testing"
-          comment: "✅ Token audit logging system working perfectly. Creates comprehensive audit logs in token_audit_logs collection for all token operations: generation, validation, failures. Includes timestamp, action, token_id, user_id, gym_id, device_info, ip_address, success status, and failure_reason. Audit trail complete with client IP tracking and device information."
-
 agent_communication:
+    - agent: "main"
+      message: "🔧 PROFESSIONAL MANAGEMENT SYSTEM FIX INITIATED (2025-01-13): Fixed critical inconsistency in professional-client assignment system. PROBLEM: flag-client endpoint was saving to client_assignments collection but my-assigned-clients was reading from users collection with different field structure. SOLUTION: 1) Updated my-assigned-clients endpoint to read from client_assignments collection using professional_id and professional_type matching, 2) Enhanced flag-client endpoint with proper client validation (Premium/VIP only), 3) Improved unassigned-clients endpoint to correctly filter already assigned clients. READY FOR TESTING: All 3 endpoints now use consistent data structure via client_assignments collection. Backend testing needed to verify fix."
     - agent: "testing"
       message: "✅ BACKEND TESTING COMPLETE: All 12 backend API endpoints tested successfully with 100% pass rate. Fixed 2 critical issues: (1) Token generation parameter format, (2) Token validation datetime handling. Demo user created and working. All authentication, CRUD operations, and business logic functioning correctly. Backend is production-ready."
     - agent: "testing"
