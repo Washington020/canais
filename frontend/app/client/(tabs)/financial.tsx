@@ -524,7 +524,7 @@ export default function Financial() {
             </View>
             
             <ScrollView style={styles.modalScroll}>
-              {(plans || []).map((plan) => (
+              {ensureArray(plans).map((plan) => (
                 <TouchableOpacity
                   key={plan.id}
                   style={[
