@@ -14,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Calendar } from 'react-native-calendars';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
@@ -54,8 +53,9 @@ export default function ClientSchedule() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedProfessionalType, setSelectedProfessionalType] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedTime, setSelectedTime] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const router = useRouter();
 
   useEffect(() => {
@@ -88,9 +88,7 @@ export default function ClientSchedule() {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
-      const headers = { Authorization: `Bearer ${token}` };
-      // Note: This endpoint would need to be implemented in the backend
-      // For now, we'll use mock data
+      // For now, we'll use mock data since this endpoint needs to be implemented
       setAppointments([]);
     } catch (error: any) {
       console.error('Error loading appointments:', error);
@@ -174,9 +172,55 @@ export default function ClientSchedule() {
     setShowBookingModal(true);
   };
 
-  const onDateSelect = (day: any) => {
-    setSelectedDate(day.dateString);
-    loadAvailableSlots(selectedProfessionalType, day.dateString);
+  const generateCalendarDates = () => {
+    const dates = [];
+    const today = new Date();
+    const currentMonth = new Date(selectedYear, selectedMonth, 1);
+    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(selectedYear, selectedMonth, day);
+      const dateString = date.toISOString().split('T')[0];
+      
+      dates.push({
+        day,
+        date: dateString,
+        isPast: date < today,
+        isToday: dateString === today.toISOString().split('T')[0],
+        isWeekend: date.getDay() === 0 || date.getDay() === 6
+      });
+    }
+    
+    return dates;
+  };
+
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const nextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
+
+  const prevMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+  };
+
+  const onDateSelect = (dateString: string) => {
+    setSelectedDate(dateString);
+    setAvailableSlots([]); // Clear previous slots
+    loadAvailableSlots(selectedProfessionalType, dateString);
   };
 
   const onRefresh = () => {
@@ -347,35 +391,58 @@ export default function ClientSchedule() {
             <ScrollView style={styles.modalScroll}>
               <Text style={styles.stepTitle}>1. Selecione a data:</Text>
               
-              <Calendar
-                onDayPress={onDateSelect}
-                markedDates={selectedDate ? {
-                  [selectedDate]: {
-                    selected: true,
-                    selectedColor: selectedProfessionalType === 'nutritionist' ? '#22C55E' : '#F59E0B'
-                  }
-                } : {}}
-                theme={{
-                  backgroundColor: 'transparent',
-                  calendarBackground: 'rgba(255, 255, 255, 0.1)',
-                  textSectionTitleColor: '#FFFFFF',
-                  selectedDayBackgroundColor: selectedProfessionalType === 'nutritionist' ? '#22C55E' : '#F59E0B',
-                  selectedDayTextColor: '#FFFFFF',
-                  todayTextColor: selectedProfessionalType === 'nutritionist' ? '#22C55E' : '#F59E0B',
-                  dayTextColor: '#FFFFFF',
-                  textDisabledColor: 'rgba(255, 255, 255, 0.3)',
-                  arrowColor: selectedProfessionalType === 'nutritionist' ? '#22C55E' : '#F59E0B',
-                  monthTextColor: '#FFFFFF',
-                  textDayFontWeight: '300',
-                  textMonthFontWeight: 'bold',
-                  textDayHeaderFontWeight: '500',
-                  textDayFontSize: 14,
-                  textMonthFontSize: 16,
-                  textDayHeaderFontSize: 12
-                }}
-                minDate={new Date().toISOString().split('T')[0]}
-                maxDate={new Date(2028, 11, 31).toISOString().split('T')[0]}
-              />
+              {/* Calendar Header */}
+              <View style={styles.calendarHeader}>
+                <TouchableOpacity onPress={prevMonth} style={styles.monthButton}>
+                  <Ionicons name="chevron-back" size={20} color={selectedProfessionalType === 'nutritionist' ? '#22C55E' : '#F59E0B'} />
+                </TouchableOpacity>
+                
+                <Text style={styles.monthTitle}>
+                  {monthNames[selectedMonth]} {selectedYear}
+                </Text>
+                
+                <TouchableOpacity onPress={nextMonth} style={styles.monthButton}>
+                  <Ionicons name="chevron-forward" size={20} color={selectedProfessionalType === 'nutritionist' ? '#22C55E' : '#F59E0B'} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Calendar Grid */}
+              <View style={styles.calendar}>
+                <View style={styles.weekHeader}>
+                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                    <Text key={day} style={styles.weekDay}>{day}</Text>
+                  ))}
+                </View>
+                
+                <View style={styles.calendarGrid}>
+                  {generateCalendarDates().map((dateInfo, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.dateCell,
+                        dateInfo.isToday && styles.todayCell,
+                        selectedDate === dateInfo.date && styles.selectedDateCell,
+                        (dateInfo.isPast || dateInfo.isWeekend) && styles.disabledDateCell
+                      ]}
+                      onPress={() => {
+                        if (!dateInfo.isPast && !dateInfo.isWeekend) {
+                          onDateSelect(dateInfo.date);
+                        }
+                      }}
+                      disabled={dateInfo.isPast || dateInfo.isWeekend}
+                    >
+                      <Text style={[
+                        styles.dateText,
+                        dateInfo.isToday && styles.todayText,
+                        selectedDate === dateInfo.date && styles.selectedDateText,
+                        (dateInfo.isPast || dateInfo.isWeekend) && styles.disabledDateText
+                      ]}>
+                        {dateInfo.day}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
               
               {selectedDate && (
                 <View style={styles.timeSlotsSection}>
@@ -666,6 +733,73 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 16,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  monthButton: {
+    padding: 8,
+  },
+  monthTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  calendar: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  weekHeader: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  weekDay: {
+    flex: 1,
+    textAlign: 'center',
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dateCell: {
+    width: '14.28%',
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  todayCell: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderRadius: 6,
+  },
+  selectedDateCell: {
+    backgroundColor: '#22C55E',
+    borderRadius: 6,
+  },
+  disabledDateCell: {
+    opacity: 0.3,
+  },
+  dateText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  todayText: {
+    color: '#22C55E',
+    fontWeight: 'bold',
+  },
+  selectedDateText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  disabledDateText: {
+    color: '#64748B',
   },
   timeSlotsSection: {
     marginTop: 24,
