@@ -321,7 +321,7 @@ export default function PersonalTrainerSchedule() {
         {/* Today's Appointments */}
         <View style={styles.todaySection}>
           <Text style={styles.sectionTitle}>Treinos de Hoje</Text>
-          {appointments.filter(apt => apt.appointment_date === new Date().toISOString().split('T')[0]).length === 0 ? (
+          {(appointments || []).filter(apt => apt.appointment_date === new Date().toISOString().split('T')[0]).length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="fitness-outline" size={48} color="#64748B" />
               <Text style={styles.emptyText}>Nenhum treino agendado para hoje</Text>
