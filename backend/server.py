@@ -1711,6 +1711,14 @@ async def flag_client_for_professional(
         if not client_id:
             raise HTTPException(status_code=400, detail="client_id é obrigatório")
         
+        # Verify client exists and is Premium/VIP
+        client = await db.users.find_one({"_id": ObjectId(client_id)})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        if client.get("plan_type") not in ["premium", "vip"]:
+            raise HTTPException(status_code=400, detail="Apenas clientes Premium/VIP podem ser atribuídos")
+        
         # Check if already assigned to this professional type
         existing_assignment = await db.client_assignments.find_one({
             "client_id": client_id,
@@ -1718,9 +1726,9 @@ async def flag_client_for_professional(
         })
         
         if existing_assignment:
-            return {"success": True, "message": "Cliente já designado para este tipo de professional"}
+            return {"success": True, "message": "Cliente já designado para este tipo de profissional"}
         
-        # Create assignment
+        # Create assignment in client_assignments collection
         assignment_data = {
             "client_id": client_id,
             "professional_id": professional_id,
