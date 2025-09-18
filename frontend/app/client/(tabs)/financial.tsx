@@ -358,7 +358,7 @@ export default function Financial() {
                 </Text>
                 <Text style={styles.planPrice}>
                   {(plans || []).find(p => p.id === userProfile?.plan)?.price ? 
-                    formatCurrency(plans.find(p => p.id === userProfile?.plan)!.price) : 
+                    formatCurrency((plans || []).find(p => p.id === userProfile?.plan)!.price) : 
                     'R$ 0,00'
                   }/mês
                 </Text>
