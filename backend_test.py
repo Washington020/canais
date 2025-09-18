@@ -3873,6 +3873,470 @@ class FitPassTester:
         
         return passed == total
 
+    def test_appointment_scheduling_system(self):
+        """Test the complete Appointment Scheduling System as requested in review"""
+        print("\n" + "="*80)
+        print("📅 TESTING COMPLETE APPOINTMENT SCHEDULING SYSTEM")
+        print("="*80)
+        print("Testing the integration between professionals and clients for appointment booking...")
+        
+        # Step 1: Test VIP and Intermediario user accounts
+        print("\n1️⃣ Testing VIP and Intermediario user accounts...")
+        
+        # Test VIP user login
+        vip_login = {
+            "email": "vip@luxepass.com",
+            "password": "vip123"
+        }
+        
+        response = self.make_request("POST", "/auth/login", vip_login, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            self.vip_token = data["access_token"]
+            self.log_test("VIP User Login", True, "Successfully logged in as VIP user")
+        else:
+            self.log_test("VIP User Login", False, f"VIP user login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Test Intermediario user login
+        intermediario_login = {
+            "email": "intermediario@luxepass.com", 
+            "password": "inter123"
+        }
+        
+        response = self.make_request("POST", "/auth/login", intermediario_login, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            self.intermediario_token = data["access_token"]
+            self.log_test("Intermediario User Login", True, "Successfully logged in as Intermediario user")
+        else:
+            self.log_test("Intermediario User Login", False, f"Intermediario user login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 2: Test Professional Login - Nutritionist
+        print("\n2️⃣ Testing Professional Login - Nutritionist...")
+        nutritionist_login = {
+            "email": "nutri@luxepass.com",
+            "password": "nutri123"
+        }
+        
+        response = self.make_request("POST", "/professionals/login", nutritionist_login, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            self.nutritionist_token = data["access_token"]
+            self.nutritionist_id = data["professional"]["id"]
+            self.log_test("Nutritionist Login", True, f"Successfully logged in as {data['professional']['full_name']}")
+        else:
+            self.log_test("Nutritionist Login", False, f"Nutritionist login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 3: Test Professional Login - Personal Trainer
+        print("\n3️⃣ Testing Professional Login - Personal Trainer...")
+        personal_login = {
+            "email": "personal@luxepass.com",
+            "password": "personal123"
+        }
+        
+        response = self.make_request("POST", "/professionals/login", personal_login, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            self.personal_token = data["access_token"]
+            self.personal_id = data["professional"]["id"]
+            self.log_test("Personal Trainer Login", True, f"Successfully logged in as {data['professional']['full_name']}")
+        else:
+            self.log_test("Personal Trainer Login", False, f"Personal trainer login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 4: Test Professional Availability Management - Nutritionist
+        print("\n4️⃣ Testing Professional Availability Management - Nutritionist...")
+        
+        # Set availability for tomorrow
+        from datetime import datetime, timedelta
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        
+        availability_data = {
+            "professional_id": self.nutritionist_id,
+            "professional_type": "nutritionist",
+            "date": tomorrow,
+            "start_time": "08:00",
+            "end_time": "19:00",
+            "break_times": ["12:00", "13:00"],  # Lunch break
+            "slot_duration": 60
+        }
+        
+        # Use nutritionist token for authentication
+        headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
+        response = self.make_request("POST", "/professionals/availability", availability_data, headers=headers, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if data.get("success"):
+                self.log_test("Nutritionist Availability Setting", True, f"Set availability: {data['message']}")
+            else:
+                self.log_test("Nutritionist Availability Setting", False, "Response success field is False")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Nutritionist Availability Setting", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 5: Test Professional Availability Management - Personal Trainer
+        print("\n5️⃣ Testing Professional Availability Management - Personal Trainer...")
+        
+        availability_data = {
+            "professional_id": self.personal_id,
+            "professional_type": "personal",
+            "date": tomorrow,
+            "start_time": "08:00",
+            "end_time": "19:00",
+            "break_times": ["12:00", "13:00"],  # Lunch break
+            "slot_duration": 60
+        }
+        
+        # Use personal trainer token for authentication
+        headers = {"Authorization": f"Bearer {self.personal_token}"}
+        response = self.make_request("POST", "/professionals/availability", availability_data, headers=headers, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if data.get("success"):
+                self.log_test("Personal Trainer Availability Setting", True, f"Set availability: {data['message']}")
+            else:
+                self.log_test("Personal Trainer Availability Setting", False, "Response success field is False")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Personal Trainer Availability Setting", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 6: Test Client Appointment Booking - VIP User with Nutritionist
+        print("\n6️⃣ Testing Client Appointment Booking - VIP User with Nutritionist...")
+        
+        # First, get available slots
+        headers = {"Authorization": f"Bearer {self.vip_token}"}
+        response = self.make_request("GET", f"/appointments/available-slots?professional_type=nutritionist&date={tomorrow}", 
+                                   headers=headers, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            available_slots = data.get("available_slots", [])
+            if available_slots:
+                self.log_test("VIP User - Get Available Slots", True, f"Found {len(available_slots)} available slots for nutritionist")
+                
+                # Book the first available slot
+                first_slot = available_slots[0]
+                booking_data = {
+                    "professional_type": "nutritionist",
+                    "professional_id": first_slot["professional_id"],
+                    "appointment_date": tomorrow,
+                    "appointment_time": first_slot["time"],
+                    "notes": "Consulta nutricional VIP"
+                }
+                
+                response = self.make_request("POST", "/appointments/book", booking_data, headers=headers, auth_required=False)
+                
+                if response and response.status_code == 200:
+                    data = response.json()
+                    if "appointment_id" in data:
+                        self.vip_appointment_id = data["appointment_id"]
+                        self.log_test("VIP User - Book Appointment", True, f"Successfully booked appointment: {data['message']}")
+                    else:
+                        self.log_test("VIP User - Book Appointment", False, "Response missing appointment_id")
+                        return False
+                else:
+                    error_detail = ""
+                    if response:
+                        try:
+                            error_detail = response.json().get("detail", response.text)
+                        except:
+                            error_detail = response.text
+                    self.log_test("VIP User - Book Appointment", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+                    return False
+            else:
+                self.log_test("VIP User - Get Available Slots", False, "No available slots found")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("VIP User - Get Available Slots", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 7: Test Client Appointment Booking - Intermediario User with Personal Trainer
+        print("\n7️⃣ Testing Client Appointment Booking - Intermediario User with Personal Trainer...")
+        
+        # Get available slots for personal trainer
+        headers = {"Authorization": f"Bearer {self.intermediario_token}"}
+        response = self.make_request("GET", f"/appointments/available-slots?professional_type=personal&date={tomorrow}", 
+                                   headers=headers, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            available_slots = data.get("available_slots", [])
+            if available_slots:
+                self.log_test("Intermediario User - Get Available Slots", True, f"Found {len(available_slots)} available slots for personal trainer")
+                
+                # Book the first available slot
+                first_slot = available_slots[0]
+                booking_data = {
+                    "professional_type": "personal",
+                    "professional_id": first_slot["professional_id"],
+                    "appointment_date": tomorrow,
+                    "appointment_time": first_slot["time"],
+                    "notes": "Treino personalizado Intermediário"
+                }
+                
+                response = self.make_request("POST", "/appointments/book", booking_data, headers=headers, auth_required=False)
+                
+                if response and response.status_code == 200:
+                    data = response.json()
+                    if "appointment_id" in data:
+                        self.intermediario_appointment_id = data["appointment_id"]
+                        self.log_test("Intermediario User - Book Appointment", True, f"Successfully booked appointment: {data['message']}")
+                    else:
+                        self.log_test("Intermediario User - Book Appointment", False, "Response missing appointment_id")
+                        return False
+                else:
+                    error_detail = ""
+                    if response:
+                        try:
+                            error_detail = response.json().get("detail", response.text)
+                        except:
+                            error_detail = response.text
+                    self.log_test("Intermediario User - Book Appointment", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+                    return False
+            else:
+                self.log_test("Intermediario User - Get Available Slots", False, "No available slots found")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Intermediario User - Get Available Slots", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 8: Test Plan Restrictions - Basic User Should Get 403
+        print("\n8️⃣ Testing Plan Restrictions - Basic User Should Get 403...")
+        
+        # Create a basic user for testing
+        basic_user_data = {
+            "email": "basic@luxepass.com",
+            "password": "basic123",
+            "full_name": "Cliente Básico",
+            "phone": "(11) 99999-3333",
+            "plan_type": "basic"
+        }
+        
+        # Register basic user
+        response = self.make_request("POST", "/auth/register", basic_user_data, auth_required=False)
+        
+        if response and response.status_code == 200:
+            # Login basic user
+            basic_login = {
+                "email": "basic@luxepass.com",
+                "password": "basic123"
+            }
+            
+            response = self.make_request("POST", "/auth/login", basic_login, auth_required=False)
+            
+            if response and response.status_code == 200:
+                data = response.json()
+                basic_token = data["access_token"]
+                
+                # Try to get available slots (should get 403)
+                headers = {"Authorization": f"Bearer {basic_token}"}
+                response = self.make_request("GET", f"/appointments/available-slots?professional_type=nutritionist&date={tomorrow}", 
+                                           headers=headers, auth_required=False)
+                
+                if response and response.status_code == 403:
+                    self.log_test("Basic User Plan Restriction", True, "Basic user correctly blocked from booking appointments (403)")
+                else:
+                    self.log_test("Basic User Plan Restriction", False, f"Expected 403, got {response.status_code if response else 'No response'}")
+                    return False
+            else:
+                self.log_test("Basic User Plan Restriction", False, "Could not login basic user for testing")
+                return False
+        else:
+            # Basic user might already exist, try to login
+            basic_login = {
+                "email": "basic@luxepass.com",
+                "password": "basic123"
+            }
+            
+            response = self.make_request("POST", "/auth/login", basic_login, auth_required=False)
+            
+            if response and response.status_code == 200:
+                data = response.json()
+                basic_token = data["access_token"]
+                
+                # Try to get available slots (should get 403)
+                headers = {"Authorization": f"Bearer {basic_token}"}
+                response = self.make_request("GET", f"/appointments/available-slots?professional_type=nutritionist&date={tomorrow}", 
+                                           headers=headers, auth_required=False)
+                
+                if response and response.status_code == 403:
+                    self.log_test("Basic User Plan Restriction", True, "Basic user correctly blocked from booking appointments (403)")
+                else:
+                    self.log_test("Basic User Plan Restriction", False, f"Expected 403, got {response.status_code if response else 'No response'}")
+                    return False
+            else:
+                self.log_test("Basic User Plan Restriction", False, "Could not create or login basic user for testing")
+                return False
+        
+        # Step 9: Test Professional Appointment Viewing - Nutritionist
+        print("\n9️⃣ Testing Professional Appointment Viewing - Nutritionist...")
+        
+        headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
+        response = self.make_request("GET", f"/professionals/appointments?date={tomorrow}", 
+                                   headers=headers, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            appointments = data.get("appointments", [])
+            if appointments:
+                self.log_test("Nutritionist - View Appointments", True, f"Nutritionist can view {len(appointments)} appointments")
+            else:
+                self.log_test("Nutritionist - View Appointments", True, "Nutritionist appointments endpoint working (no appointments yet)")
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Nutritionist - View Appointments", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 10: Test Professional Appointment Statistics
+        print("\n🔟 Testing Professional Appointment Statistics...")
+        
+        headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
+        response = self.make_request("GET", "/professionals/appointments/stats", 
+                                   headers=headers, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            required_fields = ["total_appointments_month", "completed_appointments", "scheduled_appointments", "total_clients_served", "monthly_hours"]
+            
+            if all(field in data for field in required_fields):
+                self.log_test("Professional Appointment Stats", True, f"Stats retrieved: {data}")
+            else:
+                missing = [f for f in required_fields if f not in data]
+                self.log_test("Professional Appointment Stats", False, f"Missing fields: {missing}")
+                return False
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Professional Appointment Stats", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+        
+        # Step 11: Test Complete Appointment Flow
+        print("\n1️⃣1️⃣ Testing Complete Appointment Flow...")
+        
+        if hasattr(self, 'vip_appointment_id'):
+            headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
+            response = self.make_request("PUT", f"/appointments/{self.vip_appointment_id}/complete", 
+                                       {}, headers=headers, auth_required=False)
+            
+            if response and response.status_code == 200:
+                data = response.json()
+                if data.get("success"):
+                    self.log_test("Complete Appointment Flow", True, f"Successfully completed appointment: {data['message']}")
+                else:
+                    self.log_test("Complete Appointment Flow", False, "Response success field is False")
+                    return False
+            else:
+                error_detail = ""
+                if response:
+                    try:
+                        error_detail = response.json().get("detail", response.text)
+                    except:
+                        error_detail = response.text
+                self.log_test("Complete Appointment Flow", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+                return False
+        else:
+            self.log_test("Complete Appointment Flow", False, "No appointment ID available to complete")
+            return False
+        
+        print("\n✅ APPOINTMENT SCHEDULING SYSTEM TEST COMPLETED!")
+        print("All key functionality tested successfully:")
+        print("  ✓ VIP and Intermediario user accounts verified")
+        print("  ✓ Professional login (nutritionist and personal trainer)")
+        print("  ✓ Professional availability management")
+        print("  ✓ Client appointment booking")
+        print("  ✓ Plan restrictions enforced (Basic users blocked)")
+        print("  ✓ Professional appointment viewing")
+        print("  ✓ Appointment statistics")
+        print("  ✓ Complete appointment flow")
+        
+        return True
+
+    def run_appointment_scheduling_tests(self):
+        """Run focused appointment scheduling system tests as requested in review"""
+        print("🚀 Starting LuxePass Appointment Scheduling System Tests")
+        print(f"Testing against: {API_BASE}")
+        print("Testing the complete appointment scheduling system integration...")
+        
+        # Clear previous test results
+        self.test_results = []
+        
+        # Run the appointment scheduling test
+        success = self.test_appointment_scheduling_system()
+        
+        # Summary
+        print("\n" + "="*80)
+        print("📊 APPOINTMENT SCHEDULING SYSTEM TEST SUMMARY")
+        print("="*80)
+        
+        passed = sum(1 for result in self.test_results if result["success"])
+        total = len(self.test_results)
+        
+        print(f"Total Appointment Tests: {total}")
+        print(f"Passed: {passed}")
+        print(f"Failed: {total - passed}")
+        print(f"Success Rate: {(passed/total)*100:.1f}%" if total > 0 else "No tests run")
+        
+        # Show failed tests
+        failed_tests = [result for result in self.test_results if not result["success"]]
+        if failed_tests:
+            print("\n❌ Failed Tests:")
+            for test in failed_tests:
+                print(f"  - {test['test']}: {test['details']}")
+        else:
+            print("\n✅ All appointment scheduling endpoints are working correctly!")
+            print("The complete appointment scheduling system is operational, including:")
+            print("  ✓ Professional availability management (nutritionist and personal trainer)")
+            print("  ✓ Client appointment booking (VIP and Intermediario users)")
+            print("  ✓ Plan restrictions (Basic users blocked)")
+            print("  ✓ Professional appointment viewing and statistics")
+            print("  ✓ Complete appointment flow (booking to completion)")
+        
+        return passed == total
+
 if __name__ == "__main__":
     tester = FitPassTester()
     
