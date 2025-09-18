@@ -97,7 +97,7 @@ export default function Financial() {
       // Load payment plans
       const plansResponse = await axios.get(`${API_URL}/payments/plans`, { headers });
       const plansData = plansResponse.data;
-      setPlans(Array.isArray(plansData) ? plansData : []);
+      setPlans(ensureArray(plansData));
 
       // Load user transactions
       const transactionsResponse = await axios.get(`${API_URL}/payments/user/transactions`, { headers });
