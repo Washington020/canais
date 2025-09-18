@@ -102,7 +102,7 @@ export default function Financial() {
       // Load user transactions
       const transactionsResponse = await axios.get(`${API_URL}/payments/user/transactions`, { headers });
       const transactionsData = transactionsResponse.data;
-      setTransactions(Array.isArray(transactionsData) ? transactionsData : []);
+      setTransactions(ensureArray(transactionsData));
 
       // Load user profile
       const profileResponse = await axios.get(`${API_URL}/users/profile`, { headers });
