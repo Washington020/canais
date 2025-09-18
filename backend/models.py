@@ -183,27 +183,53 @@ class ScheduledNotification(BaseModel):
 
 # Appointment System Models
 class AppointmentRequest(BaseModel):
-    appointment_type: str  # "nutritionist" or "personal"
+    professional_type: str  # "nutritionist" or "personal"
+    professional_id: str
     appointment_date: datetime
+    appointment_time: str  # "08:00", "09:00", etc.
     notes: Optional[str] = None
 
 class AppointmentSlot(BaseModel):
     id: Optional[str] = None
+    professional_id: str
     professional_type: str  # "nutritionist" or "personal"
-    date: datetime
+    date: str  # "2025-01-15"
+    time: str  # "08:00"
     available: bool = True
-    created_by: str  # admin user id
+    duration_minutes: int = 60
     created_at: Optional[datetime] = None
 
 class Appointment(BaseModel):
     id: Optional[str] = None
-    user_id: str
-    professional_type: str  # "nutritionist" or "personal"
-    appointment_date: datetime
-    status: str = "scheduled"  # scheduled, completed, cancelled
+    client_id: str
+    client_name: str
+    client_email: str
+    client_phone: str
+    professional_id: str
+    professional_type: str  # "nutritionist" or "personal" 
+    appointment_date: str  # "2025-01-15"
+    appointment_time: str  # "08:00"
+    duration_minutes: int = 60
+    status: str = "scheduled"  # scheduled, completed, cancelled, rescheduled
     notes: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+class AvailabilitySlot(BaseModel):
+    professional_id: str
+    professional_type: str
+    date: str  # "2025-01-15"
+    start_time: str  # "08:00"
+    end_time: str  # "19:00"
+    break_times: List[str] = []  # ["12:00", "13:00"] for lunch break
+    slot_duration: int = 60  # minutes per appointment
+
+class AppointmentStats(BaseModel):
+    total_appointments_month: int
+    completed_appointments: int
+    scheduled_appointments: int
+    total_clients_served: int
+    monthly_hours: float
 
 # Supplement System Models  
 class SupplementPlan(BaseModel):
