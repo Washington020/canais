@@ -1,12 +1,47 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { TouchableOpacity, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 
 export default function PersonalTrainerTabsLayout() {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Sair',
+      'Deseja sair da conta?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          onPress: async () => {
+            await AsyncStorage.multiRemove(['professionalToken', 'professional']);
+            router.replace('/professional/personal/login');
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: '#0B0D17',
+          borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+        },
+        headerTintColor: '#FFFFFF',
+        headerRight: () => (
+          <TouchableOpacity 
+            onPress={handleLogout}
+            style={{ marginRight: 16, padding: 8 }}
+          >
+            <Ionicons name="log-out" size={20} color="#EF4444" />
+          </TouchableOpacity>
+        ),
         tabBarStyle: {
           backgroundColor: '#1E293B',
           borderTopColor: 'rgba(255, 255, 255, 0.1)',
@@ -49,13 +84,13 @@ export default function PersonalTrainerTabsLayout() {
           ),
         }}
       />
-      
+
       <Tabs.Screen
-        name="profile"
+        name="schedule"
         options={{
-          title: 'Perfil',
+          title: 'Agenda',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-circle" size={size} color={color} />
+            <Ionicons name="calendar" size={size} color={color} />
           ),
         }}
       />
