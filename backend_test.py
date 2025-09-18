@@ -1301,11 +1301,11 @@ class FitPassTester:
         print("="*70)
         print("Testing the professional client assignment system that was just fixed...")
         
-        # Step 1: Test Professional Login - Nutritionist
-        print("\n1️⃣ Testing Professional Login - Nutritionist (ana@luxepass.com)...")
+        # Step 1: Test Professional Login - Nutritionist (using correct credentials)
+        print("\n1️⃣ Testing Professional Login - Nutritionist (nutri@luxepass.com)...")
         nutritionist_login = {
-            "email": "ana@luxepass.com",
-            "password": "ana123"
+            "email": "nutri@luxepass.com",
+            "password": "nutri123"
         }
         
         response = self.make_request("POST", "/professionals/login", nutritionist_login, auth_required=False)
@@ -1321,16 +1321,46 @@ class FitPassTester:
                 self.log_test("Nutritionist Login", False, "Response missing required fields")
                 return False
         else:
-            # Professional might not exist, let's check if we need to create test professionals
-            print("   Nutritionist not found, checking if test professionals exist...")
-            self.log_test("Nutritionist Login", False, f"Status: {response.status_code if response else 'No response'}")
-            return False
+            # Professional might not exist, let's try to create test professionals first
+            print("   Nutritionist not found, attempting to create test professionals...")
+            
+            # Try to create nutritionist via admin endpoint
+            nutritionist_data = {
+                "full_name": "Dra. Ana Nutricionista",
+                "email": "nutri@luxepass.com",
+                "password": "nutri123",
+                "professional_type": "nutritionist",
+                "cref_crn": "CRN-12345/SP",
+                "specialization": "Nutrição Esportiva e Funcional",
+                "bio": "Nutricionista especializada em nutrição esportiva com mais de 10 anos de experiência.",
+                "phone": "(11) 99999-0001",
+                "experience_years": 10
+            }
+            
+            # Try to register the professional
+            reg_response = self.make_request("POST", "/professionals/register", nutritionist_data, auth_required=False)
+            
+            if reg_response and reg_response.status_code == 200:
+                print("   ✅ Nutritionist created successfully")
+                # Now try login again
+                response = self.make_request("POST", "/professionals/login", nutritionist_login, auth_required=False)
+                
+                if response and response.status_code == 200:
+                    data = response.json()
+                    self.nutritionist_token = data["access_token"]
+                    self.log_test("Nutritionist Login", True, f"Successfully logged in as {data['professional']['full_name']}")
+                else:
+                    self.log_test("Nutritionist Login", False, f"Login failed after creation: {response.status_code if response else 'No response'}")
+                    return False
+            else:
+                self.log_test("Nutritionist Login", False, f"Could not create or login nutritionist: {response.status_code if response else 'No response'}")
+                return False
         
         # Step 2: Test Professional Login - Personal Trainer
-        print("\n2️⃣ Testing Professional Login - Personal Trainer (joao@luxepass.com)...")
+        print("\n2️⃣ Testing Professional Login - Personal Trainer (personal@luxepass.com)...")
         personal_login = {
-            "email": "joao@luxepass.com",
-            "password": "joao123"
+            "email": "personal@luxepass.com",
+            "password": "personal123"
         }
         
         response = self.make_request("POST", "/professionals/login", personal_login, auth_required=False)
@@ -1346,11 +1376,60 @@ class FitPassTester:
                 self.log_test("Personal Trainer Login", False, "Response missing required fields")
                 return False
         else:
-            self.log_test("Personal Trainer Login", False, f"Status: {response.status_code if response else 'No response'}")
-            return False
+            # Try to create personal trainer
+            print("   Personal trainer not found, attempting to create...")
+            
+            personal_data = {
+                "full_name": "Prof. João Personal",
+                "email": "personal@luxepass.com",
+                "password": "personal123",
+                "professional_type": "personal",
+                "cref_crn": "CREF-12345/SP",
+                "specialization": "Musculação e Condicionamento Físico",
+                "bio": "Personal trainer especializado em musculação e condicionamento com mais de 8 anos de experiência.",
+                "phone": "(11) 99999-0002",
+                "experience_years": 8
+            }
+            
+            reg_response = self.make_request("POST", "/professionals/register", personal_data, auth_required=False)
+            
+            if reg_response and reg_response.status_code == 200:
+                print("   ✅ Personal trainer created successfully")
+                # Now try login again
+                response = self.make_request("POST", "/professionals/login", personal_login, auth_required=False)
+                
+                if response and response.status_code == 200:
+                    data = response.json()
+                    self.personal_token = data["access_token"]
+                    self.log_test("Personal Trainer Login", True, f"Successfully logged in as {data['professional']['full_name']}")
+                else:
+                    self.log_test("Personal Trainer Login", False, f"Login failed after creation: {response.status_code if response else 'No response'}")
+                    return False
+            else:
+                self.log_test("Personal Trainer Login", False, f"Could not create or login personal trainer: {response.status_code if response else 'No response'}")
+                return False
         
-        # Step 3: Test GET /api/professionals/unassigned-clients (as nutritionist)
-        print("\n3️⃣ Testing GET /api/professionals/unassigned-clients (as nutritionist)...")
+        # Step 3: Ensure we have Premium/VIP clients for testing
+        print("\n3️⃣ Ensuring Premium/VIP clients exist for testing...")
+        
+        # Create a VIP test client if needed
+        vip_client_data = {
+            "email": "isabella@luxepass.com",
+            "password": "isabella123",
+            "full_name": "Isabella Costa VIP",
+            "phone": "(11) 99999-8888",
+            "plan_type": "vip"
+        }
+        
+        # Try to create VIP client (will fail if already exists, which is fine)
+        client_response = self.make_request("POST", "/auth/register", vip_client_data, auth_required=False)
+        if client_response and client_response.status_code == 200:
+            print("   ✅ VIP test client created")
+        else:
+            print("   ℹ️  VIP test client already exists or creation failed (continuing)")
+        
+        # Step 4: Test GET /api/professionals/unassigned-clients (as nutritionist)
+        print("\n4️⃣ Testing GET /api/professionals/unassigned-clients (as nutritionist)...")
         headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
         response = self.make_request("GET", "/professionals/unassigned-clients", headers=headers, auth_required=False)
         
@@ -1370,12 +1449,18 @@ class FitPassTester:
                 self.log_test("Get Unassigned Clients", False, "Response missing 'clients' array")
                 return False
         else:
-            self.log_test("Get Unassigned Clients", False, f"Status: {response.status_code if response else 'No response'}")
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Get Unassigned Clients", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
             return False
         
-        # Step 4: Test POST /api/professionals/flag-client (assign client to nutritionist)
+        # Step 5: Test POST /api/professionals/flag-client (assign client to nutritionist)
         if hasattr(self, 'test_client'):
-            print("\n4️⃣ Testing POST /api/professionals/flag-client (assign client to nutritionist)...")
+            print("\n5️⃣ Testing POST /api/professionals/flag-client (assign client to nutritionist)...")
             assignment_data = {
                 "client_id": self.test_client["id"]
             }
@@ -1401,11 +1486,11 @@ class FitPassTester:
                 self.log_test("Flag Client Assignment", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
                 return False
         else:
-            print("\n4️⃣ Skipping client assignment test - no unassigned clients available")
+            print("\n5️⃣ Skipping client assignment test - no unassigned clients available")
             self.client_assigned = False
         
-        # Step 5: Test GET /api/professionals/my-assigned-clients (verify assignment)
-        print("\n5️⃣ Testing GET /api/professionals/my-assigned-clients (verify assignment)...")
+        # Step 6: Test GET /api/professionals/my-assigned-clients (verify assignment)
+        print("\n6️⃣ Testing GET /api/professionals/my-assigned-clients (verify assignment)...")
         headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
         response = self.make_request("GET", "/professionals/my-assigned-clients", headers=headers, auth_required=False)
         
@@ -1434,12 +1519,18 @@ class FitPassTester:
                 self.log_test("Get Assigned Clients", False, "Response missing 'assigned_clients' array")
                 return False
         else:
-            self.log_test("Get Assigned Clients", False, f"Status: {response.status_code if response else 'No response'}")
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Get Assigned Clients", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
             return False
         
-        # Step 6: Test that assigned client no longer appears in unassigned list
+        # Step 7: Test that assigned client no longer appears in unassigned list
         if hasattr(self, 'test_client') and self.client_assigned:
-            print("\n6️⃣ Testing that assigned client no longer appears in unassigned list...")
+            print("\n7️⃣ Testing that assigned client no longer appears in unassigned list...")
             headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
             response = self.make_request("GET", "/professionals/unassigned-clients", headers=headers, auth_required=False)
             
@@ -1455,10 +1546,10 @@ class FitPassTester:
             else:
                 self.log_test("Client Removed from Unassigned", False, "Failed to retrieve unassigned clients for verification")
         else:
-            print("\n6️⃣ Skipping unassigned list verification - no client was assigned")
+            print("\n7️⃣ Skipping unassigned list verification - no client was assigned")
         
-        # Step 7: Test Personal Trainer flow
-        print("\n7️⃣ Testing Personal Trainer flow...")
+        # Step 8: Test Personal Trainer flow
+        print("\n8️⃣ Testing Personal Trainer flow...")
         headers = {"Authorization": f"Bearer {self.personal_token}"}
         response = self.make_request("GET", "/professionals/unassigned-clients", headers=headers, auth_required=False)
         
@@ -1476,7 +1567,13 @@ class FitPassTester:
             else:
                 self.log_test("Personal Trainer - Get Assigned Clients", False, "Failed to get personal trainer assigned clients")
         else:
-            self.log_test("Personal Trainer - Get Unassigned Clients", False, "Failed to get unassigned clients for personal trainer")
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Personal Trainer - Get Unassigned Clients", False, f"Failed to get unassigned clients for personal trainer: {error_detail}")
         
         print("\n✅ PROFESSIONAL MANAGEMENT SYSTEM TEST COMPLETED!")
         print("Summary of tested functionality:")
