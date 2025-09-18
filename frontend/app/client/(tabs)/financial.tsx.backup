@@ -66,6 +66,17 @@ export default function Financial() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
+  // Helper function to ensure we always have a valid array
+  const ensureArray = (data: any): any[] => {
+    return Array.isArray(data) ? data : [];
+  };
+
+  // Helper function to safely find a plan
+  const findPlan = (planId: string | undefined) => {
+    if (!planId) return null;
+    return ensureArray(plans).find(p => p.id === planId);
+  };
+
   // Check for payment return (from Stripe)
   useEffect(() => {
     if (params.session_id) {
@@ -85,11 +96,13 @@ export default function Financial() {
 
       // Load payment plans
       const plansResponse = await axios.get(`${API_URL}/payments/plans`, { headers });
-      setPlans(plansResponse.data || []);
+      const plansData = plansResponse.data;
+      setPlans(Array.isArray(plansData) ? plansData : []);
 
       // Load user transactions
       const transactionsResponse = await axios.get(`${API_URL}/payments/user/transactions`, { headers });
-      setTransactions(transactionsResponse.data || []);
+      const transactionsData = transactionsResponse.data;
+      setTransactions(Array.isArray(transactionsData) ? transactionsData : []);
 
       // Load user profile
       const profileResponse = await axios.get(`${API_URL}/users/profile`, { headers });
@@ -100,6 +113,9 @@ export default function Financial() {
       if (error.response?.status === 401) {
         router.replace('/client/login');
       }
+      // Set fallback values to prevent crashes
+      setPlans([]);
+      setTransactions([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
