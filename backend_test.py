@@ -3734,6 +3734,48 @@ class FitPassTester:
         
         return True
 
+    def run_professional_management_tests(self):
+        """Run focused professional management system tests as requested"""
+        print("🚀 Starting Professional Management System Tests")
+        print(f"Testing against: {API_BASE}")
+        print("Testing the professional client assignment system that was just fixed...")
+        
+        # Clear previous test results
+        self.test_results = []
+        
+        # Run the comprehensive professional management tests
+        self.test_professional_management_system()
+        
+        # Summary
+        print("\n" + "="*60)
+        print("📊 PROFESSIONAL MANAGEMENT SYSTEM TEST SUMMARY")
+        print("="*60)
+        
+        passed = sum(1 for result in self.test_results if result["success"])
+        total = len(self.test_results)
+        
+        print(f"Total Professional Tests: {total}")
+        print(f"Passed: {passed}")
+        print(f"Failed: {total - passed}")
+        print(f"Success Rate: {(passed/total)*100:.1f}%" if total > 0 else "No tests run")
+        
+        # Show failed tests
+        failed_tests = [result for result in self.test_results if not result["success"]]
+        if failed_tests:
+            print("\n❌ Failed Tests:")
+            for test in failed_tests:
+                print(f"  - {test['test']}: {test['details']}")
+        else:
+            print("\n✅ All professional management endpoints are working correctly!")
+            print("The professional client assignment system is operational, including:")
+            print("  ✓ Professional login (nutritionist and personal trainer)")
+            print("  ✓ Unassigned clients retrieval")
+            print("  ✓ Client assignment functionality")
+            print("  ✓ Assigned clients verification")
+            print("  ✓ Data persistence in client_assignments collection")
+        
+        return passed == total
+
 if __name__ == "__main__":
     tester = FitPassTester()
     
@@ -3756,12 +3798,14 @@ if __name__ == "__main__":
             success = tester.run_pagarme_tests()
         elif test_type == "luxepass" or test_type == "new":
             success = tester.run_luxepass_new_endpoints_test()
+        elif test_type == "professional" or test_type == "prof":
+            success = tester.run_professional_management_tests()
         else:
             success = tester.run_all_tests()
     else:
-        # Default to testing the NEW endpoints as requested in review
-        print("🎯 RUNNING LUXEPASS NEW ENDPOINTS TESTS AS REQUESTED")
+        # Default to testing the Professional Management System as requested in review
+        print("🎯 RUNNING PROFESSIONAL MANAGEMENT SYSTEM TESTS AS REQUESTED")
         print("="*70)
-        success = tester.run_luxepass_new_endpoints_test()
+        success = tester.run_professional_management_tests()
     
     exit(0 if success else 1)
