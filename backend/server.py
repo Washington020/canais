@@ -3960,6 +3960,9 @@ async def startup_event():
     
     # Create test professionals if they don't exist
     await create_test_professionals()
+    
+    # Create test users if they don't exist
+    await create_test_users()
 
 app.add_middleware(
     CORSMiddleware,
