@@ -293,6 +293,50 @@ async def create_test_professionals():
     except Exception as e:
         logger.error(f"Erro ao criar profissionais de teste: {e}")
 
+async def create_test_users():
+    """Create test users with different plan types"""
+    try:
+        # Create VIP user
+        vip_user = await db.users.find_one({"email": "vip@luxepass.com"})
+        if not vip_user:
+            vip_data = {
+                "full_name": "Cliente VIP Premium",
+                "email": "vip@luxepass.com",
+                "password_hash": pwd_context.hash("vip123"),
+                "phone": "(11) 99999-1111",
+                "plan_type": "vip",
+                "status": "active",
+                "tokens_available": 999,  # VIP gets unlimited tokens
+                "tokens_used": 0,
+                "gyms_visited": 0,
+                "created_at": datetime.now(timezone.utc),
+                "subscription_end": datetime.now(timezone.utc) + timedelta(days=365)
+            }
+            await db.users.insert_one(vip_data)
+            logger.info("✅ Usuário VIP de teste criado: vip@luxepass.com / vip123")
+        
+        # Create Intermediario user
+        intermediario_user = await db.users.find_one({"email": "intermediario@luxepass.com"})
+        if not intermediario_user:
+            intermediario_data = {
+                "full_name": "Cliente Intermediário",
+                "email": "intermediario@luxepass.com",
+                "password_hash": pwd_context.hash("inter123"),
+                "phone": "(11) 99999-2222",
+                "plan_type": "intermediario",
+                "status": "active",
+                "tokens_available": 50,
+                "tokens_used": 0,
+                "gyms_visited": 0,
+                "created_at": datetime.now(timezone.utc),
+                "subscription_end": datetime.now(timezone.utc) + timedelta(days=365)
+            }
+            await db.users.insert_one(intermediario_data)
+            logger.info("✅ Usuário Intermediário de teste criado: intermediario@luxepass.com / inter123")
+            
+    except Exception as e:
+        logger.error(f"Erro ao criar usuários de teste: {e}")
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
