@@ -4042,7 +4042,7 @@ class FitPassTester:
                 booking_data = {
                     "professional_type": "nutritionist",
                     "professional_id": first_slot["professional_id"],
-                    "appointment_date": tomorrow,
+                    "appointment_date": f"{tomorrow}T{first_slot['time']}:00Z",
                     "appointment_time": first_slot["time"],
                     "notes": "Consulta nutricional VIP"
                 }
