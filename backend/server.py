@@ -2125,25 +2125,31 @@ async def get_assigned_clients(current_professional: dict = Depends(get_current_
     try:
         professional_type = current_professional["professional_type"]
         professional_id = str(current_professional["_id"])
-        field_name = f"{professional_type}_id"
         
-        # Get clients assigned to this professional
-        clients = await db.users.find({
-            field_name: professional_id
+        # Get assignments for this professional
+        assignments = await db.client_assignments.find({
+            "professional_id": professional_id,
+            "professional_type": professional_type,
+            "status": "active"
         }).to_list(100)
         
         result = []
-        for client in clients:
+        for assignment in assignments:
+            # Get client details
+            client = await db.users.find_one({"_id": ObjectId(assignment["client_id"])})
+            if not client:
+                continue
+                
             # Check if client has active plans
             if professional_type == "nutritionist":
                 active_plans = await db.supplement_plans.count_documents({
-                    "user_id": str(client["_id"]),
+                    "user_id": assignment["client_id"],
                     "created_by": professional_id,
                     "active": True
                 })
             else:  # personal trainer
                 active_plans = await db.workout_plans.count_documents({
-                    "user_id": str(client["_id"]),
+                    "user_id": assignment["client_id"],
                     "created_by": professional_id,
                     "active": True
                 })
@@ -2153,7 +2159,7 @@ async def get_assigned_clients(current_professional: dict = Depends(get_current_
                 "full_name": client.get("full_name", "Usuário"),
                 "email": client.get("email", ""),
                 "plan_type": client.get("plan_type", "basic"),
-                "assigned_at": client.get(f"{professional_type}_assigned_at", datetime.now()).isoformat(),
+                "assigned_at": assignment["assigned_at"].isoformat(),
                 "active_plans": active_plans,
                 "tokens_available": client.get("tokens_available", 0),
                 "subscription_end": client.get("subscription_end").isoformat() if client.get("subscription_end") else None
