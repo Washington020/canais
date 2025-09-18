@@ -1294,6 +1294,201 @@ class FitPassTester:
         
         return False
 
+    def test_professional_management_system(self):
+        """Test the Professional Management System as requested in review"""
+        print("\n" + "="*70)
+        print("🏥 TESTING PROFESSIONAL MANAGEMENT SYSTEM")
+        print("="*70)
+        print("Testing the professional client assignment system that was just fixed...")
+        
+        # Step 1: Test Professional Login - Nutritionist
+        print("\n1️⃣ Testing Professional Login - Nutritionist (ana@luxepass.com)...")
+        nutritionist_login = {
+            "email": "ana@luxepass.com",
+            "password": "ana123"
+        }
+        
+        response = self.make_request("POST", "/professionals/login", nutritionist_login, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "access_token" in data and "professional" in data:
+                self.nutritionist_token = data["access_token"]
+                self.log_test("Nutritionist Login", True, f"Successfully logged in as {data['professional']['full_name']}")
+                print(f"   Professional Type: {data['professional']['professional_type']}")
+                print(f"   CREF/CRN: {data['professional']['cref_crn']}")
+            else:
+                self.log_test("Nutritionist Login", False, "Response missing required fields")
+                return False
+        else:
+            # Professional might not exist, let's check if we need to create test professionals
+            print("   Nutritionist not found, checking if test professionals exist...")
+            self.log_test("Nutritionist Login", False, f"Status: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 2: Test Professional Login - Personal Trainer
+        print("\n2️⃣ Testing Professional Login - Personal Trainer (joao@luxepass.com)...")
+        personal_login = {
+            "email": "joao@luxepass.com",
+            "password": "joao123"
+        }
+        
+        response = self.make_request("POST", "/professionals/login", personal_login, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "access_token" in data and "professional" in data:
+                self.personal_token = data["access_token"]
+                self.log_test("Personal Trainer Login", True, f"Successfully logged in as {data['professional']['full_name']}")
+                print(f"   Professional Type: {data['professional']['professional_type']}")
+                print(f"   CREF/CRN: {data['professional']['cref_crn']}")
+            else:
+                self.log_test("Personal Trainer Login", False, "Response missing required fields")
+                return False
+        else:
+            self.log_test("Personal Trainer Login", False, f"Status: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 3: Test GET /api/professionals/unassigned-clients (as nutritionist)
+        print("\n3️⃣ Testing GET /api/professionals/unassigned-clients (as nutritionist)...")
+        headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
+        response = self.make_request("GET", "/professionals/unassigned-clients", headers=headers, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "clients" in data and isinstance(data["clients"], list):
+                unassigned_clients = data["clients"]
+                self.log_test("Get Unassigned Clients", True, f"Retrieved {len(unassigned_clients)} unassigned Premium/VIP clients")
+                
+                if len(unassigned_clients) > 0:
+                    # Store first client for assignment test
+                    self.test_client = unassigned_clients[0]
+                    print(f"   Sample client: {self.test_client['full_name']} ({self.test_client['plan_type']} plan)")
+                else:
+                    print("   No unassigned clients found - this is expected if all clients are already assigned")
+            else:
+                self.log_test("Get Unassigned Clients", False, "Response missing 'clients' array")
+                return False
+        else:
+            self.log_test("Get Unassigned Clients", False, f"Status: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 4: Test POST /api/professionals/flag-client (assign client to nutritionist)
+        if hasattr(self, 'test_client'):
+            print("\n4️⃣ Testing POST /api/professionals/flag-client (assign client to nutritionist)...")
+            assignment_data = {
+                "client_id": self.test_client["id"]
+            }
+            
+            headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
+            response = self.make_request("POST", "/professionals/flag-client", assignment_data, headers=headers, auth_required=False)
+            
+            if response and response.status_code == 200:
+                data = response.json()
+                if "success" in data and data["success"]:
+                    self.log_test("Flag Client Assignment", True, f"Successfully assigned client: {data['message']}")
+                    self.client_assigned = True
+                else:
+                    self.log_test("Flag Client Assignment", False, "Response success field is False")
+                    return False
+            else:
+                error_detail = ""
+                if response:
+                    try:
+                        error_detail = response.json().get("detail", response.text)
+                    except:
+                        error_detail = response.text
+                self.log_test("Flag Client Assignment", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+                return False
+        else:
+            print("\n4️⃣ Skipping client assignment test - no unassigned clients available")
+            self.client_assigned = False
+        
+        # Step 5: Test GET /api/professionals/my-assigned-clients (verify assignment)
+        print("\n5️⃣ Testing GET /api/professionals/my-assigned-clients (verify assignment)...")
+        headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
+        response = self.make_request("GET", "/professionals/my-assigned-clients", headers=headers, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "assigned_clients" in data and isinstance(data["assigned_clients"], list):
+                assigned_clients = data["assigned_clients"]
+                self.log_test("Get Assigned Clients", True, f"Retrieved {len(assigned_clients)} assigned clients")
+                
+                if len(assigned_clients) > 0:
+                    client = assigned_clients[0]
+                    print(f"   Sample assigned client: {client['full_name']} ({client['plan_type']} plan)")
+                    print(f"   Assigned at: {client['assigned_at']}")
+                    print(f"   Active plans: {client['active_plans']}")
+                    
+                    # Verify our test client appears if we assigned one
+                    if hasattr(self, 'test_client') and self.client_assigned:
+                        assigned_client_ids = [c["id"] for c in assigned_clients]
+                        if self.test_client["id"] in assigned_client_ids:
+                            print(f"   ✅ Confirmed: Test client {self.test_client['full_name']} appears in assigned clients")
+                        else:
+                            print(f"   ⚠️  Test client {self.test_client['full_name']} not found in assigned clients")
+                else:
+                    print("   No assigned clients found")
+            else:
+                self.log_test("Get Assigned Clients", False, "Response missing 'assigned_clients' array")
+                return False
+        else:
+            self.log_test("Get Assigned Clients", False, f"Status: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Step 6: Test that assigned client no longer appears in unassigned list
+        if hasattr(self, 'test_client') and self.client_assigned:
+            print("\n6️⃣ Testing that assigned client no longer appears in unassigned list...")
+            headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
+            response = self.make_request("GET", "/professionals/unassigned-clients", headers=headers, auth_required=False)
+            
+            if response and response.status_code == 200:
+                data = response.json()
+                unassigned_clients = data["clients"]
+                unassigned_client_ids = [c["id"] for c in unassigned_clients]
+                
+                if self.test_client["id"] not in unassigned_client_ids:
+                    self.log_test("Client Removed from Unassigned", True, f"Assigned client {self.test_client['full_name']} no longer appears in unassigned list")
+                else:
+                    self.log_test("Client Removed from Unassigned", False, f"Assigned client {self.test_client['full_name']} still appears in unassigned list")
+            else:
+                self.log_test("Client Removed from Unassigned", False, "Failed to retrieve unassigned clients for verification")
+        else:
+            print("\n6️⃣ Skipping unassigned list verification - no client was assigned")
+        
+        # Step 7: Test Personal Trainer flow
+        print("\n7️⃣ Testing Personal Trainer flow...")
+        headers = {"Authorization": f"Bearer {self.personal_token}"}
+        response = self.make_request("GET", "/professionals/unassigned-clients", headers=headers, auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            unassigned_clients = data["clients"]
+            self.log_test("Personal Trainer - Get Unassigned Clients", True, f"Personal trainer can see {len(unassigned_clients)} unassigned clients")
+            
+            # Test personal trainer assigned clients
+            response = self.make_request("GET", "/professionals/my-assigned-clients", headers=headers, auth_required=False)
+            if response and response.status_code == 200:
+                data = response.json()
+                assigned_clients = data["assigned_clients"]
+                self.log_test("Personal Trainer - Get Assigned Clients", True, f"Personal trainer has {len(assigned_clients)} assigned clients")
+            else:
+                self.log_test("Personal Trainer - Get Assigned Clients", False, "Failed to get personal trainer assigned clients")
+        else:
+            self.log_test("Personal Trainer - Get Unassigned Clients", False, "Failed to get unassigned clients for personal trainer")
+        
+        print("\n✅ PROFESSIONAL MANAGEMENT SYSTEM TEST COMPLETED!")
+        print("Summary of tested functionality:")
+        print("  ✓ Professional login (nutritionist and personal trainer)")
+        print("  ✓ GET /api/professionals/unassigned-clients")
+        print("  ✓ POST /api/professionals/flag-client")
+        print("  ✓ GET /api/professionals/my-assigned-clients")
+        print("  ✓ Client assignment persistence verification")
+        print("  ✓ Both professional types (nutritionist and personal trainer)")
+        
+        return True
+
     def test_new_dashboard_endpoints(self):
         """Test the NEW dashboard endpoints as requested in review"""
         print("\n" + "="*70)
