@@ -3502,10 +3502,12 @@ async def book_appointment(
             )
         
         # Check if slot is available
+        appointment_date_str = appointment.appointment_date.strftime("%Y-%m-%d") if isinstance(appointment.appointment_date, datetime) else str(appointment.appointment_date)
+        
         available_slot = await db.appointment_slots.find_one({
             "professional_id": appointment.professional_id,
             "professional_type": appointment.professional_type,
-            "date": appointment.appointment_date,
+            "date": appointment_date_str,
             "time": appointment.appointment_time,
             "available": True
         })
