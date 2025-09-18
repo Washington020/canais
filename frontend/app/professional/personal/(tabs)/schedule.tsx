@@ -150,7 +150,7 @@ export default function PersonalTrainerSchedule() {
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(selectedYear, selectedMonth, day);
       const dateString = date.toISOString().split('T')[0];
-      const appointmentsOnDate = appointments.filter(apt => apt.appointment_date === dateString);
+      const appointmentsOnDate = (appointments || []).filter(apt => apt.appointment_date === dateString);
       
       dates.push({
         day,
