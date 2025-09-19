@@ -1344,7 +1344,7 @@ async def gym_authenticate(credentials: dict):
     from passlib.context import CryptContext
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
-    stored_password_hash = gym.get("login_credentials", {}).get("password")
+    stored_password_hash = gym.get("login_credentials", {}).get("password_hash")
     if not stored_password_hash:
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
     
