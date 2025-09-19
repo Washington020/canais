@@ -3682,6 +3682,88 @@ async def complete_appointment(
         logger.error(f"Erro ao completar consulta: {e}")
         raise HTTPException(status_code=500, detail="Erro ao completar consulta")
 
+@api_router.post("/professionals/create-plan")
+async def create_professional_plan(
+    plan_data: dict,
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Create nutrition or workout plan for assigned client"""
+    try:
+        professional_id = str(current_professional["_id"])
+        professional_type = current_professional["professional_type"]
+        
+        # Validate client is assigned to this professional
+        client_id = plan_data.get("client_id")
+        if not client_id:
+            raise HTTPException(status_code=400, detail="client_id é obrigatório")
+        
+        # Check if client is assigned to this professional
+        assignment = await db.client_assignments.find_one({
+            "client_id": client_id,
+            "professional_id": professional_id,
+            "professional_type": professional_type,
+            "status": "active"
+        })
+        
+        if not assignment:
+            raise HTTPException(status_code=403, detail="Cliente não está atribuído a este profissional")
+        
+        # Get client info
+        client = await db.users.find_one({"_id": ObjectId(client_id)})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        # Create plan based on professional type
+        plan_document = {
+            "client_id": client_id,
+            "client_name": client.get("full_name", "Cliente"),
+            "professional_id": professional_id,
+            "professional_name": current_professional.get("full_name", "Profissional"),
+            "professional_type": professional_type,
+            "title": plan_data.get("title", ""),
+            "description": plan_data.get("description", ""),
+            "duration_days": plan_data.get("duration_days", 30),
+            "active": True,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+        
+        if professional_type == "nutritionist":
+            # Nutrition plan specific fields
+            plan_document.update({
+                "daily_calories": plan_data.get("daily_calories", 0),
+                "water_intake": plan_data.get("water_intake", 0),
+                "meals": plan_data.get("meals", []),
+                "supplements": plan_data.get("supplements", [])
+            })
+            collection = db.supplement_plans
+            
+        elif professional_type == "personal":
+            # Workout plan specific fields
+            plan_document.update({
+                "weekly_frequency": plan_data.get("weekly_frequency", 3),
+                "difficulty": plan_data.get("difficulty", "Intermediário"),
+                "workout_days": plan_data.get("workout_days", [])
+            })
+            collection = db.workout_plans
+        else:
+            raise HTTPException(status_code=400, detail="Tipo de profissional inválido")
+        
+        # Insert plan
+        result = await collection.insert_one(plan_document)
+        
+        return {
+            "success": True,
+            "plan_id": str(result.inserted_id),
+            "message": f"Plano {'nutricional' if professional_type == 'nutritionist' else 'de treino'} criado com sucesso"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao criar plano: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar plano")
+
 # Supplement System Endpoints
 @api_router.post("/admin/supplements/plan")
 async def create_supplement_plan(plan: SupplementPlan):
