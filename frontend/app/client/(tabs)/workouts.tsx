@@ -1,54 +1,64 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  ScrollView, 
-  RefreshControl,
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
   ActivityIndicator,
-  Alert
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
 
+interface UserProfile {
+  id: string;
+  full_name: string;
+  email: string;
+  plan_type: string;
+  subscription_end?: string;
+}
+
+interface PaymentPlan {
+  id: string;
+  name: string;
+  price: number;
+  features: string[];
+  description: string;
+}
+
 interface WorkoutPlan {
   id: string;
-  workout_name: string;
-  exercises: any[];
-  start_date: string;
-  end_date?: string;
+  title: string;
+  professional_name: string;
+  duration_days: number;
+  difficulty: string;
+  workout_days: any[];
   created_at: string;
 }
 
-interface AppointmentSlot {
-  id: string;
-  date: string;
-  professional_type: string;
-}
-
 export default function Workouts() {
-  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
-  const [availableSlots, setAvailableSlots] = useState<AppointmentSlot[]>([]);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
+  const [plans, setPlans] = useState<PaymentPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [userPlan, setUserPlan] = useState('basic');
-  
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PaymentPlan | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    loadWorkoutPlan();
-    loadAvailableSlots();
+    loadUserData();
   }, []);
 
-  const loadWorkoutPlan = async () => {
+  const loadUserData = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
@@ -58,346 +68,311 @@ export default function Workouts() {
 
       const headers = { Authorization: `Bearer ${token}` };
       
-      // Get user profile to check plan
+      // Load user profile
       const profileResponse = await axios.get(`${API_URL}/users/profile`, { headers });
-      const currentPlan = profileResponse.data.plan || 'basic';
-      setUserPlan(currentPlan);
+      const userProfile = profileResponse.data;
+      setUser(userProfile);
 
-      // Get workout plan
-      const response = await axios.get(`${API_URL}/workouts/user/plan`, { headers });
-      
-      if (response.data.plan) {
-        setWorkoutPlan(response.data.plan);
-      } else if (response.data.upgrade_required) {
-        // User has basic plan, no access to workouts
-        setWorkoutPlan(null);
+      // Load payment plans
+      const plansResponse = await axios.get(`${API_URL}/payments/plans`, { headers });
+      setPlans(plansResponse.data || []);
+
+      // If not basic user, load workout plans
+      if (userProfile.plan_type !== 'basic') {
+        try {
+          const workoutsResponse = await axios.get(`${API_URL}/users/workout-plans`, { headers });
+          setWorkoutPlans(workoutsResponse.data.workout_plans || []);
+        } catch (error) {
+          console.error('Error loading workout plans:', error);
+          setWorkoutPlans([]);
+        }
       }
-      
+
     } catch (error: any) {
-      console.error('Error loading workout plan:', error);
+      console.error('Error loading user data:', error);
       if (error.response?.status === 401) {
         router.replace('/client/login');
       }
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const loadAvailableSlots = async () => {
+  const handleUpgrade = async (plan: PaymentPlan) => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!user) return;
 
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_URL}/appointments/available-slots?professional_type=personal`, { headers });
-      
-      setAvailableSlots(response.data.slots || []);
-    } catch (error: any) {
-      console.error('Error loading slots:', error);
-      // Don't show error for basic plan users
-      if (error.response?.status !== 403) {
-        console.error('Unexpected error:', error);
-      }
-    }
-  };
-
-  const schedulePersonalTraining = async (slotId: string) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      
-      const slot = availableSlots.find(s => s.id === slotId);
-      if (!slot) return;
-
-      const appointmentData = {
-        appointment_type: 'personal',
-        appointment_date: slot.date,
-        notes: 'Consulta com personal trainer agendada via app'
-      };
-
-      await axios.post(`${API_URL}/appointments/request`, appointmentData, { headers });
-      
       Alert.alert(
-        '💪 Personal Training Agendado!', 
-        `Sua sessão com o personal trainer foi agendada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${new Date(slot.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+        'Confirmar Upgrade',
+        `Deseja fazer upgrade para o ${plan.name}?\n\nValor: R$ ${plan.price.toFixed(2).replace('.', ',')}\n\n⚠️ O pagamento será cobrado imediatamente, mas o plano entrará em vigor apenas no próximo mês.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Confirmar',
+            onPress: async () => {
+              try {
+                const token = await AsyncStorage.getItem('token');
+                const headers = { Authorization: `Bearer ${token}` };
+
+                const upgradeData = {
+                  new_plan: plan.id,
+                  current_plan: user.plan_type,
+                  effective_date: 'next_month'
+                };
+
+                await axios.post(`${API_URL}/users/request-upgrade`, upgradeData, { headers });
+
+                Alert.alert(
+                  'Solicitação Enviada!',
+                  `Sua solicitação de upgrade para ${plan.name} foi enviada para aprovação.\n\nO pagamento será processado e o plano entrará em vigor no próximo mês.\n\nVocê receberá uma confirmação em breve.`,
+                  [{ text: 'OK', onPress: () => setShowUpgradeModal(false) }]
+                );
+              } catch (error: any) {
+                console.error('Error requesting upgrade:', error);
+                Alert.alert('Erro', 'Não foi possível processar a solicitação de upgrade');
+              }
+            }
+          }
+        ]
       );
-      
-      // Reload slots
-      loadAvailableSlots();
-    } catch (error: any) {
-      console.error('Error scheduling appointment:', error);
-      if (error.response?.status === 400) {
-        Alert.alert('Erro', error.response.data.detail);
-      } else {
-        Alert.alert('Erro', 'Não foi possível agendar a sessão');
-      }
+    } catch (error) {
+      console.error('Error in handleUpgrade:', error);
     }
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadWorkoutPlan();
-    loadAvailableSlots();
-  };
-
-  const startWorkout = () => {
-    if (!workoutPlan) return;
-    
-    Alert.alert(
-      '🏋️ Iniciar Treino',
-      `Você está pronto para iniciar "${workoutPlan.workout_name}"?\n\n${workoutPlan.exercises.length} exercícios programados.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Iniciar',
-          onPress: () => {
-            Alert.alert('💪 Treino Iniciado!', 'Bom treino! Mantenha o foco e a forma correta.');
-          }
-        }
-      ]
-    );
+  const formatCurrency = (value: number) => {
+    return value.toFixed(2).replace('.', ',');
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Carregando plano de treino...</Text>
+          <ActivityIndicator size="large" color="#F59E0B" />
+          <Text style={styles.loadingText}>Carregando...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  // Basic user - show upgrade options
+  if (user?.plan_type === 'basic') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Ionicons name="fitness" size={28} color="#F59E0B" />
+            <Text style={styles.title}>Treino Personalizado</Text>
+          </View>
+        </View>
+
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Current Plan Info */}
+          <View style={styles.currentPlanCard}>
+            <View style={styles.planHeader}>
+              <Ionicons name="person-circle" size={32} color="#64748B" />
+              <View style={styles.planInfo}>
+                <Text style={styles.currentPlanTitle}>Plano Atual: Básico</Text>
+                <Text style={styles.currentPlanSubtitle}>Acesso limitado às funcionalidades</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Upgrade Banner */}
+          <View style={styles.upgradeBanner}>
+            <View style={styles.upgradeIconContainer}>
+              <Ionicons name="fitness" size={40} color="#F59E0B" />
+            </View>
+            <View style={styles.upgradeContent}>
+              <Text style={styles.upgradeTitle}>Treinos Personalizados</Text>
+              <Text style={styles.upgradeDescription}>
+                Tenha acesso a treinos criados especialmente para você por personal trainers qualificados.
+              </Text>
+              
+              <View style={styles.benefitsList}>
+                <View style={styles.benefitItem}>
+                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                  <Text style={styles.benefitText}>Treinos personalizados</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                  <Text style={styles.benefitText}>Acompanhamento profissional</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                  <Text style={styles.benefitText}>Ajuste de exercícios</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                  <Text style={styles.benefitText}>Progressão monitorada</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                style={styles.upgradeButton}
+                onPress={() => setShowUpgradeModal(true)}
+              >
+                <Ionicons name="arrow-up-circle" size={20} color="#FFFFFF" />
+                <Text style={styles.upgradeButtonText}>Fazer Upgrade</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Feature Preview */}
+          <View style={styles.previewSection}>
+            <Text style={styles.previewTitle}>O que você terá acesso:</Text>
+            
+            <View style={styles.previewCard}>
+              <View style={styles.previewHeader}>
+                <Ionicons name="barbell" size={24} color="#F59E0B" />
+                <Text style={styles.previewCardTitle}>Planos Intermediário</Text>
+              </View>
+              <Text style={styles.previewPrice}>R$ 49,90/mês</Text>
+              <View style={styles.previewFeatures}>
+                <Text style={styles.previewFeature}>• 1 consulta mensal com Personal Trainer</Text>
+                <Text style={styles.previewFeature}>• Treinos personalizados</Text>
+                <Text style={styles.previewFeature}>• Agendamento de sessões</Text>
+                <Text style={styles.previewFeature}>• 30 tokens mensais</Text>
+              </View>
+            </View>
+
+            <View style={styles.previewCard}>
+              <View style={styles.previewHeader}>
+                <Ionicons name="trophy" size={24} color="#8B5CF6" />
+                <Text style={styles.previewCardTitle}>Plano VIP</Text>
+              </View>
+              <Text style={styles.previewPrice}>R$ 99,90/mês</Text>
+              <View style={styles.previewFeatures}>
+                <Text style={styles.previewFeature}>• 2 consultas mensais com Personal Trainer</Text>
+                <Text style={styles.previewFeature}>• Treinos avançados personalizados</Text>
+                <Text style={styles.previewFeature}>• Agendamento prioritário</Text>
+                <Text style={styles.previewFeature}>• Tokens ilimitados</Text>
+                <Text style={styles.previewFeature}>• Suporte 24/7</Text>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Upgrade Modal */}
+        <Modal
+          visible={showUpgradeModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowUpgradeModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Escolha seu Plano</Text>
+                <TouchableOpacity onPress={() => setShowUpgradeModal(false)}>
+                  <Ionicons name="close" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalScroll}>
+                {plans.filter(plan => plan.id !== 'basic').map((plan) => (
+                  <TouchableOpacity
+                    key={plan.id}
+                    style={[
+                      styles.planCard,
+                      plan.id === 'vip' && styles.planCardVip
+                    ]}
+                    onPress={() => handleUpgrade(plan)}
+                  >
+                    <View style={styles.planCardHeader}>
+                      <Text style={styles.planCardTitle}>{plan.name}</Text>
+                      <Text style={styles.planCardPrice}>
+                        R$ {formatCurrency(plan.price)}/mês
+                      </Text>
+                    </View>
+                    
+                    <Text style={styles.planCardDescription}>{plan.description}</Text>
+                    
+                    <View style={styles.planFeatures}>
+                      {plan.features.map((feature, index) => (
+                        <View key={index} style={styles.planFeature}>
+                          <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                          <Text style={styles.planFeatureText}>{feature}</Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    <View style={styles.planCardFooter}>
+                      <Text style={styles.planCardNote}>
+                        💡 Vigência a partir do próximo mês
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
+  }
+
+  // Non-basic users - show workout plans
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Treinos</Text>
-        <Text style={styles.subtitle}>Seu plano de treino personalizado</Text>
+        <View style={styles.headerContent}>
+          <Ionicons name="fitness" size={28} color="#F59E0B" />
+          <Text style={styles.title}>Meus Treinos</Text>
+        </View>
+        <View style={styles.planBadge}>
+          <Text style={styles.planBadgeText}>
+            {user?.plan_type?.toUpperCase()}
+          </Text>
+        </View>
       </View>
 
-      <ScrollView 
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Current Workout Plan */}
-        <View style={styles.workoutPlanContainer}>
-          <Text style={styles.sectionTitle}>🏋️ Plano de Treino Atual</Text>
-          
-          {!workoutPlan && userPlan === 'basic' ? (
-            <View style={styles.upgradeCard}>
-              <Ionicons name="fitness-outline" size={48} color="#64748B" />
-              <Text style={styles.upgradeTitle}>Treinos Personalizados</Text>
-              <Text style={styles.upgradeText}>
-                Treinos personalizados estão disponíveis apenas para usuários Premium e VIP. 
-                Faça upgrade para ter acesso a planos criados pelo nosso personal trainer.
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {workoutPlans.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="fitness-outline" size={64} color="#64748B" />
+            <Text style={styles.emptyTitle}>Nenhum treino disponível</Text>
+            <Text style={styles.emptyDescription}>
+              Seus treinos personalizados aparecerão aqui quando criados pelo seu personal trainer.
+            </Text>
+          </View>
+        ) : (
+          workoutPlans.map((workout) => (
+            <View key={workout.id} style={styles.workoutCard}>
+              <View style={styles.workoutHeader}>
+                <View style={styles.workoutInfo}>
+                  <Text style={styles.workoutTitle}>{workout.title}</Text>
+                  <Text style={styles.workoutTrainer}>
+                    Personal: {workout.professional_name}
+                  </Text>
+                </View>
+                <View style={styles.workoutMeta}>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="calendar" size={16} color="#F59E0B" />
+                    <Text style={styles.metaText}>{workout.duration_days} dias</Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="fitness" size={16} color="#F59E0B" />
+                    <Text style={styles.metaText}>{workout.difficulty}</Text>
+                  </View>
+                </View>
+              </View>
+              
+              <Text style={styles.workoutDays}>
+                {workout.workout_days.length} dias de treino programados
               </Text>
-              <TouchableOpacity 
-                style={styles.upgradeButton}
-                onPress={() => router.push('/client/(tabs)/financial')}
-              >
-                <Ionicons name="arrow-up-circle" size={16} color="#FFFFFF" />
-                <Text style={styles.upgradeButtonText}>Upgrade para Premium/VIP</Text>
+              
+              <TouchableOpacity style={styles.viewWorkoutButton}>
+                <Ionicons name="play-circle" size={18} color="#F59E0B" />
+                <Text style={styles.viewWorkoutText}>Ver Treino</Text>
               </TouchableOpacity>
             </View>
-          ) : !workoutPlan ? (
-            <View style={styles.noWorkoutCard}>
-              <Ionicons name="barbell-outline" size={48} color="#64748B" />
-              <Text style={styles.noWorkoutTitle}>Nenhum Treino Ativo</Text>
-              <Text style={styles.noWorkoutText}>
-                Você ainda não possui um plano de treino personalizado. Agende uma sessão com nosso personal trainer.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.workoutPlanCard}>
-              <View style={styles.workoutPlanHeader}>
-                <View style={styles.workoutPlanInfo}>
-                  <Text style={styles.workoutPlanName}>{workoutPlan.workout_name}</Text>
-                  <Text style={styles.workoutPlanMeta}>
-                    {workoutPlan.exercises.length} exercícios • Criado em {new Date(workoutPlan.created_at).toLocaleDateString('pt-BR')}
-                  </Text>
-                  {workoutPlan.end_date && (
-                    <Text style={styles.workoutPlanDuration}>
-                      Válido até: {new Date(workoutPlan.end_date).toLocaleDateString('pt-BR')}
-                    </Text>
-                  )}
-                </View>
-                <TouchableOpacity style={styles.favoriteButton}>
-                  <Ionicons name="heart" size={20} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Exercises List */}
-              <View style={styles.exercisesList}>
-                <Text style={styles.exercisesTitle}>Exercícios:</Text>
-                {workoutPlan.exercises.slice(0, 5).map((exercise, index) => (
-                  <View key={index} style={styles.exerciseItem}>
-                    <Text style={styles.exerciseName}>
-                      {index + 1}. {exercise.name || `Exercício ${index + 1}`}
-                    </Text>
-                    <Text style={styles.exerciseDetails}>
-                      {exercise.sets || 3} séries x {exercise.reps || 10} repetições
-                      {exercise.weight && ` • ${exercise.weight}kg`}
-                    </Text>
-                  </View>
-                ))}
-                {workoutPlan.exercises.length > 5 && (
-                  <Text style={styles.moreExercises}>
-                    +{workoutPlan.exercises.length - 5} exercícios adicionais
-                  </Text>
-                )}
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.workoutActions}>
-                <TouchableOpacity 
-                  style={styles.startWorkoutButton}
-                  onPress={startWorkout}
-                >
-                  <Ionicons name="play" size={16} color="#FFFFFF" />
-                  <Text style={styles.startWorkoutText}>Iniciar Treino</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.detailsButton}>
-                  <Ionicons name="eye" size={16} color="#8B5CF6" />
-                  <Text style={styles.detailsButtonText}>Ver Detalhes</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Personal Trainer Section */}
-        <View style={styles.personalTrainerContainer}>
-          <Text style={styles.sectionTitle}>👨‍💼 Personal Trainer</Text>
-          
-          <View style={styles.personalTrainerCard}>
-            <View style={styles.trainerHeader}>
-              <View style={styles.trainerAvatar}>
-                <Text style={styles.trainerAvatarText}>PT</Text>
-              </View>
-              <View style={styles.trainerInfo}>
-                <Text style={styles.trainerName}>Prof. Carlos Silva</Text>
-                <Text style={styles.trainerTitle}>Personal Trainer - CREF 12345-G/SP</Text>
-              </View>
-            </View>
-            
-            <View style={styles.trainerMessage}>
-              <Text style={styles.messageText}>
-                "Para ter um treino personalizado e eficiente, é importante avaliar suas condições físicas e objetivos. 
-                Agende uma sessão para criarmos seu plano ideal!"
-              </Text>
-            </View>
-            
-            {userPlan === 'basic' ? (
-              <View style={styles.upgradeSection}>
-                <Text style={styles.upgradeText}>
-                  Personal training disponível para planos Premium e VIP
-                </Text>
-                <TouchableOpacity 
-                  style={styles.upgradeButton}
-                  onPress={() => router.push('/client/(tabs)/financial')}
-                >
-                  <Ionicons name="arrow-up-circle" size={16} color="#FFFFFF" />
-                  <Text style={styles.upgradeButtonText}>Fazer Upgrade</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.appointmentSection}>
-                <Text style={styles.appointmentTitle}>Agendar Sessão</Text>
-                
-                {availableSlots.length === 0 ? (
-                  <Text style={styles.noSlotsText}>
-                    Nenhum horário disponível no momento. Tente novamente mais tarde.
-                  </Text>
-                ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slotsScroll}>
-                    {availableSlots.slice(0, 5).map((slot) => (
-                      <TouchableOpacity 
-                        key={slot.id}
-                        style={styles.slotCard}
-                        onPress={() => schedulePersonalTraining(slot.id)}
-                      >
-                        <Text style={styles.slotDate}>
-                          {new Date(slot.date).toLocaleDateString('pt-BR', {
-                            day: '2-digit',
-                            month: 'short'
-                          })}
-                        </Text>
-                        <Text style={styles.slotTime}>
-                          {new Date(slot.date).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
-                
-                <TouchableOpacity style={styles.messageTrainerButton}>
-                  <Ionicons name="chatbubble" size={16} color="#8B5CF6" />
-                  <Text style={styles.messageTrainerText}>Enviar Mensagem</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Workout Stats */}
-        {workoutPlan && (
-          <View style={styles.statsContainer}>
-            <Text style={styles.sectionTitle}>📊 Estatísticas</Text>
-            
-            <View style={styles.statsGrid}>
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>{workoutPlan.exercises.length}</Text>
-                <Text style={styles.statLabel}>Exercícios</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>0</Text>
-                <Text style={styles.statLabel}>Concluídos</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>~45</Text>
-                <Text style={styles.statLabel}>Min Médio</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>0%</Text>
-                <Text style={styles.statLabel}>Progresso</Text>
-              </View>
-            </View>
-          </View>
+          ))
         )}
-
-        {/* Tips */}
-        <View style={styles.tipsContainer}>
-          <Text style={styles.sectionTitle}>💡 Dicas de Treino</Text>
-          <View style={styles.tipsCard}>
-            <View style={styles.tip}>
-              <Ionicons name="water" size={20} color="#3B82F6" />
-              <Text style={styles.tipText}>Mantenha-se hidratado durante todo o treino</Text>
-            </View>
-            <View style={styles.tip}>
-              <Ionicons name="time" size={20} color="#8B5CF6" />
-              <Text style={styles.tipText}>Respeite o intervalo entre séries (30-90s)</Text>
-            </View>
-            <View style={styles.tip}>
-              <Ionicons name="body" size={20} color="#22C55E" />
-              <Text style={styles.tipText}>Foque na execução correta dos movimentos</Text>
-            </View>
-            <View style={styles.tip}>
-              <Ionicons name="calendar" size={20} color="#F59E0B" />
-              <Text style={styles.tipText}>Mantenha consistência na frequência semanal</Text>
-            </View>
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -406,7 +381,7 @@ export default function Workouts() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0B0D17',
   },
   loadingContainer: {
     flex: 1,
@@ -414,357 +389,333 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#E2E8F0',
-    marginTop: 16,
+    color: '#FFFFFF',
     fontSize: 16,
+    marginTop: 16,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#94A3B8',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  workoutPlanContainer: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  upgradeCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  upgradeTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  upgradeText: {
-    fontSize: 14,
-    color: '#94A3B8',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  upgradeButton: {
-    backgroundColor: '#8B5CF6',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginLeft: 12,
+  },
+  planBadge: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  planBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+  },
+  currentPlanCard: {
+    backgroundColor: 'rgba(100, 116, 139, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.3)',
+  },
+  planHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  planInfo: {
+    marginLeft: 12,
+  },
+  currentPlanTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  currentPlanSubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  upgradeBanner: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  upgradeIconContainer: {
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  upgradeContent: {
+    alignItems: 'center',
+  },
+  upgradeTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  upgradeDescription: {
+    color: '#94A3B8',
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  benefitsList: {
+    alignSelf: 'stretch',
+    marginBottom: 24,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  benefitText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  upgradeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
   upgradeButtonText: {
     color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
-  noWorkoutCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
+  previewSection: {
+    marginBottom: 32,
+  },
+  previewTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  previewCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  noWorkoutTitle: {
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  previewCardTitle: {
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  previewPrice: {
+    color: '#22C55E',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  previewFeatures: {
+    marginTop: 8,
+  },
+  previewFeature: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#0B0D17',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalTitle: {
     color: '#FFFFFF',
-    marginTop: 16,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  modalScroll: {
+    padding: 20,
+  },
+  planCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  planCardVip: {
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+  },
+  planCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  planCardTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  planCardPrice: {
+    color: '#22C55E',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  planCardDescription: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  planFeatures: {
+    marginBottom: 16,
+  },
+  planFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  planFeatureText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  planCardFooter: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: 12,
+  },
+  planCardNote: {
+    color: '#94A3B8',
+    fontSize: 12,
     textAlign: 'center',
   },
-  noWorkoutText: {
-    fontSize: 14,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+  },
+  emptyDescription: {
     color: '#94A3B8',
+    fontSize: 14,
     textAlign: 'center',
+    marginTop: 8,
     lineHeight: 20,
   },
-  workoutPlanCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
+  workoutCard: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
-  workoutPlanHeader: {
+  workoutHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  workoutPlanInfo: {
-    flex: 1,
-  },
-  workoutPlanName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  workoutPlanMeta: {
-    fontSize: 14,
-    color: '#94A3B8',
-    marginBottom: 4,
-  },
-  workoutPlanDuration: {
-    fontSize: 12,
-    color: '#F59E0B',
-  },
-  favoriteButton: {
-    padding: 8,
-  },
-  exercisesList: {
-    marginBottom: 20,
-  },
-  exercisesTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
     marginBottom: 12,
   },
-  exerciseItem: {
-    marginBottom: 8,
+  workoutInfo: {
+    flex: 1,
   },
-  exerciseName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#E2E8F0',
-    marginBottom: 2,
+  workoutTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
-  exerciseDetails: {
-    fontSize: 12,
+  workoutTrainer: {
     color: '#94A3B8',
-  },
-  moreExercises: {
-    fontSize: 12,
-    color: '#8B5CF6',
-    fontStyle: 'italic',
+    fontSize: 14,
     marginTop: 4,
   },
-  workoutActions: {
-    flexDirection: 'row',
-    gap: 12,
+  workoutMeta: {
+    alignItems: 'flex-end',
   },
-  startWorkoutButton: {
-    flex: 1,
-    backgroundColor: '#22C55E',
-    paddingVertical: 12,
-    borderRadius: 12,
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  startWorkoutText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  detailsButton: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#8B5CF6',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  detailsButtonText: {
-    color: '#8B5CF6',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  personalTrainerContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  personalTrainerCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  trainerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  trainerAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#8B5CF6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  trainerAvatarText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  trainerInfo: {
-    flex: 1,
-  },
-  trainerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  trainerTitle: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  trainerMessage: {
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  messageText: {
-    fontSize: 14,
-    color: '#E2E8F0',
-    lineHeight: 20,
-    fontStyle: 'italic',
-  },
-  upgradeSection: {
-    alignItems: 'center',
-  },
-  appointmentSection: {
-    gap: 16,
-  },
-  appointmentTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  noSlotsText: {
-    fontSize: 14,
-    color: '#94A3B8',
-    textAlign: 'center',
-    padding: 20,
-  },
-  slotsScroll: {
-    marginBottom: 16,
-  },
-  slotCard: {
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    padding: 16,
-    marginRight: 12,
-    minWidth: 100,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  slotDate: {
-    fontSize: 12,
-    color: '#94A3B8',
     marginBottom: 4,
   },
-  slotTime: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  messageTrainerButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#8B5CF6',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  messageTrainerText: {
-    color: '#8B5CF6',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  statsContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#8B5CF6',
-    marginBottom: 4,
-  },
-  statLabel: {
+  metaText: {
+    color: '#F59E0B',
     fontSize: 12,
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+  workoutDays: {
     color: '#94A3B8',
-    textAlign: 'center',
+    fontSize: 14,
+    marginBottom: 16,
   },
-  tipsContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  tipsCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 16,
-  },
-  tip: {
+  viewWorkoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
-  tipText: {
-    flex: 1,
+  viewWorkoutText: {
+    color: '#F59E0B',
     fontSize: 14,
-    color: '#E2E8F0',
-    lineHeight: 20,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
