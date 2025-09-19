@@ -366,7 +366,7 @@ async def create_test_gym():
                 "status": "active",
                 "login_credentials": {
                     "username": "academia_teste",
-                    "password": pwd_context.hash("teste123"),
+                    "password_hash": pwd_context.hash("teste123"),
                     "last_login": None
                 },
                 "operating_hours": {
