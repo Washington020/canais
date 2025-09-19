@@ -1294,6 +1294,314 @@ class FitPassTester:
         
         return False
 
+    def test_payment_plans_pricing(self):
+        """Test the updated payment plans pricing as requested in review"""
+        print("\n" + "="*70)
+        print("💳 TESTING UPDATED PAYMENT PLANS PRICING")
+        print("="*70)
+        print("Testing the payment plans pricing that was just changed...")
+        
+        # Step 1: Test GET /api/payments/plans endpoint
+        print("\n1️⃣ Testing GET /api/payments/plans - Verify updated pricing...")
+        
+        response = self.make_request("GET", "/payments/plans", auth_required=False)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            
+            # Verify response is a list or dict with plans
+            plans = data if isinstance(data, list) else data.get("plans", [])
+            
+            if not plans:
+                self.log_test("Payment Plans - Structure", False, "No plans found in response")
+                return False
+            
+            # Convert list to dict for easier access
+            plans_dict = {}
+            if isinstance(plans, list):
+                for plan in plans:
+                    plans_dict[plan.get("id", "")] = plan
+            else:
+                plans_dict = plans
+            
+            # Verify all 4 plans exist
+            expected_plans = ["basic", "intermediario", "premium", "vip"]
+            missing_plans = [plan_id for plan_id in expected_plans if plan_id not in plans_dict]
+            
+            if missing_plans:
+                self.log_test("Payment Plans - All Plans Present", False, f"Missing plans: {missing_plans}")
+                return False
+            else:
+                self.log_test("Payment Plans - All Plans Present", True, "All 4 plans (basic, intermediario, premium, vip) are present")
+            
+            # Step 2: Verify Basic Plan Pricing (should be R$ 79.80)
+            print("\n2️⃣ Verifying Basic Plan Pricing...")
+            basic_plan = plans_dict.get("basic", {})
+            
+            if basic_plan.get("price") == 79.80:
+                self.log_test("Basic Plan Price", True, f"Basic plan price is correct: R$ {basic_plan['price']}")
+            else:
+                self.log_test("Basic Plan Price", False, f"Basic plan price is {basic_plan.get('price')}, expected 79.80")
+                return False
+            
+            # Verify Basic Plan structure and token limit
+            if basic_plan.get("token_limit") == 10:
+                self.log_test("Basic Plan Token Limit", True, f"Basic plan has correct token limit: {basic_plan['token_limit']}")
+            else:
+                self.log_test("Basic Plan Token Limit", False, f"Basic plan token limit is {basic_plan.get('token_limit')}, expected 10")
+            
+            # Step 3: Verify Intermediário Plan (newly added)
+            print("\n3️⃣ Verifying Intermediário Plan (newly added)...")
+            intermediario_plan = plans_dict.get("intermediario", {})
+            
+            if intermediario_plan.get("price") == 49.90:
+                self.log_test("Intermediário Plan Price", True, f"Intermediário plan price is correct: R$ {intermediario_plan['price']}")
+            else:
+                self.log_test("Intermediário Plan Price", False, f"Intermediário plan price is {intermediario_plan.get('price')}, expected 49.90")
+                return False
+            
+            if intermediario_plan.get("token_limit") == 30:
+                self.log_test("Intermediário Plan Token Limit", True, f"Intermediário plan has correct token limit: {intermediario_plan['token_limit']}")
+            else:
+                self.log_test("Intermediário Plan Token Limit", False, f"Intermediário plan token limit is {intermediario_plan.get('token_limit')}, expected 30")
+            
+            # Step 4: Verify Premium Plan (unchanged)
+            print("\n4️⃣ Verifying Premium Plan (should remain unchanged)...")
+            premium_plan = plans_dict.get("premium", {})
+            
+            if premium_plan.get("price") == 59.90:
+                self.log_test("Premium Plan Price", True, f"Premium plan price is correct: R$ {premium_plan['price']}")
+            else:
+                self.log_test("Premium Plan Price", False, f"Premium plan price is {premium_plan.get('price')}, expected 59.90")
+                return False
+            
+            if premium_plan.get("token_limit") == 60:
+                self.log_test("Premium Plan Token Limit", True, f"Premium plan has correct token limit: {premium_plan['token_limit']}")
+            else:
+                self.log_test("Premium Plan Token Limit", False, f"Premium plan token limit is {premium_plan.get('token_limit')}, expected 60")
+            
+            # Step 5: Verify VIP Plan (unchanged)
+            print("\n5️⃣ Verifying VIP Plan (should remain unchanged)...")
+            vip_plan = plans_dict.get("vip", {})
+            
+            if vip_plan.get("price") == 99.90:
+                self.log_test("VIP Plan Price", True, f"VIP plan price is correct: R$ {vip_plan['price']}")
+            else:
+                self.log_test("VIP Plan Price", False, f"VIP plan price is {vip_plan.get('price')}, expected 99.90")
+                return False
+            
+            if vip_plan.get("token_limit") == -1:
+                self.log_test("VIP Plan Token Limit", True, f"VIP plan has unlimited tokens: {vip_plan['token_limit']}")
+            else:
+                self.log_test("VIP Plan Token Limit", False, f"VIP plan token limit is {vip_plan.get('token_limit')}, expected -1 (unlimited)")
+            
+            # Step 6: Verify Plan Structure for all plans
+            print("\n6️⃣ Verifying Plan Structure...")
+            required_fields = ["id", "name", "price", "currency", "duration_days", "features", "token_limit", "description"]
+            
+            all_structure_valid = True
+            for plan_id, plan in plans_dict.items():
+                missing_fields = [field for field in required_fields if field not in plan]
+                if missing_fields:
+                    self.log_test(f"{plan_id.title()} Plan Structure", False, f"Missing fields: {missing_fields}")
+                    all_structure_valid = False
+                else:
+                    # Verify currency is BRL and duration is 30 days
+                    if plan.get("currency") != "BRL":
+                        self.log_test(f"{plan_id.title()} Plan Currency", False, f"Currency is {plan.get('currency')}, expected BRL")
+                        all_structure_valid = False
+                    
+                    if plan.get("duration_days") != 30:
+                        self.log_test(f"{plan_id.title()} Plan Duration", False, f"Duration is {plan.get('duration_days')}, expected 30 days")
+                        all_structure_valid = False
+            
+            if all_structure_valid:
+                self.log_test("All Plans Structure", True, "All plans have correct structure with required fields")
+            
+            # Print summary of all plans
+            print("\n📋 PAYMENT PLANS SUMMARY:")
+            for plan_id, plan in plans_dict.items():
+                print(f"   {plan_id.upper()}: R$ {plan.get('price')} - {plan.get('token_limit')} tokens - {plan.get('currency')} - {plan.get('duration_days')} days")
+            
+            return all_structure_valid
+            
+        else:
+            error_detail = ""
+            if response:
+                try:
+                    error_detail = response.json().get("detail", response.text)
+                except:
+                    error_detail = response.text
+            self.log_test("Payment Plans Endpoint", False, f"Status: {response.status_code if response else 'No response'}, Error: {error_detail}")
+            return False
+
+    def test_user_profile_integration(self):
+        """Test user profile integration with different plan types"""
+        print("\n" + "="*70)
+        print("👥 TESTING USER PROFILE INTEGRATION WITH PLAN TYPES")
+        print("="*70)
+        print("Testing users with different plan types can access appropriate features...")
+        
+        # Test users with different plan types
+        test_users = [
+            {
+                "email": "intermediario@luxepass.com",
+                "password": "inter123",
+                "expected_plan": "intermediario",
+                "name": "Intermediário User"
+            },
+            {
+                "email": "vip@luxepass.com", 
+                "password": "vip123",
+                "expected_plan": "vip",
+                "name": "VIP User"
+            }
+        ]
+        
+        all_tests_passed = True
+        
+        for i, user_info in enumerate(test_users, 1):
+            print(f"\n{i}️⃣ Testing {user_info['name']} ({user_info['email']})...")
+            
+            # Try to login
+            login_data = {
+                "email": user_info["email"],
+                "password": user_info["password"]
+            }
+            
+            response = self.make_request("POST", "/auth/login", login_data, auth_required=False)
+            
+            if response and response.status_code == 200:
+                data = response.json()
+                if "access_token" in data:
+                    user_token = data["access_token"]
+                    
+                    # Get user profile
+                    profile_response = self.make_request("GET", "/users/me", 
+                                                       headers={"Authorization": f"Bearer {user_token}"}, 
+                                                       auth_required=False)
+                    
+                    if profile_response and profile_response.status_code == 200:
+                        profile_data = profile_response.json()
+                        
+                        if profile_data.get("plan_type") == user_info["expected_plan"]:
+                            self.log_test(f"{user_info['name']} Profile", True, 
+                                        f"Successfully accessed profile with {user_info['expected_plan']} plan")
+                            print(f"   Plan Type: {profile_data.get('plan_type')}")
+                            print(f"   Full Name: {profile_data.get('full_name')}")
+                            print(f"   Email: {profile_data.get('email')}")
+                            
+                            # Test user stats to verify token limits
+                            stats_response = self.make_request("GET", "/users/stats",
+                                                             headers={"Authorization": f"Bearer {user_token}"},
+                                                             auth_required=False)
+                            
+                            if stats_response and stats_response.status_code == 200:
+                                stats_data = stats_response.json()
+                                print(f"   Tokens Available: {stats_data.get('tokens_available', 'N/A')}")
+                                print(f"   Tokens Used: {stats_data.get('tokens_used', 'N/A')}")
+                                print(f"   Gyms Visited: {stats_data.get('gyms_visited', 'N/A')}")
+                            
+                        else:
+                            self.log_test(f"{user_info['name']} Profile", False, 
+                                        f"Plan type is {profile_data.get('plan_type')}, expected {user_info['expected_plan']}")
+                            all_tests_passed = False
+                    else:
+                        self.log_test(f"{user_info['name']} Profile", False, 
+                                    f"Failed to get profile: {profile_response.status_code if profile_response else 'No response'}")
+                        all_tests_passed = False
+                else:
+                    self.log_test(f"{user_info['name']} Login", False, "Response missing access_token")
+                    all_tests_passed = False
+            else:
+                # User might not exist, let's try to create them
+                print(f"   {user_info['name']} not found, attempting to create...")
+                
+                user_data = {
+                    "email": user_info["email"],
+                    "password": user_info["password"],
+                    "full_name": f"Cliente {user_info['expected_plan'].title()}",
+                    "phone": f"+5511999{i:02d}{i:02d}{i:02d}{i:02d}",
+                    "plan_type": user_info["expected_plan"]
+                }
+                
+                reg_response = self.make_request("POST", "/auth/register", user_data, auth_required=False)
+                
+                if reg_response and reg_response.status_code == 200:
+                    print(f"   ✅ {user_info['name']} created successfully")
+                    
+                    # Try login again
+                    response = self.make_request("POST", "/auth/login", login_data, auth_required=False)
+                    
+                    if response and response.status_code == 200:
+                        data = response.json()
+                        user_token = data["access_token"]
+                        
+                        # Get profile
+                        profile_response = self.make_request("GET", "/users/me",
+                                                           headers={"Authorization": f"Bearer {user_token}"},
+                                                           auth_required=False)
+                        
+                        if profile_response and profile_response.status_code == 200:
+                            profile_data = profile_response.json()
+                            self.log_test(f"{user_info['name']} Profile (Created)", True,
+                                        f"Successfully created and accessed {user_info['expected_plan']} user")
+                        else:
+                            self.log_test(f"{user_info['name']} Profile (Created)", False, "Failed to get profile after creation")
+                            all_tests_passed = False
+                    else:
+                        self.log_test(f"{user_info['name']} Login (After Creation)", False, "Failed to login after creation")
+                        all_tests_passed = False
+                else:
+                    self.log_test(f"{user_info['name']} Creation", False, f"Failed to create user: {reg_response.status_code if reg_response else 'No response'}")
+                    all_tests_passed = False
+        
+        return all_tests_passed
+
+    def run_payment_plans_tests(self):
+        """Run focused payment plans pricing tests as requested in review"""
+        print("🚀 Starting LuxePass Payment Plans Pricing Tests")
+        print(f"Testing against: {API_BASE}")
+        print("Testing the updated payment plans pricing that was just changed...")
+        
+        # Run the payment plans tests
+        plans_test_passed = self.test_payment_plans_pricing()
+        user_integration_passed = self.test_user_profile_integration()
+        
+        # Summary
+        print("\n" + "="*70)
+        print("📊 PAYMENT PLANS PRICING TEST SUMMARY")
+        print("="*70)
+        
+        passed = sum(1 for result in self.test_results if result["success"])
+        total = len(self.test_results)
+        
+        print(f"Total Payment Plans Tests: {total}")
+        print(f"Passed: {passed}")
+        print(f"Failed: {total - passed}")
+        print(f"Success Rate: {(passed/total)*100:.1f}%")
+        
+        # Show failed tests
+        failed_tests = [result for result in self.test_results if not result["success"]]
+        if failed_tests:
+            print("\n❌ Failed Tests:")
+            for test in failed_tests:
+                print(f"  - {test['test']}: {test['details']}")
+        else:
+            print("\n✅ All payment plans pricing tests passed!")
+            print("VERIFIED PRICING UPDATES:")
+            print("  ✓ Basic plan: R$ 79.80 (updated from R$ 29.90)")
+            print("  ✓ Intermediário plan: R$ 49.90 (newly added)")
+            print("  ✓ Premium plan: R$ 59.90 (unchanged)")
+            print("  ✓ VIP plan: R$ 99.90 (unchanged)")
+            print("\nVERIFIED PLAN STRUCTURE:")
+            print("  ✓ All plans have correct structure (id, name, price, currency, duration_days, features, token_limit, description)")
+            print("  ✓ Basic: 10 tokens, Intermediário: 30 tokens, Premium: 60 tokens, VIP: unlimited (-1)")
+            print("  ✓ All plans use BRL currency and 30-day duration")
+            print("  ✓ User profile integration working for different plan types")
+        
+        return passed == total
+
     def test_professional_management_system(self):
         """Test the Professional Management System as requested in review"""
         print("\n" + "="*70)
