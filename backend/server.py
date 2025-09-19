@@ -58,6 +58,16 @@ PAYMENT_PLANS = {
         "token_limit": 10,
         "description": "Ideal para uso ocasional"
     },
+    "intermediario": {
+        "id": "intermediario",
+        "name": "Plano Intermediário",
+        "price": 49.90,
+        "currency": "BRL",
+        "duration_days": 30,
+        "features": ["30 tokens por mês", "Acesso a academias básicas", "Suporte por chat", "Agendamentos profissionais"],
+        "token_limit": 30,
+        "description": "Para usuários que querem mais benefícios"
+    },
     "premium": {
         "id": "premium", 
         "name": "Plano Premium",
