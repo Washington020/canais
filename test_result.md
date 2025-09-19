@@ -389,6 +389,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "✅ GET /api/payments/plans endpoint working correctly. Returns all 3 payment plans (basic, premium, vip) with complete structure including id, name, price, currency, duration_days, features, token_limit, and description. Plan details: Basic (R$ 29.90, 10 tokens), Premium (R$ 59.90, 60 tokens), VIP (R$ 99.90, unlimited tokens)."
+        - working: true
+          agent: "testing"
+          comment: "✅ PAYMENT PLANS PRICING UPDATE VERIFIED (2025-01-13): Successfully tested updated payment plans pricing with 100% pass rate (12/12 tests). VERIFIED PRICING UPDATES: Basic plan now R$ 79.80 (updated from R$ 29.90) ✅, Intermediário plan R$ 49.90 (newly added) ✅, Premium plan R$ 59.90 (unchanged) ✅, VIP plan R$ 99.90 (unchanged) ✅. VERIFIED PLAN STRUCTURE: All 4 plans have correct structure with id, name, price, currency (BRL), duration_days (30), features, token_limit, description ✅. TOKEN LIMITS CONFIRMED: Basic: 10 tokens ✅, Intermediário: 30 tokens ✅, Premium: 60 tokens ✅, VIP: unlimited (-1) ✅. USER PROFILE INTEGRATION TESTED: Successfully tested with basic user (basic@luxepass.com), intermediario user (intermediario@luxepass.com), and VIP user (vip@luxepass.com) - all can access appropriate features based on their plan types ✅. All requested pricing changes have been implemented correctly and are fully operational."
 
   - task: "Checkout Session Creation API"
     implemented: true
