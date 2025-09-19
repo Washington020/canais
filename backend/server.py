@@ -51,7 +51,7 @@ PAYMENT_PLANS = {
     "basic": {
         "id": "basic",
         "name": "Plano Básico",
-        "price": 29.90,
+        "price": 79.80,
         "currency": "BRL",
         "duration_days": 30,
         "features": ["10 tokens por mês", "Acesso a academias básicas", "Suporte por email"],
