@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,26 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import Constants from 'expo-constants';
 
-const API_URL = '/api';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
+
+interface AssignedClient {
+  id: string;
+  full_name: string;
+  email: string;
+  plan_type: string;
+  assigned_at: string;
+  active_plans: number;
+}
 
 interface Meal {
   name: string;
@@ -35,8 +47,13 @@ interface Supplement {
 }
 
 export default function CreateNutritionPlan() {
-  const [clientName, setClientName] = useState('Isabella Costa VIP');
-  const [planTitle, setPlanTitle] = useState('Plano Nutricional para Emagrecimento e Massa Muscular');
+  const [loading, setLoading] = useState(false);
+  const [assignedClients, setAssignedClients] = useState<AssignedClient[]>([]);
+  const [selectedClient, setSelectedClient] = useState<AssignedClient | null>(null);
+  const [showClientModal, setShowClientModal] = useState(false);
+  
+  // Plan data
+  const [planTitle, setPlanTitle] = useState('');
   const [planDescription, setPlanDescription] = useState('');
   const [duration, setDuration] = useState('30');
   const [dailyCalories, setDailyCalories] = useState('1800');
@@ -48,415 +65,483 @@ export default function CreateNutritionPlan() {
       foods: ['2 ovos mexidos', '1 fatia de pão integral', '1 copo de leite desnatado', '1/2 abacate'],
       time: '07:00',
       calories: '450',
-      instructions: 'Preparar ovos com pouco óleo. Torrar o pão.'
+      instructions: 'Consumir até 30 minutos após acordar'
     },
     {
       name: 'Lanche da Manhã',
-      foods: ['1 banana', '1 punhado de castanhas'],
+      foods: ['1 maçã', '10g de castanha-do-pará'],
       time: '10:00',
       calories: '200',
-      instructions: 'Consumir 30min antes do treino se houver.'
+      instructions: 'Opção de lanche leve'
     },
     {
       name: 'Almoço',
-      foods: ['150g peito de frango grelhado', '1 xícara de arroz integral', '1/2 xícara de feijão', 'Salada verde à vontade'],
+      foods: ['150g de frango grelhado', '100g de arroz integral', '100g de brócolis', 'Salada verde'],
       time: '12:30',
       calories: '600',
-      instructions: 'Temperar frango com ervas. Salada com azeite extravirgem.'
+      instructions: 'Refeição principal do dia'
     },
     {
       name: 'Lanche da Tarde',
-      foods: ['1 iogurte grego natural', '1 colher de sopa de granola', 'Frutas vermelhas'],
+      foods: ['1 iogurte natural', '1 colher de granola'],
       time: '15:30',
-      calories: '250',
-      instructions: 'Misturar todos os ingredientes.'
+      calories: '180',
+      instructions: 'Rico em proteínas'
     },
     {
       name: 'Jantar',
-      foods: ['120g salmão grelhado', '1 batata doce média assada', 'Brócolis no vapor'],
+      foods: ['120g de peixe assado', '100g de batata doce', 'Legumes refogados'],
       time: '19:00',
-      calories: '500',
-      instructions: 'Temperar salmão com limão e ervas.'
+      calories: '450',
+      instructions: 'Refeição leve para o período noturno'
     }
   ]);
 
   const [supplements, setSupplements] = useState<Supplement[]>([
     {
       name: 'Whey Protein',
-      dosage: '1 scoop (30g)',
+      dosage: '30g',
       time: 'Pós-treino',
-      instructions: 'Misturar com 200ml de água ou leite'
+      instructions: 'Misturar com 200ml de água'
     },
     {
       name: 'Ômega 3',
       dosage: '1 cápsula',
-      time: 'Com almoço',
-      instructions: 'Consumir junto com refeição'
+      time: 'Café da manhã',
+      instructions: 'Tomar com alimento'
     },
     {
       name: 'Multivitamínico',
-      dosage: '1 cápsula',
+      dosage: '1 comprimido',
       time: 'Café da manhã',
-      instructions: 'Tomar com o estômago cheio'
-    },
-    {
-      name: 'Creatina',
-      dosage: '3g',
-      time: 'Pós-treino',
-      instructions: 'Misturar com whey protein ou água'
+      instructions: 'Uso diário'
     }
   ]);
 
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleCreatePlan = useCallback(async () => {
-    if (!clientName.trim() || !planTitle.trim()) {
-      Alert.alert('Erro', 'Por favor, preencha o nome do cliente e título do plano');
+  useEffect(() => {
+    loadAssignedClients();
+  }, []);
+
+  const loadAssignedClients = async () => {
+    try {
+      const token = await AsyncStorage.getItem('professionalToken');
+      if (!token) {
+        router.replace('/professional/nutritionist/login');
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/professionals/my-assigned-clients`, { headers });
+      
+      setAssignedClients(response.data.assigned_clients || []);
+    } catch (error: any) {
+      console.error('Error loading assigned clients:', error);
+      if (error.response?.status === 401) {
+        router.replace('/professional/nutritionist/login');
+      }
+      setAssignedClients([]);
+    }
+  };
+
+  const updateMeal = (index: number, field: string, value: string) => {
+    const updatedMeals = [...meals];
+    if (field === 'foods') {
+      updatedMeals[index].foods = value.split('\n').filter(item => item.trim());
+    } else {
+      (updatedMeals[index] as any)[field] = value;
+    }
+    setMeals(updatedMeals);
+  };
+
+  const updateSupplement = (index: number, field: string, value: string) => {
+    const updatedSupplements = [...supplements];
+    (updatedSupplements[index] as any)[field] = value;
+    setSupplements(updatedSupplements);
+  };
+
+  const handleCreatePlan = async () => {
+    if (!selectedClient) {
+      Alert.alert('Erro', 'Selecione um cliente para criar o plano nutricional');
+      return;
+    }
+
+    if (!planTitle.trim()) {
+      Alert.alert('Erro', 'Digite um título para o plano');
       return;
     }
 
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('professionalToken');
-      if (!token) {
-        Alert.alert('Erro', 'Token não encontrado');
-        return;
-      }
+      const headers = { Authorization: `Bearer ${token}` };
 
       const planData = {
-        client_name: clientName.trim(),
-        plan_title: planTitle.trim(),
-        plan_description: planDescription.trim(),
+        client_id: selectedClient.id,
+        title: planTitle,
+        description: planDescription,
         duration_days: parseInt(duration),
         daily_calories: parseInt(dailyCalories),
-        water_intake_liters: parseFloat(waterIntake),
+        water_intake: parseFloat(waterIntake),
         meals: meals,
         supplements: supplements,
-        created_by: 'marina@luxepass.com',
-        professional_type: 'nutritionist',
-        instructions: 'Plano personalizado com foco em emagrecimento saudável e ganho de massa muscular. Seguir horários e quantidades recomendadas.',
-        notes: 'Cliente VIP - acompanhamento quinzenal. Ajustes conforme evolução.'
+        professional_type: 'nutritionist'
       };
 
-      // Para demonstração, vamos simular sucesso
-      setTimeout(() => {
-        Alert.alert(
-          '✅ Plano Nutricional Criado!',
-          `Plano "${planTitle}" foi criado com sucesso para ${clientName}.\n\n` +
-          `• ${meals.length} refeições programadas\n` +
-          `• ${supplements.length} suplementos incluídos\n` +
-          `• Meta diária: ${dailyCalories} kcal\n` +
-          `• Consumo de água: ${waterIntake}L/dia`,
-          [
-            {
-              text: 'Criar Outro',
-              onPress: () => {
-                setClientName('');
-                setPlanTitle('');
-                setPlanDescription('');
-              }
-            },
-            {
-              text: 'Ver Clientes',
-              onPress: () => router.push('/professional/nutritionist/(tabs)/index')
-            }
-          ]
-        );
-        setLoading(false);
-      }, 2000);
+      await axios.post(`${API_URL}/professionals/create-plan`, planData, { headers });
 
+      Alert.alert(
+        'Sucesso!',
+        `Plano nutricional criado para ${selectedClient.full_name}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Reset form
+              setSelectedClient(null);
+              setPlanTitle('');
+              setPlanDescription('');
+              router.back();
+            }
+          }
+        ]
+      );
     } catch (error: any) {
-      console.error('Error creating nutrition plan:', error);
-      Alert.alert('Erro', 'Não foi possível criar o plano. Tente novamente.');
+      console.error('Error creating plan:', error);
+      Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível criar o plano');
+    } finally {
       setLoading(false);
     }
-  }, [clientName, planTitle, planDescription, duration, dailyCalories, waterIntake, meals, supplements, router]);
-
-  const addMeal = () => {
-    setMeals([...meals, {
-      name: '',
-      foods: [''],
-      time: '',
-      calories: '',
-      instructions: ''
-    }]);
   };
 
-  const updateMeal = (index: number, field: keyof Meal, value: any) => {
-    const newMeals = [...meals];
-    newMeals[index] = { ...newMeals[index], [field]: value };
-    setMeals(newMeals);
-  };
-
-  const removeMeal = (index: number) => {
-    setMeals(meals.filter((_, i) => i !== index));
-  };
-
-  const addSupplement = () => {
-    setSupplements([...supplements, {
-      name: '',
-      dosage: '',
-      time: '',
-      instructions: ''
-    }]);
-  };
-
-  const updateSupplement = (index: number, field: keyof Supplement, value: string) => {
-    const newSupplements = [...supplements];
-    newSupplements[index] = { ...newSupplements[index], [field]: value };
-    setSupplements(newSupplements);
-  };
-
-  const removeSupplement = (index: number) => {
-    setSupplements(supplements.filter((_, i) => i !== index));
+  const selectClient = (client: AssignedClient) => {
+    setSelectedClient(client);
+    setPlanTitle(`Plano Nutricional - ${client.full_name}`);
+    setShowClientModal(false);
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <KeyboardAvoidingView
         style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Header Info */}
+          {/* Header */}
           <View style={styles.headerCard}>
             <View style={styles.headerIcon}>
-              <Ionicons name="restaurant" size={32} color="#22C55E" />
+              <Ionicons name="nutrition" size={24} color="#FFFFFF" />
             </View>
             <View style={styles.headerInfo}>
               <Text style={styles.headerTitle}>Criar Plano Nutricional</Text>
-              <Text style={styles.headerSubtitle}>Dieta personalizada para cliente VIP</Text>
+              <Text style={styles.headerSubtitle}>
+                {selectedClient ? `Para: ${selectedClient.full_name}` : 'Selecione um cliente'}
+              </Text>
             </View>
           </View>
 
-          {/* Client Info */}
+          {/* Client Selection */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>👤 Informações do Cliente</Text>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="person" size={18} color="#22C55E" /> Cliente
+            </Text>
             
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Nome do Cliente</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ex: Isabella Costa VIP"
-                placeholderTextColor="#64748B"
-                value={clientName}
-                onChangeText={setClientName}
-              />
-            </View>
-          </View>
-
-          {/* Plan Details */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📋 Detalhes do Plano</Text>
-            
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Título do Plano</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ex: Plano Emagrecimento + Massa Muscular"
-                placeholderTextColor="#64748B"
-                value={planTitle}
-                onChangeText={setPlanTitle}
-              />
-            </View>
-
-            <View style={styles.row}>
-              <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.inputLabel}>Duração (dias)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="30"
-                  placeholderTextColor="#64748B"
-                  value={duration}
-                  onChangeText={setDuration}
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.inputLabel}>Calorias/dia</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="1800"
-                  placeholderTextColor="#64748B"
-                  value={dailyCalories}
-                  onChangeText={setDailyCalories}
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.inputLabel}>Água (L/dia)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="2.5"
-                  placeholderTextColor="#64748B"
-                  value={waterIntake}
-                  onChangeText={setWaterIntake}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Meals Schedule */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>🍽️ Cronograma de Refeições</Text>
-              <TouchableOpacity style={styles.addButton} onPress={addMeal}>
-                <Ionicons name="add" size={16} color="#22C55E" />
-              </TouchableOpacity>
-            </View>
-            
-            {meals.map((meal, index) => (
-              <View key={index} style={styles.mealContainer}>
-                <View style={styles.mealHeader}>
-                  <TextInput
-                    style={styles.mealNameInput}
-                    placeholder="Nome da refeição"
-                    placeholderTextColor="#64748B"
-                    value={meal.name}
-                    onChangeText={(value) => updateMeal(index, 'name', value)}
-                  />
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => removeMeal(index)}
-                  >
-                    <Ionicons name="close" size={16} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.mealDetails}>
-                  <View style={styles.detailRow}>
-                    <View style={styles.detailInput}>
-                      <Text style={styles.detailLabel}>Horário</Text>
-                      <TextInput
-                        style={styles.detailField}
-                        placeholder="07:00"
-                        placeholderTextColor="#64748B"
-                        value={meal.time}
-                        onChangeText={(value) => updateMeal(index, 'time', value)}
-                      />
-                    </View>
-
-                    <View style={styles.detailInput}>
-                      <Text style={styles.detailLabel}>Calorias</Text>
-                      <TextInput
-                        style={styles.detailField}
-                        placeholder="450"
-                        placeholderTextColor="#64748B"
-                        value={meal.calories}
-                        onChangeText={(value) => updateMeal(index, 'calories', value)}
-                        keyboardType="numeric"
-                      />
-                    </View>
+            <TouchableOpacity
+              style={[styles.clientSelector, !selectedClient && styles.clientSelectorEmpty]}
+              onPress={() => setShowClientModal(true)}
+            >
+              {selectedClient ? (
+                <View style={styles.selectedClientInfo}>
+                  <View style={styles.clientDetails}>
+                    <Text style={styles.clientName}>{selectedClient.full_name}</Text>
+                    <Text style={styles.clientEmail}>{selectedClient.email}</Text>
+                    <Text style={styles.clientPlan}>Plano: {selectedClient.plan_type.toUpperCase()}</Text>
                   </View>
+                  <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
                 </View>
+              ) : (
+                <View style={styles.emptyClientSelector}>
+                  <Ionicons name="person-add" size={24} color="#64748B" />
+                  <Text style={styles.emptyClientText}>Selecionar Cliente</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#64748B" />
+                </View>
+              )}
+            </TouchableOpacity>
 
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Alimentos (um por linha)"
-                  placeholderTextColor="#64748B"
-                  value={meal.foods.join('\n')}
-                  onChangeText={(value) => updateMeal(index, 'foods', value.split('\n'))}
-                  multiline
-                  numberOfLines={4}
-                />
-
-                <TextInput
-                  style={styles.notesInput}
-                  placeholder="Instruções de preparo (opcional)"
-                  placeholderTextColor="#64748B"
-                  value={meal.instructions}
-                  onChangeText={(value) => updateMeal(index, 'instructions', value)}
-                />
-              </View>
-            ))}
+            <Text style={styles.clientCount}>
+              {assignedClients.length} {assignedClients.length === 1 ? 'cliente atribuído' : 'clientes atribuídos'}
+            </Text>
           </View>
 
-          {/* Supplements */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>💊 Suplementação</Text>
-              <TouchableOpacity style={styles.addButton} onPress={addSupplement}>
-                <Ionicons name="add" size={16} color="#22C55E" />
-              </TouchableOpacity>
-            </View>
-            
-            {supplements.map((supplement, index) => (
-              <View key={index} style={styles.supplementContainer}>
-                <View style={styles.supplementHeader}>
+          {/* Plan Details - Only show if client is selected */}
+          {selectedClient && (
+            <>
+              {/* Plan Info */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  <Ionicons name="document-text" size={18} color="#22C55E" /> Informações do Plano
+                </Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Título do Plano</Text>
                   <TextInput
-                    style={styles.supplementNameInput}
-                    placeholder="Nome do suplemento"
+                    style={styles.textInput}
+                    placeholder="Ex: Plano para Emagrecimento"
                     placeholderTextColor="#64748B"
-                    value={supplement.name}
-                    onChangeText={(value) => updateSupplement(index, 'name', value)}
+                    value={planTitle}
+                    onChangeText={setPlanTitle}
                   />
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => removeSupplement(index)}
-                  >
-                    <Ionicons name="close" size={16} color="#EF4444" />
-                  </TouchableOpacity>
                 </View>
 
-                <View style={styles.supplementDetails}>
-                  <View style={styles.detailInput}>
-                    <Text style={styles.detailLabel}>Dosagem</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Descrição</Text>
+                  <TextInput
+                    style={[styles.textInput, styles.textArea]}
+                    placeholder="Descreva os objetivos e características do plano..."
+                    placeholderTextColor="#64748B"
+                    value={planDescription}
+                    onChangeText={setPlanDescription}
+                    multiline
+                    numberOfLines={3}
+                  />
+                </View>
+
+                <View style={styles.row}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Duração (dias)</Text>
                     <TextInput
-                      style={styles.detailField}
-                      placeholder="1 scoop"
+                      style={styles.textInput}
+                      placeholder="30"
                       placeholderTextColor="#64748B"
-                      value={supplement.dosage}
-                      onChangeText={(value) => updateSupplement(index, 'dosage', value)}
+                      value={duration}
+                      onChangeText={setDuration}
+                      keyboardType="numeric"
                     />
                   </View>
 
-                  <View style={styles.detailInput}>
-                    <Text style={styles.detailLabel}>Horário</Text>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Calorias/dia</Text>
                     <TextInput
-                      style={styles.detailField}
-                      placeholder="Pós-treino"
+                      style={styles.textInput}
+                      placeholder="1800"
                       placeholderTextColor="#64748B"
-                      value={supplement.time}
-                      onChangeText={(value) => updateSupplement(index, 'time', value)}
+                      value={dailyCalories}
+                      onChangeText={setDailyCalories}
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Água (L/dia)</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="2.5"
+                      placeholderTextColor="#64748B"
+                      value={waterIntake}
+                      onChangeText={setWaterIntake}
+                      keyboardType="numeric"
                     />
                   </View>
                 </View>
-
-                <TextInput
-                  style={styles.notesInput}
-                  placeholder="Instruções de uso (opcional)"
-                  placeholderTextColor="#64748B"
-                  value={supplement.instructions}
-                  onChangeText={(value) => updateSupplement(index, 'instructions', value)}
-                />
               </View>
-            ))}
-          </View>
 
-          {/* Create Button */}
-          <TouchableOpacity
-            style={[styles.createButton, loading && styles.createButtonDisabled]}
-            onPress={handleCreatePlan}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                <Text style={styles.createButtonText}>Criar Plano Nutricional</Text>
-              </>
-            )}
-          </TouchableOpacity>
+              {/* Meals Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  <Ionicons name="restaurant" size={18} color="#22C55E" /> Refeições ({meals.length})
+                </Text>
+
+                {meals.map((meal, index) => (
+                  <View key={index} style={styles.mealCard}>
+                    <View style={styles.mealHeader}>
+                      <Text style={styles.mealTitle}>{meal.name}</Text>
+                      <TouchableOpacity style={styles.editButton}>
+                        <Text style={styles.editButtonText}>Editar</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.row}>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Horário</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="07:00"
+                          placeholderTextColor="#64748B"
+                          value={meal.time}
+                          onChangeText={(value) => updateMeal(index, 'time', value)}
+                        />
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Calorias</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="450"
+                          placeholderTextColor="#64748B"
+                          value={meal.calories}
+                          onChangeText={(value) => updateMeal(index, 'calories', value)}
+                          keyboardType="numeric"
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Alimentos (um por linha)</Text>
+                      <TextInput
+                        style={[styles.textInput, styles.textArea]}
+                        placeholder="2 ovos mexidos&#10;1 fatia de pão integral&#10;1 copo de leite"
+                        placeholderTextColor="#64748B"
+                        value={meal.foods.join('\n')}
+                        onChangeText={(value) => updateMeal(index, 'foods', value)}
+                        multiline
+                        numberOfLines={4}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Instruções</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="Observações sobre a refeição..."
+                        placeholderTextColor="#64748B"
+                        value={meal.instructions}
+                        onChangeText={(value) => updateMeal(index, 'instructions', value)}
+                      />
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {/* Supplements Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  <Ionicons name="medical" size={18} color="#F59E0B" /> Suplementos ({supplements.length})
+                </Text>
+
+                {supplements.map((supplement, index) => (
+                  <View key={index} style={styles.supplementCard}>
+                    <View style={styles.supplementHeader}>
+                      <Text style={styles.supplementTitle}>{supplement.name}</Text>
+                      <TouchableOpacity style={styles.editButton}>
+                        <Text style={styles.editButtonText}>Editar</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.row}>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Dosagem</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="30g"
+                          placeholderTextColor="#64748B"
+                          value={supplement.dosage}
+                          onChangeText={(value) => updateSupplement(index, 'dosage', value)}
+                        />
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Horário</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="Pós-treino"
+                          placeholderTextColor="#64748B"
+                          value={supplement.time}
+                          onChangeText={(value) => updateSupplement(index, 'time', value)}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Instruções</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="Como tomar o suplemento..."
+                        placeholderTextColor="#64748B"
+                        value={supplement.instructions}
+                        onChangeText={(value) => updateSupplement(index, 'instructions', value)}
+                      />
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {/* Create Button */}
+              <TouchableOpacity
+                style={[styles.createButton, loading && styles.createButtonDisabled]}
+                onPress={handleCreatePlan}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                    <Text style={styles.createButtonText}>Criar Plano Nutricional</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
 
           <View style={{ height: 100 }} />
         </ScrollView>
+
+        {/* Client Selection Modal */}
+        <Modal
+          visible={showClientModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowClientModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Selecionar Cliente</Text>
+                <TouchableOpacity onPress={() => setShowClientModal(false)}>
+                  <Ionicons name="close" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalScroll}>
+                {assignedClients.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="people-outline" size={48} color="#64748B" />
+                    <Text style={styles.emptyText}>Nenhum cliente atribuído</Text>
+                    <Text style={styles.emptySubtext}>
+                      Vá para a aba "Novos" para assumir clientes
+                    </Text>
+                  </View>
+                ) : (
+                  assignedClients.map((client) => (
+                    <TouchableOpacity
+                      key={client.id}
+                      style={styles.clientCard}
+                      onPress={() => selectClient(client)}
+                    >
+                      <View style={styles.clientCardContent}>
+                        <View style={styles.clientCardInfo}>
+                          <Text style={styles.clientCardName}>{client.full_name}</Text>
+                          <Text style={styles.clientCardEmail}>{client.email}</Text>
+                          <Text style={styles.clientCardPlan}>
+                            Plano: {client.plan_type.toUpperCase()}
+                          </Text>
+                        </View>
+                        <View style={styles.clientCardMeta}>
+                          <Text style={styles.activeNutritionPlansText}>
+                            {client.active_plans} planos ativos
+                          </Text>
+                          <Ionicons name="chevron-forward" size={20} color="#22C55E" />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -518,6 +603,86 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  clientSelector: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 8,
+  },
+  clientSelectorEmpty: {
+    borderColor: 'rgba(100, 116, 139, 0.3)',
+    borderStyle: 'dashed',
+  },
+  selectedClientInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  clientDetails: {
+    flex: 1,
+  },
+  clientName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  clientEmail: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  clientPlan: {
+    color: '#22C55E',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  emptyClientSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  emptyClientText: {
+    color: '#94A3B8',
+    fontSize: 16,
+    marginHorizontal: 12,
+  },
+  clientCount: {
+    color: '#64748B',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  inputGroup: {
+    flex: 1,
+    marginHorizontal: 4,
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    padding: 12,
+    color: '#FFFFFF',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
   mealCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
@@ -550,15 +715,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  mealItems: {
-    marginTop: 8,
-  },
-  mealItem: {
-    color: '#94A3B8',
-    fontSize: 14,
-    marginBottom: 4,
-    paddingLeft: 8,
-  },
   supplementCard: {
     backgroundColor: 'rgba(245, 158, 11, 0.1)',
     borderRadius: 12,
@@ -578,40 +734,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  detailsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  detailInput: {
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  detailLabel: {
-    color: '#94A3B8',
-    fontSize: 12,
-    marginBottom: 4,
-    fontWeight: '600',
-  },
-  detailField: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
-    padding: 12,
-    color: '#FFFFFF',
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  notesInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
-    padding: 12,
-    color: '#FFFFFF',
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    minHeight: 40,
-  },
   createButton: {
     backgroundColor: '#22C55E',
     borderRadius: 12,
@@ -630,5 +752,91 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#0B0D17',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  modalScroll: {
+    padding: 20,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  clientCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  clientCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  clientCardInfo: {
+    flex: 1,
+  },
+  clientCardName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  clientCardEmail: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  clientCardPlan: {
+    color: '#22C55E',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  clientCardMeta: {
+    alignItems: 'flex-end',
+  },
+  activeNutritionPlansText: {
+    color: '#64748B',
+    fontSize: 12,
+    marginBottom: 4,
   },
 });
