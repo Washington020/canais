@@ -347,6 +347,63 @@ async def create_test_users():
     except Exception as e:
         logger.error(f"Erro ao criar usuários de teste: {e}")
 
+async def create_test_gym():
+    """Create test gym if it doesn't exist"""
+    try:
+        # Check if test gym exists
+        test_gym = await db.gyms.find_one({"login_credentials.username": "academia_teste"})
+        if not test_gym:
+            gym_data = {
+                "name": "Academia Teste LuxePass",
+                "address": "Rua das Academias, 123 - Centro, São Paulo - SP",
+                "phone": "(11) 3333-4444",
+                "email": "contato@academiateste.com",
+                "cnpj": "12.345.678/0001-90",
+                "owner_name": "João Silva",
+                "owner_email": "joao@academiateste.com",
+                "owner_phone": "(11) 99999-3333",
+                "plan_type": "premium",
+                "status": "active",
+                "login_credentials": {
+                    "username": "academia_teste",
+                    "password": pwd_context.hash("teste123"),
+                    "last_login": None
+                },
+                "operating_hours": {
+                    "monday": "06:00-22:00",
+                    "tuesday": "06:00-22:00", 
+                    "wednesday": "06:00-22:00",
+                    "thursday": "06:00-22:00",
+                    "friday": "06:00-22:00",
+                    "saturday": "08:00-18:00",
+                    "sunday": "08:00-16:00"
+                },
+                "amenities": ["Musculação", "Cardio", "Funcional", "Estacionamento", "Vestiário"],
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+            
+            result = await db.gyms.insert_one(gym_data)
+            logger.info("✅ Academia de teste criada: academia_teste / teste123")
+            
+            # Create gym user entry
+            gym_user_data = {
+                "gym_id": str(result.inserted_id),
+                "username": "academia_teste",
+                "password_hash": pwd_context.hash("teste123"),
+                "role": "admin",
+                "permissions": ["validate_tokens", "view_stats", "manage_schedule"],
+                "created_at": datetime.now(timezone.utc),
+                "last_login": None,
+                "active": True
+            }
+            
+            await db.gym_users.insert_one(gym_user_data)
+            logger.info("✅ Usuário da academia de teste criado")
+            
+    except Exception as e:
+        logger.error(f"Erro ao criar academia de teste: {e}")
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
