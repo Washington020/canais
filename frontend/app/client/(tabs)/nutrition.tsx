@@ -1,62 +1,65 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  ScrollView, 
-  RefreshControl,
-  ActivityIndicator,
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
   Alert,
-  Platform
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
 
-interface SupplementLog {
+interface UserProfile {
   id: string;
-  supplement_name: string;
-  scheduled_time: string;
-  status: 'pending' | 'taken' | 'missed';
-  taken_at?: string;
+  full_name: string;
+  email: string;
+  plan_type: string;
+  subscription_end?: string;
 }
 
-interface SupplementPlan {
+interface PaymentPlan {
   id: string;
+  name: string;
+  price: number;
+  features: string[];
+  description: string;
+}
+
+interface NutritionPlan {
+  id: string;
+  title: string;
+  professional_name: string;
+  duration_days: number;
+  daily_calories: number;
+  meals: any[];
   supplements: any[];
-  start_date: string;
   created_at: string;
 }
 
-interface AppointmentSlot {
-  id: string;
-  date: string;
-  professional_type: string;
-}
-
 export default function Nutrition() {
-  const [supplementPlan, setSupplementPlan] = useState<SupplementPlan | null>(null);
-  const [todaySupplements, setTodaySupplements] = useState<SupplementLog[]>([]);
-  const [availableSlots, setAvailableSlots] = useState<AppointmentSlot[]>([]);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [nutritionPlans, setNutritionPlans] = useState<NutritionPlan[]>([]);
+  const [plans, setPlans] = useState<PaymentPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [userPlan, setUserPlan] = useState('basic');
-  
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PaymentPlan | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    loadSupplementPlan();
-    loadAvailableSlots();
+    loadUserData();
   }, []);
 
-  const loadSupplementPlan = async () => {
+  const loadUserData = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
@@ -66,366 +69,348 @@ export default function Nutrition() {
 
       const headers = { Authorization: `Bearer ${token}` };
       
-      // Get user profile to check plan
+      // Load user profile
       const profileResponse = await axios.get(`${API_URL}/users/profile`, { headers });
-      const currentPlan = profileResponse.data.plan || 'basic';
-      setUserPlan(currentPlan);
+      const userProfile = profileResponse.data;
+      setUser(userProfile);
 
-      // Get supplement plan
-      const response = await axios.get(`${API_URL}/supplements/user/plan`, { headers });
-      
-      if (response.data.plan) {
-        setSupplementPlan(response.data.plan);
-        setTodaySupplements(response.data.today_supplements || []);
+      // Load payment plans
+      const plansResponse = await axios.get(`${API_URL}/payments/plans`, { headers });
+      setPlans(plansResponse.data || []);
+
+      // If not basic user, load nutrition plans
+      if (userProfile.plan_type !== 'basic') {
+        try {
+          const nutritionResponse = await axios.get(`${API_URL}/users/nutrition-plans`, { headers });
+          setNutritionPlans(nutritionResponse.data.nutrition_plans || []);
+        } catch (error) {
+          console.error('Error loading nutrition plans:', error);
+          setNutritionPlans([]);
+        }
       }
-      
+
     } catch (error: any) {
-      console.error('Error loading supplement plan:', error);
+      console.error('Error loading user data:', error);
       if (error.response?.status === 401) {
         router.replace('/client/login');
       }
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const loadAvailableSlots = async () => {
+  const handleUpgrade = async (plan: PaymentPlan) => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!user) return;
 
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_URL}/appointments/available-slots?professional_type=nutritionist`, { headers });
-      
-      setAvailableSlots(response.data.slots || []);
-    } catch (error: any) {
-      console.error('Error loading slots:', error);
-      // Don't show error for basic plan users
-      if (error.response?.status !== 403) {
-        console.error('Unexpected error:', error);
-      }
-    }
-  };
-
-  const markSupplementTaken = async (logId: string) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      
-      await axios.post(`${API_URL}/supplements/log/${logId}/take`, {}, { headers });
-      
-      // Update local state
-      setTodaySupplements(prev => 
-        prev.map(supplement => 
-          supplement.id === logId 
-            ? { ...supplement, status: 'taken', taken_at: new Date().toISOString() }
-            : supplement
-        )
-      );
-      
-      Alert.alert('✅ Suplemento Registrado', 'Suplemento marcado como tomado!');
-    } catch (error: any) {
-      console.error('Error marking supplement:', error);
-      Alert.alert('Erro', 'Não foi possível registrar o suplemento');
-    }
-  };
-
-  const scheduleAppointment = async (slotId: string) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      
-      const slot = availableSlots.find(s => s.id === slotId);
-      if (!slot) return;
-
-      const appointmentData = {
-        appointment_type: 'nutritionist',
-        appointment_date: slot.date,
-        notes: 'Consulta nutricional agendada via app'
-      };
-
-      await axios.post(`${API_URL}/appointments/request`, appointmentData, { headers });
-      
       Alert.alert(
-        '📅 Consulta Agendada!', 
-        `Sua consulta com a nutricionista foi agendada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${new Date(slot.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+        'Confirmar Upgrade',
+        `Deseja fazer upgrade para o ${plan.name}?\n\nValor: R$ ${plan.price.toFixed(2).replace('.', ',')}\n\n⚠️ O pagamento será cobrado imediatamente, mas o plano entrará em vigor apenas no próximo mês.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Confirmar',
+            onPress: async () => {
+              try {
+                const token = await AsyncStorage.getItem('token');
+                const headers = { Authorization: `Bearer ${token}` };
+
+                const upgradeData = {
+                  new_plan: plan.id,
+                  current_plan: user.plan_type,
+                  effective_date: 'next_month'
+                };
+
+                await axios.post(`${API_URL}/users/request-upgrade`, upgradeData, { headers });
+
+                Alert.alert(
+                  'Solicitação Enviada!',
+                  `Sua solicitação de upgrade para ${plan.name} foi enviada para aprovação.\n\nO pagamento será processado e o plano entrará em vigor no próximo mês.\n\nVocê receberá uma confirmação em breve.`,
+                  [{ text: 'OK', onPress: () => setShowUpgradeModal(false) }]
+                );
+              } catch (error: any) {
+                console.error('Error requesting upgrade:', error);
+                Alert.alert('Erro', 'Não foi possível processar a solicitação de upgrade');
+              }
+            }
+          }
+        ]
       );
-      
-      // Reload slots
-      loadAvailableSlots();
-    } catch (error: any) {
-      console.error('Error scheduling appointment:', error);
-      if (error.response?.status === 400) {
-        Alert.alert('Erro', error.response.data.detail);
-      } else {
-        Alert.alert('Erro', 'Não foi possível agendar a consulta');
-      }
+    } catch (error) {
+      console.error('Error in handleUpgrade:', error);
     }
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadSupplementPlan();
-    loadAvailableSlots();
-  };
-
-  const getSupplementsForToday = () => {
-    const now = new Date();
-    const today = now.toDateString();
-    
-    return todaySupplements.filter(supplement => {
-      const supplementDate = new Date(supplement.scheduled_time).toDateString();
-      return supplementDate === today;
-    });
-  };
-
-  const getSupplementStatus = (supplement: SupplementLog) => {
-    const now = new Date();
-    const scheduledTime = new Date(supplement.scheduled_time);
-    
-    if (supplement.status === 'taken') {
-      return { color: '#22C55E', text: 'Tomado', icon: 'checkmark-circle' };
-    } else if (now > scheduledTime) {
-      return { color: '#EF4444', text: 'Atrasado', icon: 'alert-circle' };
-    } else {
-      return { color: '#F59E0B', text: 'Pendente', icon: 'time' };
-    }
+  const formatCurrency = (value: number) => {
+    return value.toFixed(2).replace('.', ',');
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Carregando plano nutricional...</Text>
+          <ActivityIndicator size="large" color="#22C55E" />
+          <Text style={styles.loadingText}>Carregando...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const todaySupplementsList = getSupplementsForToday();
+  // Basic user - show upgrade options
+  if (user?.plan_type === 'basic') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Ionicons name="nutrition" size={28} color="#22C55E" />
+            <Text style={styles.title}>Orientação Nutricional</Text>
+          </View>
+        </View>
 
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Current Plan Info */}
+          <View style={styles.currentPlanCard}>
+            <View style={styles.planHeader}>
+              <Ionicons name="person-circle" size={32} color="#64748B" />
+              <View style={styles.planInfo}>
+                <Text style={styles.currentPlanTitle}>Plano Atual: Básico</Text>
+                <Text style={styles.currentPlanSubtitle}>Acesso limitado às funcionalidades</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Upgrade Banner */}
+          <View style={styles.upgradeBanner}>
+            <View style={styles.upgradeIconContainer}>
+              <Ionicons name="nutrition" size={40} color="#22C55E" />
+            </View>
+            <View style={styles.upgradeContent}>
+              <Text style={styles.upgradeTitle}>Orientação Nutricional</Text>
+              <Text style={styles.upgradeDescription}>
+                Tenha acesso a planos alimentares e orientações personalizadas criadas por nutricionistas qualificados.
+              </Text>
+              
+              <View style={styles.benefitsList}>
+                <View style={styles.benefitItem}>
+                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                  <Text style={styles.benefitText}>Planos alimentares personalizados</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                  <Text style={styles.benefitText}>Acompanhamento nutricional</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                  <Text style={styles.benefitText}>Orientações sobre suplementos</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                  <Text style={styles.benefitText}>Consultas individuais</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                style={styles.upgradeButton}
+                onPress={() => setShowUpgradeModal(true)}
+              >
+                <Ionicons name="arrow-up-circle" size={20} color="#FFFFFF" />
+                <Text style={styles.upgradeButtonText}>Fazer Upgrade</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Feature Preview */}
+          <View style={styles.previewSection}>
+            <Text style={styles.previewTitle}>O que você terá acesso:</Text>
+            
+            <View style={styles.previewCard}>
+              <View style={styles.previewHeader}>
+                <Ionicons name="leaf" size={24} color="#22C55E" />
+                <Text style={styles.previewCardTitle}>Plano Intermediário</Text>
+              </View>
+              <Text style={styles.previewPrice}>R$ 49,90/mês</Text>
+              <View style={styles.previewFeatures}>
+                <Text style={styles.previewFeature}>• 1 consulta mensal com Nutricionista</Text>
+                <Text style={styles.previewFeature}>• Planos alimentares personalizados</Text>
+                <Text style={styles.previewFeature}>• Agendamento de consultas</Text>
+                <Text style={styles.previewFeature}>• Orientações sobre suplementos</Text>
+                <Text style={styles.previewFeature}>• 30 tokens mensais</Text>
+              </View>
+            </View>
+
+            <View style={styles.previewCard}>
+              <View style={styles.previewHeader}>
+                <Ionicons name="trophy" size={24} color="#8B5CF6" />
+                <Text style={styles.previewCardTitle}>Plano VIP</Text>
+              </View>
+              <Text style={styles.previewPrice}>R$ 99,90/mês</Text>
+              <View style={styles.previewFeatures}>
+                <Text style={styles.previewFeature}>• 2 consultas mensais com Nutricionista</Text>
+                <Text style={styles.previewFeature}>• Planos alimentares avançados</Text>
+                <Text style={styles.previewFeature}>• Agendamento prioritário</Text>
+                <Text style={styles.previewFeature}>• Acompanhamento nutricional completo</Text>
+                <Text style={styles.previewFeature}>• Tokens ilimitados</Text>
+                <Text style={styles.previewFeature}>• Suporte 24/7</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Nutrition Tips for Basic Users */}
+          <View style={styles.tipsSection}>
+            <Text style={styles.tipsTitle}>💡 Dicas Nutricionais Gratuitas</Text>
+            
+            <View style={styles.tipCard}>
+              <View style={styles.tipHeader}>
+                <Ionicons name="water" size={20} color="#3B82F6" />
+                <Text style={styles.tipTitle}>Hidratação</Text>
+              </View>
+              <Text style={styles.tipText}>
+                Beba pelo menos 2-3 litros de água por dia. A hidratação adequada é fundamental para o metabolismo.
+              </Text>
+            </View>
+
+            <View style={styles.tipCard}>
+              <View style={styles.tipHeader}>
+                <Ionicons name="time" size={20} color="#F59E0B" />
+                <Text style={styles.tipTitle}>Horários das Refeições</Text>
+              </View>
+              <Text style={styles.tipText}>
+                Mantenha horários regulares para as refeições. Isso ajuda a regular o metabolismo e controlar a fome.
+              </Text>
+            </View>
+
+            <View style={styles.tipCard}>
+              <View style={styles.tipHeader}>
+                <Ionicons name="restaurant" size={20} color="#22C55E" />
+                <Text style={styles.tipTitle}>Variedade de Alimentos</Text>
+              </View>
+              <Text style={styles.tipText}>
+                Inclua diferentes cores no seu prato. Cada cor representa nutrientes diferentes essenciais para a saúde.
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Upgrade Modal */}
+        <Modal
+          visible={showUpgradeModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowUpgradeModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Escolha seu Plano</Text>
+                <TouchableOpacity onPress={() => setShowUpgradeModal(false)}>
+                  <Ionicons name="close" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalScroll}>
+                {plans.filter(plan => plan.id !== 'basic').map((plan) => (
+                  <TouchableOpacity
+                    key={plan.id}
+                    style={[
+                      styles.planCard,
+                      plan.id === 'vip' && styles.planCardVip
+                    ]}
+                    onPress={() => handleUpgrade(plan)}
+                  >
+                    <View style={styles.planCardHeader}>
+                      <Text style={styles.planCardTitle}>{plan.name}</Text>
+                      <Text style={styles.planCardPrice}>
+                        R$ {formatCurrency(plan.price)}/mês
+                      </Text>
+                    </View>
+                    
+                    <Text style={styles.planCardDescription}>{plan.description}</Text>
+                    
+                    <View style={styles.planFeatures}>
+                      {plan.features.map((feature, index) => (
+                        <View key={index} style={styles.planFeature}>
+                          <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                          <Text style={styles.planFeatureText}>{feature}</Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    <View style={styles.planCardFooter}>
+                      <Text style={styles.planCardNote}>
+                        💡 Vigência a partir do próximo mês
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
+  }
+
+  // Non-basic users - show nutrition plans
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Suplementação</Text>
-        <Text style={styles.subtitle}>Acompanhe sua suplementação diária</Text>
+        <View style={styles.headerContent}>
+          <Ionicons name="nutrition" size={28} color="#22C55E" />
+          <Text style={styles.title}>Minha Nutrição</Text>
+        </View>
+        <View style={styles.planBadge}>
+          <Text style={styles.planBadgeText}>
+            {user?.plan_type?.toUpperCase()}
+          </Text>
+        </View>
       </View>
 
-      <ScrollView 
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Today's Supplements */}
-        <View style={styles.todayContainer}>
-          <Text style={styles.sectionTitle}>📋 Hoje - {new Date().toLocaleDateString('pt-BR')}</Text>
-          
-          {!supplementPlan ? (
-            <View style={styles.noSupplementsCard}>
-              <Ionicons name="restaurant-outline" size={48} color="#64748B" />
-              <Text style={styles.noSupplementsTitle}>Nenhum Plano de Suplementação</Text>
-              <Text style={styles.noSupplementsText}>
-                Você ainda não possui um plano de suplementação ativo. Agende uma consulta com nossa nutricionista para criar seu plano personalizado.
-              </Text>
-              {userPlan === 'basic' && (
-                <TouchableOpacity 
-                  style={styles.upgradeButton}
-                  onPress={() => router.push('/client/(tabs)/financial')}
-                >
-                  <Text style={styles.upgradeButtonText}>Upgrade para Premium/VIP</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : todaySupplementsList.length === 0 ? (
-            <View style={styles.noSupplementsTodayCard}>
-              <Ionicons name="checkmark-circle" size={48} color="#22C55E" />
-              <Text style={styles.noSupplementsTodayText}>Nenhum suplemento programado para hoje!</Text>
-            </View>
-          ) : (
-            <View style={styles.supplementsList}>
-              {todaySupplementsList.map((supplement) => {
-                const status = getSupplementStatus(supplement);
-                return (
-                  <View key={supplement.id} style={styles.supplementCard}>
-                    <View style={styles.supplementHeader}>
-                      <View style={styles.supplementInfo}>
-                        <Text style={styles.supplementName}>{supplement.supplement_name}</Text>
-                        <Text style={styles.supplementTime}>
-                          {new Date(supplement.scheduled_time).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </Text>
-                      </View>
-                      
-                      <View style={[styles.statusBadge, { backgroundColor: `${status.color}20` }]}>
-                        <Ionicons name={status.icon as any} size={16} color={status.color} />
-                        <Text style={[styles.statusText, { color: status.color }]}>
-                          {status.text}
-                        </Text>
-                      </View>
-                    </View>
-                    
-                    {supplement.status === 'pending' && (
-                      <TouchableOpacity 
-                        style={styles.takeSupplementButton}
-                        onPress={() => markSupplementTaken(supplement.id)}
-                      >
-                        <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                        <Text style={styles.takeSupplementText}>Marcar como Tomado</Text>
-                      </TouchableOpacity>
-                    )}
-                    
-                    {supplement.taken_at && (
-                      <Text style={styles.takenAtText}>
-                        Tomado em: {new Date(supplement.taken_at).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </Text>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          )}
-        </View>
-
-        {/* Nutritionist Consultation */}
-        <View style={styles.consultationContainer}>
-          <Text style={styles.sectionTitle}>👩‍⚕️ Orientações da Nutricionista</Text>
-          
-          <View style={styles.consultationCard}>
-            <View style={styles.nutritionistHeader}>
-              <View style={styles.nutritionistAvatar}>
-                <Text style={styles.nutritionistAvatarText}>DR</Text>
-              </View>
-              <View style={styles.nutritionistInfo}>
-                <Text style={styles.nutritionistName}>Dra. Roberta Silva</Text>
-                <Text style={styles.nutritionistTitle}>Nutricionista Esportiva - CRN 12345</Text>
-              </View>
-            </View>
-            
-            <View style={styles.consultationMessage}>
-              <Text style={styles.messageText}>
-                "Olá! Para ter um plano de suplementação personalizado, é importante agendar uma consulta. 
-                Vamos avaliar suas necessidades individuais e criar um protocolo adequado para seus objetivos."
-              </Text>
-            </View>
-            
-            {userPlan === 'basic' ? (
-              <View style={styles.upgradeSection}>
-                <Text style={styles.upgradeText}>
-                  Agendamentos disponíveis para planos Premium e VIP
-                </Text>
-                <TouchableOpacity 
-                  style={styles.upgradeButton}
-                  onPress={() => router.push('/client/(tabs)/financial')}
-                >
-                  <Ionicons name="arrow-up-circle" size={16} color="#FFFFFF" />
-                  <Text style={styles.upgradeButtonText}>Fazer Upgrade</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.appointmentSection}>
-                <Text style={styles.appointmentTitle}>Horários Disponíveis</Text>
-                
-                {availableSlots.length === 0 ? (
-                  <Text style={styles.noSlotsText}>
-                    Nenhum horário disponível no momento. Tente novamente mais tarde.
-                  </Text>
-                ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slotsScroll}>
-                    {availableSlots.slice(0, 5).map((slot) => (
-                      <TouchableOpacity 
-                        key={slot.id}
-                        style={styles.slotCard}
-                        onPress={() => scheduleAppointment(slot.id)}
-                      >
-                        <Text style={styles.slotDate}>
-                          {new Date(slot.date).toLocaleDateString('pt-BR', {
-                            day: '2-digit',
-                            month: 'short'
-                          })}
-                        </Text>
-                        <Text style={styles.slotTime}>
-                          {new Date(slot.date).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
-                
-                <TouchableOpacity style={styles.messageNutritionistButton}>
-                  <Ionicons name="chatbubble" size={16} color="#22C55E" />
-                  <Text style={styles.messageNutritionistText}>Enviar Mensagem</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {nutritionPlans.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="nutrition-outline" size={64} color="#64748B" />
+            <Text style={styles.emptyTitle}>Nenhum plano nutricional disponível</Text>
+            <Text style={styles.emptyDescription}>
+              Seus planos alimentares personalizados aparecerão aqui quando criados pelo seu nutricionista.
+            </Text>
           </View>
-        </View>
-
-        {/* Supplement Plan Details */}
-        {supplementPlan && (
-          <View style={styles.planDetailsContainer}>
-            <Text style={styles.sectionTitle}>📊 Detalhes do Plano</Text>
-            
-            <View style={styles.planDetailsCard}>
-              <View style={styles.planInfo}>
-                <Text style={styles.planStartDate}>
-                  Iniciado em: {new Date(supplementPlan.start_date).toLocaleDateString('pt-BR')}
-                </Text>
-                <Text style={styles.planCreatedDate}>
-                  Criado em: {new Date(supplementPlan.created_at).toLocaleDateString('pt-BR')}
-                </Text>
+        ) : (
+          nutritionPlans.map((nutrition) => (
+            <View key={nutrition.id} style={styles.nutritionCard}>
+              <View style={styles.nutritionHeader}>
+                <View style={styles.nutritionInfo}>
+                  <Text style={styles.nutritionTitle}>{nutrition.title}</Text>
+                  <Text style={styles.nutritionNutritionist}>
+                    Nutricionista: {nutrition.professional_name}
+                  </Text>
+                </View>
+                <View style={styles.nutritionMeta}>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="calendar" size={16} color="#22C55E" />
+                    <Text style={styles.metaText}>{nutrition.duration_days} dias</Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="flame" size={16} color="#22C55E" />
+                    <Text style={styles.metaText}>{nutrition.daily_calories} kcal</Text>
+                  </View>
+                </View>
               </View>
               
-              <View style={styles.supplementsOverview}>
-                <Text style={styles.overviewTitle}>Suplementos no Plano:</Text>
-                {supplementPlan.supplements.map((supplement, index) => (
-                  <View key={index} style={styles.overviewItem}>
-                    <Text style={styles.overviewSupplementName}>{supplement.name}</Text>
-                    <Text style={styles.overviewSupplementDetails}>
-                      {supplement.dosage} - {supplement.timings?.join(', ') || 'Conforme orientação'}
-                    </Text>
-                  </View>
-                ))}
-              </View>
+              <Text style={styles.nutritionDetails}>
+                {nutrition.meals.length} refeições • {nutrition.supplements.length} suplementos
+              </Text>
+              
+              <TouchableOpacity style={styles.viewNutritionButton}>
+                <Ionicons name="restaurant" size={18} color="#22C55E" />
+                <Text style={styles.viewNutritionText}>Ver Plano Alimentar</Text>
+              </TouchableOpacity>
             </View>
-          </View>
+          ))
         )}
-
-        {/* Tips */}
-        <View style={styles.tipsContainer}>
-          <Text style={styles.sectionTitle}>💡 Dicas de Suplementação</Text>
-          <View style={styles.tipsCard}>
-            <View style={styles.tip}>
-              <Ionicons name="time" size={20} color="#8B5CF6" />
-              <Text style={styles.tipText}>Mantenha horários regulares para máxima eficácia</Text>
-            </View>
-            <View style={styles.tip}>
-              <Ionicons name="water" size={20} color="#3B82F6" />
-              <Text style={styles.tipText}>Sempre tome com água, nunca com outros líquidos</Text>
-            </View>
-            <View style={styles.tip}>
-              <Ionicons name="restaurant" size={20} color="#22C55E" />
-              <Text style={styles.tipText}>Alguns suplementos são melhores com alimentos</Text>
-            </View>
-            <View style={styles.tip}>
-              <Ionicons name="alarm" size={20} color="#F59E0B" />
-              <Text style={styles.tipText}>Configure lembretes para não esquecer</Text>
-            </View>
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -447,328 +432,361 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  subtitle: {
-    color: '#94A3B8',
-    fontSize: 16,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  
-  // Today's supplements section
-  todayContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  noSupplementsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-  },
-  noSupplementsTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  noSupplementsText: {
-    color: '#94A3B8',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  noSupplementsTodayCard: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
-  },
-  noSupplementsTodayText: {
-    color: '#22C55E',
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  supplementsList: {
-    gap: 12,
-  },
-  supplementCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-  },
-  supplementHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  supplementInfo: {
-    flex: 1,
-  },
-  supplementName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  supplementTime: {
-    color: '#94A3B8',
-    fontSize: 14,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  takeSupplementButton: {
-    backgroundColor: '#22C55E',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 6,
-  },
-  takeSupplementText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  takenAtText: {
-    color: '#94A3B8',
-    fontSize: 12,
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  
-  // Consultation section
-  consultationContainer: {
     paddingHorizontal: 24,
-    marginBottom: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  consultationCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginLeft: 12,
+  },
+  planBadge: {
+    backgroundColor: '#22C55E',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  planBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+  },
+  currentPlanCard: {
+    backgroundColor: 'rgba(100, 116, 139, 0.1)',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 116, 139, 0.3)',
   },
-  nutritionistHeader: {
+  planHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  nutritionistAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#8B5CF6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  planInfo: {
+    marginLeft: 12,
   },
-  nutritionistAvatarText: {
+  currentPlanTitle: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
   },
-  nutritionistInfo: {
-    flex: 1,
-  },
-  nutritionistName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  nutritionistTitle: {
+  currentPlanSubtitle: {
     color: '#94A3B8',
-    fontSize: 12,
+    fontSize: 14,
+    marginTop: 2,
   },
-  consultationMessage: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
-    padding: 12,
+  upgradeBanner: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  upgradeIconContainer: {
+    alignSelf: 'center',
     marginBottom: 16,
   },
-  messageText: {
-    color: '#94A3B8',
-    fontSize: 14,
-    lineHeight: 20,
-    fontStyle: 'italic',
-  },
-  upgradeSection: {
+  upgradeContent: {
     alignItems: 'center',
-    paddingTop: 8,
   },
-  upgradeText: {
-    color: '#94A3B8',
-    fontSize: 14,
+  upgradeTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  upgradeButton: {
-    backgroundColor: '#8B5CF6',
+  upgradeDescription: {
+    color: '#94A3B8',
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  benefitsList: {
+    alignSelf: 'stretch',
+    marginBottom: 24,
+  },
+  benefitItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    marginBottom: 8,
+  },
+  benefitText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  upgradeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#22C55E',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
-    gap: 6,
   },
   upgradeButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  appointmentSection: {
-    paddingTop: 8,
-  },
-  appointmentTitle: {
-    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
-  noSlotsText: {
-    color: '#94A3B8',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 16,
+  previewSection: {
+    marginBottom: 32,
   },
-  slotsScroll: {
-    marginBottom: 16,
-  },
-  slotCard: {
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-    borderRadius: 8,
-    padding: 12,
-    marginRight: 8,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  slotDate: {
-    color: '#8B5CF6',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  slotTime: {
+  previewTitle: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
   },
-  messageNutritionistButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  messageNutritionistText: {
-    color: '#22C55E',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  
-  // Plan details section
-  planDetailsContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  planDetailsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  previewCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
     padding: 16,
-  },
-  planInfo: {
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  planStartDate: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  planCreatedDate: {
-    color: '#94A3B8',
-    fontSize: 12,
-  },
-  supplementsOverview: {
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  overviewTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  overviewItem: {
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  overviewSupplementName: {
+  previewCardTitle: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
-  overviewSupplementDetails: {
+  previewPrice: {
+    color: '#22C55E',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  previewFeatures: {
+    marginTop: 8,
+  },
+  previewFeature: {
     color: '#94A3B8',
-    fontSize: 12,
+    fontSize: 14,
+    marginBottom: 4,
   },
-  
-  // Tips section
-  tipsContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 40,
+  tipsSection: {
+    marginBottom: 32,
   },
-  tipsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  tipsTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  tipCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  tip: {
+  tipHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  tipTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   tipText: {
     color: '#94A3B8',
     fontSize: 14,
-    marginLeft: 12,
+    lineHeight: 20,
+  },
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#0B0D17',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  modalScroll: {
+    padding: 20,
+  },
+  planCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  planCardVip: {
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+  },
+  planCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  planCardTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  planCardPrice: {
+    color: '#22C55E',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  planCardDescription: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  planFeatures: {
+    marginBottom: 16,
+  },
+  planFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  planFeatureText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  planCardFooter: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: 12,
+  },
+  planCardNote: {
+    color: '#94A3B8',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+  },
+  emptyDescription: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  nutritionCard: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  nutritionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  nutritionInfo: {
+    flex: 1,
+  },
+  nutritionTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  nutritionNutritionist: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  nutritionMeta: {
+    alignItems: 'flex-end',
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  metaText: {
+    color: '#22C55E',
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+  nutritionDetails: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  viewNutritionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  viewNutritionText: {
+    color: '#22C55E',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
