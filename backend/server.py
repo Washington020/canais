@@ -3821,6 +3821,92 @@ async def create_professional_plan(
         logger.error(f"Erro ao criar plano: {e}")
         raise HTTPException(status_code=500, detail="Erro ao criar plano")
 
+# User Plan Upgrade System
+@api_router.post("/users/request-upgrade")
+async def request_plan_upgrade(
+    upgrade_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Request plan upgrade with next month effective date"""
+    try:
+        new_plan = upgrade_data.get("new_plan")
+        current_plan = upgrade_data.get("current_plan")
+        
+        if not new_plan:
+            raise HTTPException(status_code=400, detail="new_plan é obrigatório")
+        
+        # Validate new plan exists
+        if new_plan not in PAYMENT_PLANS:
+            raise HTTPException(status_code=400, detail="Plano inválido")
+        
+        plan_info = PAYMENT_PLANS[new_plan]
+        
+        # Create upgrade request
+        upgrade_request = {
+            "user_id": str(current_user.id),
+            "user_name": current_user.full_name,
+            "user_email": current_user.email,
+            "current_plan": current_plan,
+            "requested_plan": new_plan,
+            "plan_name": plan_info["name"],
+            "plan_price": plan_info["price"],
+            "effective_date": "next_month",
+            "status": "pending_approval",
+            "payment_status": "pending",
+            "requested_at": datetime.now(timezone.utc),
+            "admin_approved": False,
+            "payment_processed": False
+        }
+        
+        result = await db.plan_upgrade_requests.insert_one(upgrade_request)
+        
+        return {
+            "success": True,
+            "request_id": str(result.inserted_id),
+            "message": "Solicitação de upgrade enviada para aprovação",
+            "upgrade_details": {
+                "new_plan": plan_info["name"],
+                "price": plan_info["price"],
+                "effective_date": "Próximo mês"
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao solicitar upgrade: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao processar solicitação")
+
+@api_router.get("/users/nutrition-plans")
+async def get_user_nutrition_plans(current_user: User = Depends(get_current_user)):
+    """Get user's nutrition plans"""
+    try:
+        nutrition_plans = await db.supplement_plans.find({
+            "client_id": str(current_user.id),
+            "active": True
+        }).to_list(100)
+        
+        return {"nutrition_plans": nutrition_plans}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar planos nutricionais: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar planos nutricionais")
+
+@api_router.get("/users/workout-plans")
+async def get_user_workout_plans(current_user: User = Depends(get_current_user)):
+    """Get user's workout plans"""
+    try:
+        workout_plans = await db.workout_plans.find({
+            "client_id": str(current_user.id),
+            "active": True
+        }).to_list(100)
+        
+        return {"workout_plans": workout_plans}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar planos de treino: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar planos de treino")
+
 # Supplement System Endpoints
 @api_router.post("/admin/supplements/plan")
 async def create_supplement_plan(plan: SupplementPlan):
