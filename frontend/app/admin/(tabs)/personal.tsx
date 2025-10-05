@@ -299,21 +299,32 @@ export default function PersonalTrainerManagement() {
         ) : (
           professionals.map((professional) => (
             <View key={professional.id} style={styles.professionalCard}>
-              <View style={styles.professionalHeader}>
+              <TouchableOpacity 
+                style={styles.professionalHeader}
+                onPress={() => toggleProfessionalDetails(professional.id)}
+              >
                 <View style={styles.professionalInfo}>
                   <Text style={styles.professionalName}>{professional.full_name}</Text>
                   <Text style={styles.professionalEmail}>{professional.email}</Text>
                   <Text style={styles.professionalCref}>{professional.cref_crn}</Text>
                 </View>
-                <View style={[
-                  styles.statusBadge,
-                  { backgroundColor: professional.active ? '#F59E0B' : '#EF4444' }
-                ]}>
-                  <Text style={styles.statusText}>
-                    {professional.active ? 'Ativo' : 'Inativo'}
-                  </Text>
+                <View style={styles.headerRight}>
+                  <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: professional.active ? '#F59E0B' : '#EF4444' }
+                  ]}>
+                    <Text style={styles.statusText}>
+                      {professional.active ? 'Ativo' : 'Inativo'}
+                    </Text>
+                  </View>
+                  <Ionicons 
+                    name={expandedProfessional === professional.id ? "chevron-up" : "chevron-down"} 
+                    size={24} 
+                    color="#94A3B8" 
+                    style={{ marginLeft: 8 }}
+                  />
                 </View>
-              </View>
+              </TouchableOpacity>
 
               <View style={styles.professionalDetails}>
                 <Text style={styles.detailText}>
@@ -327,22 +338,89 @@ export default function PersonalTrainerManagement() {
                 </Text>
               </View>
 
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  { backgroundColor: professional.active ? '#EF4444' : '#F59E0B' }
-                ]}
-                onPress={() => toggleProfessionalStatus(professional)}
-              >
-                <Ionicons 
-                  name={professional.active ? "close-circle" : "checkmark-circle"} 
-                  size={16} 
-                  color="#FFFFFF" 
-                />
-                <Text style={styles.actionButtonText}>
-                  {professional.active ? 'Desativar' : 'Ativar'}
-                </Text>
-              </TouchableOpacity>
+              {/* Expanded Section */}
+              {expandedProfessional === professional.id && (
+                <View style={styles.expandedSection}>
+                  {/* Login Information */}
+                  <View style={styles.loginSection}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="log-in" size={16} color="#F59E0B" />
+                      <Text style={styles.sectionTitle}>Credenciais de Login</Text>
+                    </View>
+                    <View style={styles.loginInfo}>
+                      <Text style={styles.loginLabel}>Email:</Text>
+                      <Text style={styles.loginValue}>{professional.email}</Text>
+                    </View>
+                    <View style={styles.loginInfo}>
+                      <Text style={styles.loginLabel}>Acesso ao App:</Text>
+                      <Text style={styles.loginValue}>App Personal Trainer</Text>
+                    </View>
+                  </View>
+
+                  {/* PIX Information */}
+                  <View style={styles.pixSection}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="card" size={16} color="#22C55E" />
+                      <Text style={styles.sectionTitle}>PIX para Pagamentos</Text>
+                    </View>
+                    <Text style={styles.pixValue}>{professional.pix_key || 'PIX não informado'}</Text>
+                  </View>
+
+                  {/* Appointments History */}
+                  <View style={styles.appointmentsSection}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="calendar" size={16} color="#8B5CF6" />
+                      <Text style={styles.sectionTitle}>Histórico de Atendimentos</Text>
+                    </View>
+                    
+                    {appointments[professional.id]?.length > 0 ? (
+                      appointments[professional.id].map((appointment, index) => (
+                        <View key={index} style={styles.appointmentItem}>
+                          <View style={styles.appointmentInfo}>
+                            <Text style={styles.clientName}>{appointment.client_name}</Text>
+                            <Text style={styles.appointmentDate}>
+                              {new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às {appointment.appointment_time}
+                            </Text>
+                            <Text style={styles.clientEmail}>{appointment.client_email}</Text>
+                          </View>
+                          <View style={styles.appointmentPayment}>
+                            <Text style={styles.paymentAmount}>
+                              {appointment.payment_amount.toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL'
+                              })}
+                            </Text>
+                            <Text style={styles.paymentStatus}>
+                              {appointment.status === 'completed' ? 'Concluído' : 'Pendente'}
+                            </Text>
+                          </View>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.noAppointments}>Nenhum atendimento registrado</Text>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    { backgroundColor: professional.active ? '#EF4444' : '#F59E0B' }
+                  ]}
+                  onPress={() => toggleProfessionalStatus(professional)}
+                >
+                  <Ionicons 
+                    name={professional.active ? "close-circle" : "checkmark-circle"} 
+                    size={16} 
+                    color="#FFFFFF" 
+                  />
+                  <Text style={styles.actionButtonText}>
+                    {professional.active ? 'Desativar' : 'Ativar'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))
         )}
