@@ -3665,11 +3665,28 @@ async def get_my_appointments(current_user: User = Depends(get_current_user)):
         
         # Add cancel eligibility
         for apt in appointments:
+            apt["id"] = str(apt["_id"])  # Add ID for frontend
+            if "_id" in apt:
+                del apt["_id"]
+            
             if apt["status"] == "scheduled":
                 # Can cancel if appointment is more than 24h away
-                appointment_datetime = datetime.fromisoformat(f"{apt['appointment_date']}T{apt['appointment_time']}:00")
-                can_cancel = datetime.now(timezone.utc) + timedelta(hours=24) < appointment_datetime
-                apt["can_cancel"] = can_cancel
+                try:
+                    # Handle different date formats
+                    if isinstance(apt['appointment_date'], datetime):
+                        apt_date_str = apt['appointment_date'].strftime("%Y-%m-%d")
+                    else:
+                        apt_date_str = str(apt['appointment_date']).split('T')[0]  # Remove time if present
+                    
+                    appointment_datetime = datetime.fromisoformat(f"{apt_date_str}T{apt['appointment_time']}:00")
+                    if appointment_datetime.tzinfo is None:
+                        appointment_datetime = appointment_datetime.replace(tzinfo=timezone.utc)
+                    
+                    can_cancel = datetime.now(timezone.utc) + timedelta(hours=24) < appointment_datetime
+                    apt["can_cancel"] = can_cancel
+                except Exception as date_error:
+                    logger.warning(f"Erro ao processar data do agendamento: {date_error}")
+                    apt["can_cancel"] = False
             else:
                 apt["can_cancel"] = False
         
