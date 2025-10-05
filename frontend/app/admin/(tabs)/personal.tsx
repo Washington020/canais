@@ -137,7 +137,8 @@ export default function PersonalTrainerManagement() {
                 specialization: '',
                 phone: '',
                 experience_years: '0',
-                bio: ''
+                bio: '',
+                pix_key: ''
               });
               loadProfessionals();
             }
