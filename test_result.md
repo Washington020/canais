@@ -528,7 +528,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Professional Client Assignment System Fix"
+    - "Client Schedule Monthly Limits Integration"
+    - "Workouts Tab Upgrade Path" 
+    - "Nutrition Tab Upgrade Path"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
