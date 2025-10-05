@@ -57,7 +57,7 @@ export default function PersonalTrainerManagement() {
 
   const loadProfessionals = async () => {
     try {
-      const token = await AsyncStorage.getItem('adminToken');
+      const token = await AsyncStorage.getItem('token');
       if (!token) {
         Alert.alert('Erro', 'Token não encontrado', [
           { text: 'OK', onPress: () => router.replace('/admin/login') }
@@ -97,7 +97,7 @@ export default function PersonalTrainerManagement() {
 
     setCreating(true);
     try {
-      const token = await AsyncStorage.getItem('adminToken');
+      const token = await AsyncStorage.getItem('token');
       if (!token) {
         Alert.alert('Erro', 'Token não encontrado');
         return;
@@ -165,7 +165,7 @@ export default function PersonalTrainerManagement() {
           text: 'Confirmar',
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem('adminToken');
+              const token = await AsyncStorage.getItem('token');
               await axios.put(
                 `${API_URL}/admin/professionals/${professional.id}/status?active=${!professional.active}`,
                 {},
