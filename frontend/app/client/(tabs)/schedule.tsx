@@ -36,6 +36,14 @@ interface MyAppointment {
   appointment_time: string;
   status: string;
   notes?: string;
+  can_cancel: boolean;
+}
+
+interface AppointmentLimits {
+  plan_type: string;
+  limits: { nutritionist: number; personal: number };
+  usage: { nutritionist: number; personal: number };
+  remaining: { nutritionist: number; personal: number };
 }
 
 interface UserProfile {
