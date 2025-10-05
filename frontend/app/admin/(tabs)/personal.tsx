@@ -186,6 +186,54 @@ export default function PersonalTrainerManagement() {
     );
   };
 
+  const loadProfessionalAppointments = async (professionalId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      // Simular endpoint - você pode implementar no backend se necessário
+      // Por enquanto retornamos dados mock
+      const mockAppointments = [
+        {
+          id: '1',
+          client_name: 'João Silva',
+          client_email: 'joao@example.com',
+          appointment_date: '2025-01-15',
+          appointment_time: '09:00',
+          status: 'completed',
+          payment_amount: 150.00
+        },
+        {
+          id: '2',
+          client_name: 'Maria Santos',
+          client_email: 'maria@example.com', 
+          appointment_date: '2025-01-14',
+          appointment_time: '14:30',
+          status: 'completed',
+          payment_amount: 150.00
+        }
+      ];
+      
+      setAppointments(prev => ({
+        ...prev,
+        [professionalId]: mockAppointments
+      }));
+    } catch (error: any) {
+      console.error('Error loading appointments:', error);
+    }
+  };
+
+  const toggleProfessionalDetails = (professionalId: string) => {
+    if (expandedProfessional === professionalId) {
+      setExpandedProfessional(null);
+    } else {
+      setExpandedProfessional(professionalId);
+      if (!appointments[professionalId]) {
+        loadProfessionalAppointments(professionalId);
+      }
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     loadProfessionals();
