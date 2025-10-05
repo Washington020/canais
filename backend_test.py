@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-LuxePass Admin System Backend Testing
-Focus: Dashboard and Professional Management Endpoints
+Backend Testing Script for LuxePass Professional Login Credentials
+Testing professional login endpoints for Nutritionist and Personal Trainer apps
 """
 
 import requests
@@ -13,7 +13,38 @@ import os
 # Get backend URL from environment
 BACKEND_URL = "https://trainer-client-app-4.preview.emergentagent.com/api"
 
-class LuxePassAdminTester:
+class TestResults:
+    def __init__(self):
+        self.tests_run = 0
+        self.tests_passed = 0
+        self.tests_failed = 0
+        self.failures = []
+    
+    def add_result(self, test_name, passed, message=""):
+        self.tests_run += 1
+        if passed:
+            self.tests_passed += 1
+            print(f"✅ {test_name}: PASSED")
+        else:
+            self.tests_failed += 1
+            self.failures.append(f"{test_name}: {message}")
+            print(f"❌ {test_name}: FAILED - {message}")
+    
+    def print_summary(self):
+        print(f"\n{'='*60}")
+        print(f"TEST SUMMARY")
+        print(f"{'='*60}")
+        print(f"Total Tests: {self.tests_run}")
+        print(f"Passed: {self.tests_passed}")
+        print(f"Failed: {self.tests_failed}")
+        print(f"Success Rate: {(self.tests_passed/self.tests_run)*100:.1f}%")
+        
+        if self.failures:
+            print(f"\n❌ FAILURES:")
+            for failure in self.failures:
+                print(f"  - {failure}")
+
+class ProfessionalLoginTester:
     def __init__(self):
         self.base_url = BACKEND_URL
         self.admin_token = None
