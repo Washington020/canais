@@ -1,20 +1,35 @@
 #!/usr/bin/env python3
 """
-FitPass Brasil Backend API Test Suite
-Tests all backend endpoints with proper authentication flow
+LuxePass Appointment System Backend Testing
+Testing monthly limits and cancellation features as requested in review.
 """
 
 import requests
 import json
-import os
+import sys
 from datetime import datetime, timedelta
-import time
+from typing import Dict, Any, Optional
 
-# Get backend URL from environment
-BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://trainer-client-app-4.preview.emergentagent.com')
-API_BASE = f"{BACKEND_URL}/api"
+# Configuration
+BASE_URL = "https://trainer-client-app-4.preview.emergentagent.com/api"
 
-class FitPassTester:
+# Test credentials as specified in review request
+TEST_USERS = {
+    "vip_user": {
+        "email": "cliente@luxepass.com",
+        "password": "cliente123",
+        "expected_plan": "vip",
+        "expected_limits": {"nutritionist": 2, "personal": 2}
+    },
+    "intermediario_user": {
+        "email": "intermediario@luxepass.com", 
+        "password": "inter123",
+        "expected_plan": "intermediario",
+        "expected_limits": {"nutritionist": 1, "personal": 1}
+    }
+}
+
+class AppointmentSystemTester:
     def __init__(self):
         self.session = requests.Session()
         self.auth_token = None
