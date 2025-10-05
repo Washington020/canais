@@ -567,7 +567,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Appointment System Monthly Limits and Cancellation"
+    - "Professional Login Credentials Test"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
