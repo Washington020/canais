@@ -1,53 +1,44 @@
 #!/usr/bin/env python3
 """
-LuxePass Appointment System Backend Testing - VERIFICATION FOCUS
-Quick verification test of the fixed appointment system endpoints.
-Testing: Premium plan support, date format fixes, available slots access
+LuxePass Admin System Backend Testing
+Focus: Dashboard and Professional Management Endpoints
 """
 
 import requests
 import json
 import sys
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from datetime import datetime
+import os
 
-# Configuration
-BASE_URL = "https://trainer-client-app-4.preview.emergentagent.com/api"
+# Get backend URL from environment
+BACKEND_URL = "https://trainer-client-app-4.preview.emergentagent.com/api"
 
-# Test credentials as specified in review request
-TEST_USERS = {
-    "premium_user": {
-        "email": "cliente@luxepass.com",
-        "password": "cliente123",
-        "expected_plan": "premium",
-        "expected_limits": {"nutritionist": 2, "personal": 2}  # Should work like VIP
-    },
-    "intermediario_user": {
-        "email": "intermediario@luxepass.com", 
-        "password": "inter123",
-        "expected_plan": "intermediario",
-        "expected_limits": {"nutritionist": 1, "personal": 1}
-    }
-}
-
-class AppointmentSystemTester:
+class LuxePassAdminTester:
     def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        })
-        self.tokens = {}
+        self.base_url = BACKEND_URL
+        self.admin_token = None
+        self.professional_tokens = {}
         self.test_results = []
+        self.created_professionals = []
         
-    def log_test(self, test_name: str, success: bool, details: str = "", response_data: Any = None):
+    def log_test(self, test_name, success, details="", error=""):
         """Log test results"""
-        status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status} - {test_name}")
+        result = {
+            "test": test_name,
+            "success": success,
+            "details": details,
+            "error": error,
+            "timestamp": datetime.now().isoformat()
+        }
+        self.test_results.append(result)
+        
+        status = "✅" if success else "❌"
+        print(f"{status} {test_name}")
         if details:
-            print(f"    Details: {details}")
-        if response_data and not success:
-            print(f"    Response: {response_data}")
+            print(f"   Details: {details}")
+        if error:
+            print(f"   Error: {error}")
+        print()
         print()
         
         self.test_results.append({
