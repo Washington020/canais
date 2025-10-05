@@ -68,9 +68,11 @@ class LuxePassTester:
     def test_create_personal_trainer_with_pix(self):
         """Test creating Personal Trainer with PIX key"""
         try:
+            # Use unique email to avoid conflicts
+            unique_id = uuid.uuid4().hex[:8]
             professional_data = {
                 "full_name": "Prof. Ricardo Silva",
-                "email": "ricardo@luxepass.com",
+                "email": f"ricardo_{unique_id}@luxepass.com",
                 "password": "ricardo123",
                 "professional_type": "personal",
                 "cref_crn": "CREF-555555/SP",
