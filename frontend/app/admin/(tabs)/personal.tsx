@@ -41,6 +41,8 @@ export default function PersonalTrainerManagement() {
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [expandedProfessional, setExpandedProfessional] = useState<string | null>(null);
+  const [appointments, setAppointments] = useState<{[key: string]: any[]}>({});
   const router = useRouter();
 
   // Form states
