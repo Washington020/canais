@@ -457,22 +457,37 @@ export default function PersonalTrainerManagement() {
               )}
 
               <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    { backgroundColor: professional.active ? '#EF4444' : '#F59E0B' }
-                  ]}
-                  onPress={() => toggleProfessionalStatus(professional)}
-                >
-                  <Ionicons 
-                    name={professional.active ? "close-circle" : "checkmark-circle"} 
-                    size={16} 
-                    color="#FFFFFF" 
-                  />
-                  <Text style={styles.actionButtonText}>
-                    {professional.active ? 'Desativar' : 'Ativar'}
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.actionButtonsRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      styles.halfButton,
+                      { backgroundColor: professional.active ? '#EF4444' : '#F59E0B' }
+                    ]}
+                    onPress={() => toggleProfessionalStatus(professional)}
+                  >
+                    <Ionicons 
+                      name={professional.active ? "close-circle" : "checkmark-circle"} 
+                      size={16} 
+                      color="#FFFFFF" 
+                    />
+                    <Text style={styles.actionButtonText}>
+                      {professional.active ? 'Desativar' : 'Ativar'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      styles.halfButton,
+                      { backgroundColor: '#8B5CF6' }
+                    ]}
+                    onPress={() => resetProfessionalPassword(professional)}
+                  >
+                    <Ionicons name="key" size={16} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>Reset Senha</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           ))
