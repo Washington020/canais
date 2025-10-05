@@ -56,6 +56,7 @@ export default function ClientSchedule() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [appointments, setAppointments] = useState<MyAppointment[]>([]);
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
+  const [appointmentLimits, setAppointmentLimits] = useState<AppointmentLimits | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
