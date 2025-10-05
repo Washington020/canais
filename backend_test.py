@@ -359,6 +359,20 @@ class LuxePassAdminTester:
             self.log_test(f"Professional Login ({prof_type})", False, error=str(e))
             return False
     
+    def test_existing_professional_logins(self):
+        """Test login for existing professionals from review request"""
+        existing_professionals = [
+            {"email": "carlos@luxepass.com", "password": "carlos123", "type": "personal"},
+            {"email": "ana@luxepass.com", "password": "ana123", "type": "nutritionist"}
+        ]
+        
+        success_count = 0
+        for prof in existing_professionals:
+            if self.test_professional_login(prof["email"], prof["password"], prof["type"]):
+                success_count += 1
+        
+        return success_count == len(existing_professionals)
+    
     def test_professional_logins(self):
         """Test login for all created professionals"""
         success_count = 0
