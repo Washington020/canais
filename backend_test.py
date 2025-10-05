@@ -69,7 +69,7 @@ def test_professional_login(email, password, expected_type, test_name):
             data = response.json()
             
             # Check if response has required fields
-            required_fields = ["access_token", "token_type", "professional_info"]
+            required_fields = ["access_token", "token_type", "professional"]
             missing_fields = [field for field in required_fields if field not in data]
             
             if missing_fields:
@@ -84,7 +84,7 @@ def test_professional_login(email, password, expected_type, test_name):
                 return False, "Access token is empty or missing"
             
             # Check professional info
-            prof_info = data.get("professional_info", {})
+            prof_info = data.get("professional", {})
             if prof_info.get("professional_type") != expected_type:
                 return False, f"Expected professional_type '{expected_type}', got '{prof_info.get('professional_type')}'"
             
@@ -93,7 +93,7 @@ def test_professional_login(email, password, expected_type, test_name):
             prof_missing = [field for field in prof_required if field not in prof_info]
             
             if prof_missing:
-                return False, f"Missing professional_info fields: {prof_missing}"
+                return False, f"Missing professional fields: {prof_missing}"
             
             print(f"✅ JWT Token: {data['access_token'][:50]}...")
             print(f"✅ Professional Type: {prof_info['professional_type']}")
