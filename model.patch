@@ -1,0 +1,220 @@
+diff --git a/backend/server.py b/backend/server.py
+index ffe8fb8..cfa2385 100644
+--- a/backend/server.py
++++ b/backend/server.py
+@@ -3559,7 +3559,7 @@ async def book_appointment(
+     appointment: AppointmentRequest,
+     current_user: User = Depends(get_current_user)
+ ):
+-    """Client books an appointment"""
++    """Client books an appointment with monthly limits"""
+     try:
+         # Check user plan permissions
+         user_plan = current_user.plan_type if hasattr(current_user, 'plan_type') else 'basic'
+@@ -3570,6 +3570,32 @@ async def book_appointment(
+                 detail="Agendamentos disponíveis apenas para planos VIP e Intermediário."
+             )
+         
++        # Check monthly appointment limits
++        current_month = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
++        next_month = (current_month + timedelta(days=32)).replace(day=1)
++        
++        existing_appointments = await db.appointments.count_documents({
++            "client_id": str(current_user.id),
++            "professional_type": appointment.professional_type,
++            "created_at": {"$gte": current_month, "$lt": next_month},
++            "status": {"$in": ["scheduled", "completed"]}
++        })
++        
++        # Set limits based on plan
++        if user_plan == 'intermediario':
++            monthly_limit = 1  # 1 consulta por mês
++        elif user_plan == 'vip':
++            monthly_limit = 2  # 2 consultas por mês
++        else:
++            monthly_limit = 0
++        
++        if existing_appointments >= monthly_limit:
++            plan_name = "Intermediário" if user_plan == 'intermediario' else "VIP"
++            raise HTTPException(
++                status_code=400,
++                detail=f"Limite de {monthly_limit} consulta{'s' if monthly_limit > 1 else ''} por mês atingido para o plano {plan_name}. Aguarde o próximo mês ou cancele um agendamento existente."
++            )
++        
+         # Check if slot is available
+         appointment_date_str = appointment.appointment_date.strftime("%Y-%m-%d") if isinstance(appointment.appointment_date, datetime) else str(appointment.appointment_date)
+         
+@@ -3600,7 +3626,8 @@ async def book_appointment(
+             "duration_minutes": 60,
+             "status": "scheduled",
+             "notes": appointment.notes or "",
+-            "created_at": datetime.now(timezone.utc)
++            "created_at": datetime.now(timezone.utc),
++            "can_cancel_until": datetime.now(timezone.utc) + timedelta(hours=24)  # Can cancel up to 24h before
+         }
+         
+         result = await db.appointments.insert_one(appointment_data)
+@@ -3608,7 +3635,7 @@ async def book_appointment(
+         # Mark slot as unavailable
+         await db.appointment_slots.update_one(
+             {"_id": available_slot["_id"]},
+-            {"$set": {"available": False}}
++            {"$set": {"available": False, "booked_by": str(current_user.id)}}
+         )
+         
+         return {
+@@ -3617,7 +3644,8 @@ async def book_appointment(
+             "appointment_details": {
+                 "date": appointment.appointment_date,
+                 "time": appointment.appointment_time,
+-                "professional_type": appointment.professional_type.title()
++                "professional_type": appointment.professional_type.title(),
++                "monthly_remaining": monthly_limit - existing_appointments - 1
+             }
+         }
+         
+@@ -3627,6 +3655,144 @@ async def book_appointment(
+         logger.error(f"Erro ao agendar consulta: {e}")
+         raise HTTPException(status_code=500, detail="Erro ao agendar consulta")
+ 
++@api_router.get("/appointments/my-appointments")
++async def get_my_appointments(current_user: User = Depends(get_current_user)):
++    """Get user's appointments"""
++    try:
++        appointments = await db.appointments.find({
++            "client_id": str(current_user.id)
++        }).sort("appointment_date", 1).to_list(100)
++        
++        # Add cancel eligibility
++        for apt in appointments:
++            if apt["status"] == "scheduled":
++                # Can cancel if appointment is more than 24h away
++                appointment_datetime = datetime.fromisoformat(f"{apt['appointment_date']}T{apt['appointment_time']}:00")
++                can_cancel = datetime.now(timezone.utc) + timedelta(hours=24) < appointment_datetime
++                apt["can_cancel"] = can_cancel
++            else:
++                apt["can_cancel"] = False
++        
++        return {"appointments": appointments}
++        
++    except Exception as e:
++        logger.error(f"Erro ao buscar agendamentos: {e}")
++        raise HTTPException(status_code=500, detail="Erro ao buscar agendamentos")
++
++@api_router.delete("/appointments/{appointment_id}/cancel")
++async def cancel_appointment(
++    appointment_id: str,
++    current_user: User = Depends(get_current_user)
++):
++    """Cancel user appointment and free up the slot"""
++    try:
++        # Find appointment
++        appointment = await db.appointments.find_one({
++            "_id": ObjectId(appointment_id),
++            "client_id": str(current_user.id)
++        })
++        
++        if not appointment:
++            raise HTTPException(status_code=404, detail="Agendamento não encontrado")
++        
++        if appointment["status"] != "scheduled":
++            raise HTTPException(status_code=400, detail="Apenas agendamentos ativos podem ser cancelados")
++        
++        # Check if can still cancel (24h before appointment)
++        appointment_datetime = datetime.fromisoformat(f"{appointment['appointment_date']}T{appointment['appointment_time']}:00")
++        if datetime.now(timezone.utc) + timedelta(hours=24) >= appointment_datetime:
++            raise HTTPException(
++                status_code=400,
++                detail="Agendamento só pode ser cancelado até 24 horas antes da consulta"
++            )
++        
++        # Cancel appointment
++        await db.appointments.update_one(
++            {"_id": ObjectId(appointment_id)},
++            {
++                "$set": {
++                    "status": "cancelled",
++                    "cancelled_at": datetime.now(timezone.utc),
++                    "updated_at": datetime.now(timezone.utc)
++                }
++            }
++        )
++        
++        # Free up the slot
++        await db.appointment_slots.update_one(
++            {
++                "professional_id": appointment["professional_id"],
++                "date": appointment["appointment_date"],
++                "time": appointment["appointment_time"]
++            },
++            {
++                "$set": {
++                    "available": True,
++                    "booked_by": None
++                }
++            }
++        )
++        
++        return {
++            "success": True,
++            "message": "Agendamento cancelado com sucesso. O horário foi liberado para outros clientes.",
++            "cancelled_appointment": {
++                "date": appointment["appointment_date"],
++                "time": appointment["appointment_time"],
++                "professional_type": appointment["professional_type"]
++            }
++        }
++        
++    except HTTPException:
++        raise
++    except Exception as e:
++        logger.error(f"Erro ao cancelar agendamento: {e}")
++        raise HTTPException(status_code=500, detail="Erro ao cancelar agendamento")
++
++@api_router.get("/appointments/monthly-limits")
++async def get_monthly_appointment_limits(current_user: User = Depends(get_current_user)):
++    """Get user's monthly appointment limits and usage"""
++    try:
++        user_plan = current_user.plan_type if hasattr(current_user, 'plan_type') else 'basic'
++        
++        # Set limits based on plan
++        if user_plan == 'basic':
++            limits = {"nutritionist": 0, "personal": 0}
++        elif user_plan == 'intermediario':
++            limits = {"nutritionist": 1, "personal": 1}
++        elif user_plan == 'vip':
++            limits = {"nutritionist": 2, "personal": 2}
++        else:
++            limits = {"nutritionist": 0, "personal": 0}
++        
++        # Count current month usage
++        current_month = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
++        next_month = (current_month + timedelta(days=32)).replace(day=1)
++        
++        usage = {}
++        for prof_type in ["nutritionist", "personal"]:
++            used_count = await db.appointments.count_documents({
++                "client_id": str(current_user.id),
++                "professional_type": prof_type,
++                "created_at": {"$gte": current_month, "$lt": next_month},
++                "status": {"$in": ["scheduled", "completed"]}
++            })
++            usage[prof_type] = used_count
++        
++        return {
++            "plan_type": user_plan,
++            "limits": limits,
++            "usage": usage,
++            "remaining": {
++                "nutritionist": max(0, limits["nutritionist"] - usage["nutritionist"]),
++                "personal": max(0, limits["personal"] - usage["personal"])
++            }
++        }
++        
++    except Exception as e:
++        logger.error(f"Erro ao buscar limites: {e}")
++        raise HTTPException(status_code=500, detail="Erro ao buscar limites")
++
+ # Professional Appointment Management
+ @api_router.get("/professionals/appointments")
+ async def get_professional_appointments(
