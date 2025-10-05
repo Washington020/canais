@@ -192,8 +192,7 @@ export default function PersonalTrainerManagement() {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
-      // Simular endpoint - você pode implementar no backend se necessário
-      // Por enquanto retornamos dados mock
+      // Simular endpoint - dados mock sem valores monetários
       const mockAppointments = [
         {
           id: '1',
@@ -202,7 +201,7 @@ export default function PersonalTrainerManagement() {
           appointment_date: '2025-01-15',
           appointment_time: '09:00',
           status: 'completed',
-          payment_amount: 150.00
+          confirmed_by_professional: true
         },
         {
           id: '2',
@@ -211,7 +210,16 @@ export default function PersonalTrainerManagement() {
           appointment_date: '2025-01-14',
           appointment_time: '14:30',
           status: 'completed',
-          payment_amount: 150.00
+          confirmed_by_professional: true
+        },
+        {
+          id: '3',
+          client_name: 'Carlos Oliveira',
+          client_email: 'carlos@example.com', 
+          appointment_date: '2025-01-13',
+          appointment_time: '16:00',
+          status: 'pending_confirmation',
+          confirmed_by_professional: false
         }
       ];
       
