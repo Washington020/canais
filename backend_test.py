@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-LuxePass Appointment System Backend Testing
-Testing monthly limits and cancellation features as requested in review.
+LuxePass Appointment System Backend Testing - VERIFICATION FOCUS
+Quick verification test of the fixed appointment system endpoints.
+Testing: Premium plan support, date format fixes, available slots access
 """
 
 import requests
@@ -15,11 +16,11 @@ BASE_URL = "https://trainer-client-app-4.preview.emergentagent.com/api"
 
 # Test credentials as specified in review request
 TEST_USERS = {
-    "vip_user": {
+    "premium_user": {
         "email": "cliente@luxepass.com",
         "password": "cliente123",
-        "expected_plan": "premium",  # Actually premium, not vip
-        "expected_limits": {"nutritionist": 2, "personal": 2}
+        "expected_plan": "premium",
+        "expected_limits": {"nutritionist": 2, "personal": 2}  # Should work like VIP
     },
     "intermediario_user": {
         "email": "intermediario@luxepass.com", 
