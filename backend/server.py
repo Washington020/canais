@@ -2039,7 +2039,8 @@ async def get_professional_appointments(current_professional: dict = Depends(get
         result = []
         for appointment in appointments:
             # Get user details
-            user = await db.users.find_one({"_id": ObjectId(appointment.get("user_id") or appointment.get("client_id"))})
+            user_id = appointment.get("user_id") or appointment.get("client_id")
+            user = await db.users.find_one({"_id": ObjectId(user_id)}) if user_id else None
             
             result.append({
                 "id": str(appointment["_id"]),
@@ -2540,7 +2541,8 @@ async def get_scheduled_appointments(limit: int = 20):
         result = []
         for appointment in appointments:
             # Get user details
-            user = await db.users.find_one({"_id": ObjectId(appointment.get("user_id") or appointment.get("client_id"))})
+            user_id = appointment.get("user_id") or appointment.get("client_id")
+            user = await db.users.find_one({"_id": ObjectId(user_id)}) if user_id else None
             
             result.append({
                 "id": str(appointment["_id"]),
