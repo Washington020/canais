@@ -199,14 +199,22 @@ export default function PersonalTrainerManagement() {
           onPress: async () => {
             try {
               const token = await AsyncStorage.getItem('token');
-              const newPassword = `temp${Date.now().toString().slice(-6)}`;
+              if (!token) {
+                Alert.alert('Erro', 'Token não encontrado');
+                return;
+              }
               
-              // Simular endpoint de reset - implementar no backend
-              await new Promise(resolve => setTimeout(resolve, 1000)); // Mock delay
+              const response = await axios.put(
+                `${API_URL}/admin/professionals/${professional.id}/reset-password`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              
+              const tempPassword = response.data.temp_password;
               
               Alert.alert(
                 '✅ Senha Resetada!',
-                `Nova senha temporária para ${professional.full_name}:\n\n🔑 ${newPassword}\n\nInstrua o profissional a alterar esta senha no primeiro login.`,
+                `Nova senha temporária para ${professional.full_name}:\n\n🔑 ${tempPassword}\n\nInstrua o profissional a alterar esta senha no primeiro login.`,
                 [
                   {
                     text: 'Copiar Senha',
