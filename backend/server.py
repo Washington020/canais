@@ -1579,6 +1579,7 @@ async def create_professional_admin(professional: ProfessionalRegister, credenti
             "bio": professional.bio,
             "phone": professional.phone,
             "experience_years": professional.experience_years,
+            "pix_key": professional.pix_key,
             "active": True,
             "created_at": datetime.now(timezone.utc),
             "created_by_admin": str(current_user["id"])
