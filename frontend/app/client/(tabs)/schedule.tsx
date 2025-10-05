@@ -366,6 +366,11 @@ export default function ClientSchedule() {
             <Text style={styles.serviceDescription}>
               Planos alimentares personalizados e orientação nutricional
             </Text>
+            {appointmentLimits && (
+              <Text style={styles.limitsText}>
+                {appointmentLimits.remaining.nutritionist} de {appointmentLimits.limits.nutritionist} consultas restantes este mês
+              </Text>
+            )}
             <View style={styles.bookButton}>
               <Ionicons name="calendar" size={16} color="#22C55E" />
               <Text style={styles.bookButtonText}>Agendar</Text>
@@ -381,6 +386,11 @@ export default function ClientSchedule() {
             <Text style={styles.serviceDescription}>
               Treinos personalizados e acompanhamento profissional
             </Text>
+            {appointmentLimits && (
+              <Text style={styles.limitsText}>
+                {appointmentLimits.remaining.personal} de {appointmentLimits.limits.personal} sessões restantes este mês
+              </Text>
+            )}
             <View style={styles.bookButton}>
               <Ionicons name="calendar" size={16} color="#F59E0B" />
               <Text style={styles.bookButtonText}>Agendar</Text>
