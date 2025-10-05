@@ -961,4 +961,27 @@ const styles = StyleSheet.create({
   actionButtons: {
     marginTop: 16,
   },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  halfButton: {
+    flex: 1,
+  },
+  summaryText: {
+    color: '#F59E0B',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  appointmentStatus: {
+    alignItems: 'flex-end',
+  },
+  statusIndicator: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
 });
