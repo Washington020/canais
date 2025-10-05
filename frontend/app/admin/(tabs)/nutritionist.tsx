@@ -33,6 +33,7 @@ interface Professional {
   experience_years: number;
   active: boolean;
   created_at: string;
+  pix_key?: string;
 }
 
 export default function NutritionistManagement() {
@@ -41,6 +42,8 @@ export default function NutritionistManagement() {
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [expandedProfessional, setExpandedProfessional] = useState<string | null>(null);
+  const [appointments, setAppointments] = useState<{[key: string]: any[]}>({});
   const router = useRouter();
 
   // Form states
@@ -52,7 +55,8 @@ export default function NutritionistManagement() {
     specialization: '',
     phone: '',
     experience_years: '0',
-    bio: ''
+    bio: '',
+    pix_key: ''
   });
 
   const loadProfessionals = async () => {
@@ -112,7 +116,8 @@ export default function NutritionistManagement() {
         specialization: formData.specialization.trim(),
         phone: formData.phone.trim(),
         experience_years: parseInt(formData.experience_years) || 0,
-        bio: formData.bio.trim()
+        bio: formData.bio.trim(),
+        pix_key: formData.pix_key.trim()
       };
 
       const response = await axios.post(`${API_URL}/admin/professionals`, professionalData, {
@@ -135,7 +140,8 @@ export default function NutritionistManagement() {
                 specialization: '',
                 phone: '',
                 experience_years: '0',
-                bio: ''
+                bio: '',
+                pix_key: ''
               });
               loadProfessionals();
             }
@@ -179,6 +185,54 @@ export default function NutritionistManagement() {
         }
       ]
     );
+  };
+
+  const loadProfessionalAppointments = async (professionalId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      // Simular endpoint - você pode implementar no backend se necessário
+      // Por enquanto retornamos dados mock
+      const mockAppointments = [
+        {
+          id: '1',
+          client_name: 'Ana Silva',
+          client_email: 'ana@example.com',
+          appointment_date: '2025-01-15',
+          appointment_time: '10:00',
+          status: 'completed',
+          payment_amount: 200.00
+        },
+        {
+          id: '2',
+          client_name: 'Carlos Santos',
+          client_email: 'carlos@example.com', 
+          appointment_date: '2025-01-14',
+          appointment_time: '15:00',
+          status: 'completed',
+          payment_amount: 200.00
+        }
+      ];
+      
+      setAppointments(prev => ({
+        ...prev,
+        [professionalId]: mockAppointments
+      }));
+    } catch (error: any) {
+      console.error('Error loading appointments:', error);
+    }
+  };
+
+  const toggleProfessionalDetails = (professionalId: string) => {
+    if (expandedProfessional === professionalId) {
+      setExpandedProfessional(null);
+    } else {
+      setExpandedProfessional(professionalId);
+      if (!appointments[professionalId]) {
+        loadProfessionalAppointments(professionalId);
+      }
+    }
   };
 
   const onRefresh = () => {
@@ -246,25 +300,36 @@ export default function NutritionistManagement() {
         ) : (
           professionals.map((professional) => (
             <View key={professional.id} style={styles.professionalCard}>
-              <View style={styles.professionalHeader}>
+              <TouchableOpacity 
+                style={styles.professionalHeader}
+                onPress={() => toggleProfessionalDetails(professional.id)}
+              >
                 <View style={styles.professionalInfo}>
                   <Text style={styles.professionalName}>{professional.full_name}</Text>
                   <Text style={styles.professionalEmail}>{professional.email}</Text>
                   <Text style={styles.professionalCref}>{professional.cref_crn}</Text>
                 </View>
-                <View style={[
-                  styles.statusBadge,
-                  { backgroundColor: professional.active ? '#22C55E' : '#EF4444' }
-                ]}>
-                  <Text style={styles.statusText}>
-                    {professional.active ? 'Ativo' : 'Inativo'}
-                  </Text>
+                <View style={styles.headerRight}>
+                  <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: professional.active ? '#22C55E' : '#EF4444' }
+                  ]}>
+                    <Text style={styles.statusText}>
+                      {professional.active ? 'Ativo' : 'Inativo'}
+                    </Text>
+                  </View>
+                  <Ionicons 
+                    name={expandedProfessional === professional.id ? "chevron-up" : "chevron-down"} 
+                    size={24} 
+                    color="#94A3B8" 
+                    style={{ marginLeft: 8 }}
+                  />
                 </View>
-              </View>
+              </TouchableOpacity>
 
               <View style={styles.professionalDetails}>
                 <Text style={styles.detailText}>
-                  📋 {professional.specialization || 'Especialização não informada'}
+                  🥗 {professional.specialization || 'Especialização não informada'}
                 </Text>
                 <Text style={styles.detailText}>
                   📞 {professional.phone || 'Telefone não informado'}
@@ -274,22 +339,89 @@ export default function NutritionistManagement() {
                 </Text>
               </View>
 
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  { backgroundColor: professional.active ? '#EF4444' : '#22C55E' }
-                ]}
-                onPress={() => toggleProfessionalStatus(professional)}
-              >
-                <Ionicons 
-                  name={professional.active ? "close-circle" : "checkmark-circle"} 
-                  size={16} 
-                  color="#FFFFFF" 
-                />
-                <Text style={styles.actionButtonText}>
-                  {professional.active ? 'Desativar' : 'Ativar'}
-                </Text>
-              </TouchableOpacity>
+              {/* Expanded Section */}
+              {expandedProfessional === professional.id && (
+                <View style={styles.expandedSection}>
+                  {/* Login Information */}
+                  <View style={styles.loginSection}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="log-in" size={16} color="#22C55E" />
+                      <Text style={styles.sectionTitle}>Credenciais de Login</Text>
+                    </View>
+                    <View style={styles.loginInfo}>
+                      <Text style={styles.loginLabel}>Email:</Text>
+                      <Text style={styles.loginValue}>{professional.email}</Text>
+                    </View>
+                    <View style={styles.loginInfo}>
+                      <Text style={styles.loginLabel}>Acesso ao App:</Text>
+                      <Text style={styles.loginValue}>App Nutricionista</Text>
+                    </View>
+                  </View>
+
+                  {/* PIX Information */}
+                  <View style={styles.pixSection}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="card" size={16} color="#22C55E" />
+                      <Text style={styles.sectionTitle}>PIX para Pagamentos</Text>
+                    </View>
+                    <Text style={styles.pixValue}>{professional.pix_key || 'PIX não informado'}</Text>
+                  </View>
+
+                  {/* Appointments History */}
+                  <View style={styles.appointmentsSection}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="calendar" size={16} color="#8B5CF6" />
+                      <Text style={styles.sectionTitle}>Histórico de Atendimentos</Text>
+                    </View>
+                    
+                    {appointments[professional.id]?.length > 0 ? (
+                      appointments[professional.id].map((appointment, index) => (
+                        <View key={index} style={styles.appointmentItem}>
+                          <View style={styles.appointmentInfo}>
+                            <Text style={styles.clientName}>{appointment.client_name}</Text>
+                            <Text style={styles.appointmentDate}>
+                              {new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às {appointment.appointment_time}
+                            </Text>
+                            <Text style={styles.clientEmail}>{appointment.client_email}</Text>
+                          </View>
+                          <View style={styles.appointmentPayment}>
+                            <Text style={styles.paymentAmount}>
+                              {appointment.payment_amount.toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL'
+                              })}
+                            </Text>
+                            <Text style={styles.paymentStatus}>
+                              {appointment.status === 'completed' ? 'Concluído' : 'Pendente'}
+                            </Text>
+                          </View>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.noAppointments}>Nenhum atendimento registrado</Text>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    { backgroundColor: professional.active ? '#EF4444' : '#22C55E' }
+                  ]}
+                  onPress={() => toggleProfessionalStatus(professional)}
+                >
+                  <Ionicons 
+                    name={professional.active ? "close-circle" : "checkmark-circle"} 
+                    size={16} 
+                    color="#FFFFFF" 
+                  />
+                  <Text style={styles.actionButtonText}>
+                    {professional.active ? 'Desativar' : 'Ativar'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))
         )}
@@ -371,7 +503,7 @@ export default function NutritionistManagement() {
                 <Text style={styles.inputLabel}>Especialização</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Ex: Nutrição Esportiva"
+                  placeholder="Ex: Nutrição Esportiva e Funcional"
                   placeholderTextColor="#64748B"
                   value={formData.specialization}
                   onChangeText={(text) => setFormData({...formData, specialization: text})}
@@ -399,6 +531,17 @@ export default function NutritionistManagement() {
                   value={formData.experience_years}
                   onChangeText={(text) => setFormData({...formData, experience_years: text})}
                   keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Chave PIX *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="CPF, e-mail, telefone ou chave aleatória"
+                  placeholderTextColor="#64748B"
+                  value={formData.pix_key}
+                  onChangeText={(text) => setFormData({...formData, pix_key: text})}
                 />
               </View>
 
@@ -450,7 +593,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#FFFFFF',
+    color: '#94A3B8',
     fontSize: 16,
     marginTop: 16,
   },
@@ -473,43 +616,48 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   headerSubtitle: {
-    color: '#94A3B8',
+    color: '#22C55E',
     fontSize: 14,
+    fontWeight: '600',
   },
   createButton: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     backgroundColor: '#22C55E',
-    borderRadius: 24,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
     flex: 1,
     paddingHorizontal: 24,
+    paddingTop: 16,
   },
   emptyState: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 80,
+    paddingVertical: 60,
   },
   emptyTitle: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
     marginTop: 16,
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtitle: {
-    color: '#64748B',
+    color: '#94A3B8',
     fontSize: 14,
     textAlign: 'center',
-    paddingHorizontal: 32,
+    lineHeight: 20,
   },
   professionalCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 16,
     padding: 20,
-    marginVertical: 8,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -524,50 +672,154 @@ const styles = StyleSheet.create({
   },
   professionalName: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
   professionalEmail: {
     color: '#94A3B8',
     fontSize: 14,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   professionalCref: {
-    color: '#64748B',
+    color: '#22C55E',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   statusBadge: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 12,
   },
   statusText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   professionalDetails: {
     marginBottom: 16,
   },
   detailText: {
-    color: '#94A3B8',
-    fontSize: 14,
+    color: '#E2E8F0',
+    fontSize: 12,
     marginBottom: 4,
+  },
+  expandedSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  loginSection: {
+    marginBottom: 16,
+  },
+  pixSection: {
+    marginBottom: 16,
+  },
+  appointmentsSection: {
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  loginInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  loginLabel: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  loginValue: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  pixValue: {
+    color: '#22C55E',
+    fontSize: 14,
+    fontWeight: '600',
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    padding: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  appointmentItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  appointmentInfo: {
+    flex: 1,
+  },
+  clientName: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  appointmentDate: {
+    color: '#22C55E',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  clientEmail: {
+    color: '#94A3B8',
+    fontSize: 11,
+  },
+  appointmentPayment: {
+    alignItems: 'flex-end',
+  },
+  paymentAmount: {
+    color: '#22C55E',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  paymentStatus: {
+    color: '#94A3B8',
+    fontSize: 10,
+  },
+  noAppointments: {
+    color: '#94A3B8',
+    fontSize: 12,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    padding: 16,
+  },
+  actionButtons: {
+    marginTop: 16,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
+    gap: 6,
   },
   actionButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    marginLeft: 8,
   },
   modalContainer: {
     flex: 1,
@@ -586,10 +838,8 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   modalCloseButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
