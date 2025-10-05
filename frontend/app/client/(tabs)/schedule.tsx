@@ -125,6 +125,28 @@ export default function ClientSchedule() {
     }
   };
 
+  const cancelAppointment = async (appointmentId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.delete(`${API_URL}/appointments/${appointmentId}/cancel`, { headers });
+      
+      Alert.alert(
+        'Agendamento Cancelado',
+        'Seu agendamento foi cancelado com sucesso. O horário foi liberado para outros clientes.',
+        [{ text: 'OK', onPress: () => {
+          loadMyAppointments();
+          loadAppointmentLimits();
+        }}]
+      );
+    } catch (error: any) {
+      console.error('Error cancelling appointment:', error);
+      Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível cancelar o agendamento');
+    }
+  };
+
   const loadAvailableSlots = async (professionalType: string, date: string) => {
     try {
       const token = await AsyncStorage.getItem('token');
