@@ -3584,7 +3584,7 @@ async def book_appointment(
         # Set limits based on plan
         if user_plan == 'intermediario':
             monthly_limit = 1  # 1 consulta por mês
-        elif user_plan == 'vip':
+        elif user_plan in ['vip', 'premium']:
             monthly_limit = 2  # 2 consultas por mês
         else:
             monthly_limit = 0
