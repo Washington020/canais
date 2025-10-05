@@ -198,8 +198,10 @@ class LuxePassTester:
     def test_professional_login_ricardo(self):
         """Test professional login for Ricardo (Personal Trainer)"""
         try:
+            # Use the created professional's email if available, otherwise use existing one
+            email = self.created_professionals[0]["email"] if self.created_professionals else "ricardo@luxepass.com"
             response = self.session.post(f"{BACKEND_URL}/professionals/login", json={
-                "email": "ricardo@luxepass.com",
+                "email": email,
                 "password": "ricardo123"
             })
             
