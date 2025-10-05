@@ -111,6 +111,20 @@ export default function ClientSchedule() {
     }
   };
 
+  const loadAppointmentLimits = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/appointments/monthly-limits`, { headers });
+      
+      setAppointmentLimits(response.data);
+    } catch (error: any) {
+      console.error('Error loading appointment limits:', error);
+    }
+  };
+
   const loadAvailableSlots = async (professionalType: string, date: string) => {
     try {
       const token = await AsyncStorage.getItem('token');
