@@ -1,52 +1,69 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for LuxePass Professional Login Credentials
-Testing professional login endpoints for Nutritionist and Personal Trainer apps
+LuxePass Backend Testing Suite - PIX Professional Management System
+Testing enhanced professional management with PIX functionality
 """
 
 import requests
 import json
 import sys
 from datetime import datetime
-import os
+import uuid
 
-# Get backend URL from environment
+# Configuration
 BACKEND_URL = "https://trainer-client-app-4.preview.emergentagent.com/api"
 
-class TestResults:
+class LuxePassTester:
     def __init__(self):
-        self.tests_run = 0
-        self.tests_passed = 0
-        self.tests_failed = 0
-        self.failures = []
-    
-    def add_result(self, test_name, passed, message=""):
-        self.tests_run += 1
-        if passed:
-            self.tests_passed += 1
-            print(f"✅ {test_name}: PASSED")
-        else:
-            self.tests_failed += 1
-            self.failures.append(f"{test_name}: {message}")
-            print(f"❌ {test_name}: FAILED - {message}")
-    
-    def print_summary(self):
-        print(f"\n{'='*60}")
-        print(f"TEST SUMMARY")
-        print(f"{'='*60}")
-        print(f"Total Tests: {self.tests_run}")
-        print(f"Passed: {self.tests_passed}")
-        print(f"Failed: {self.tests_failed}")
-        print(f"Success Rate: {(self.tests_passed/self.tests_run)*100:.1f}%")
+        self.session = requests.Session()
+        self.admin_token = None
+        self.test_results = []
+        self.created_professionals = []
         
-        if self.failures:
-            print(f"\n❌ FAILURES:")
-            for failure in self.failures:
-                print(f"  - {failure}")
-
-class ProfessionalLoginTester:
-    def __init__(self):
-        self.base_url = BACKEND_URL
+    def log_test(self, test_name, success, details="", response_data=None):
+        """Log test results"""
+        status = "✅ PASS" if success else "❌ FAIL"
+        print(f"{status} - {test_name}")
+        if details:
+            print(f"   Details: {details}")
+        if response_data and not success:
+            print(f"   Response: {response_data}")
+        print()
+        
+        self.test_results.append({
+            "test": test_name,
+            "success": success,
+            "details": details,
+            "response": response_data
+        })
+    
+    def test_admin_login(self):
+        """Test admin login with admin@luxepass.com/admin123"""
+        try:
+            response = self.session.post(f"{BACKEND_URL}/auth/login", json={
+                "email": "admin@luxepass.com",
+                "password": "admin123"
+            })
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "access_token" in data:
+                    self.admin_token = data["access_token"]
+                    self.session.headers.update({
+                        "Authorization": f"Bearer {self.admin_token}"
+                    })
+                    self.log_test("Admin Login", True, f"Successfully logged in as admin")
+                    return True
+                else:
+                    self.log_test("Admin Login", False, "No access token in response", data)
+                    return False
+            else:
+                self.log_test("Admin Login", False, f"HTTP {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_test("Admin Login", False, f"Exception: {str(e)}")
+            return False
 def test_professional_login(email, password, expected_type, test_name):
     """Test professional login endpoint"""
     try:
