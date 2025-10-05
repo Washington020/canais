@@ -33,6 +33,7 @@ interface Professional {
   experience_years: number;
   active: boolean;
   created_at: string;
+  pix_key?: string;
 }
 
 export default function PersonalTrainerManagement() {
