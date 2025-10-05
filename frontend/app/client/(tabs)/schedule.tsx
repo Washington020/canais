@@ -292,6 +292,7 @@ export default function ClientSchedule() {
     setRefreshing(true);
     loadUserProfile();
     loadMyAppointments();
+    loadAppointmentLimits();
   };
 
   if (loading) {
