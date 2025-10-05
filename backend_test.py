@@ -233,9 +233,13 @@ class LuxePassAdminTester:
                 "Content-Type": "application/json"
             }
             
+            # Use unique email to avoid conflicts
+            import time
+            unique_id = int(time.time()) % 10000
+            
             professional_data = {
-                "full_name": "Prof. Carlos Silva",
-                "email": "carlos@luxepass.com",
+                "full_name": "Prof. Carlos Silva Novo",
+                "email": f"carlos_novo_{unique_id}@luxepass.com",
                 "password": "carlos123",
                 "professional_type": "personal",
                 "cref_crn": "CREF-123456/SP",
@@ -252,7 +256,7 @@ class LuxePassAdminTester:
                 data = response.json()
                 if data.get('success'):
                     self.created_professionals.append({
-                        "email": "carlos@luxepass.com",
+                        "email": professional_data["email"],
                         "password": "carlos123",
                         "type": "personal"
                     })
