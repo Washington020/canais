@@ -98,10 +98,13 @@ export default function ClientSchedule() {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
-      // For now, we'll use mock data since this endpoint needs to be implemented
-      setAppointments([]);
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/appointments/my-appointments`, { headers });
+      
+      setAppointments(response.data.appointments || []);
     } catch (error: any) {
       console.error('Error loading appointments:', error);
+      setAppointments([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
