@@ -3525,13 +3525,13 @@ async def get_available_appointment_slots(
 ):
     """Get available appointment slots for clients (VIP and Intermediario only)"""
     try:
-        # Check user plan permissions - VIP and Intermediario only
+        # Check user plan permissions - VIP, Premium, and Intermediario only
         user_plan = current_user.plan_type if hasattr(current_user, 'plan_type') else 'basic'
         
-        if user_plan not in ['vip', 'intermediario']:
+        if user_plan not in ['vip', 'premium', 'intermediario']:
             raise HTTPException(
                 status_code=403, 
-                detail="Agendamentos disponíveis apenas para planos VIP e Intermediário. Faça upgrade para acessar."
+                detail="Agendamentos disponíveis apenas para planos VIP, Premium e Intermediário. Faça upgrade para acessar."
             )
         
         # Get available slots
