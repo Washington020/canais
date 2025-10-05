@@ -441,11 +441,15 @@ class LuxePassAdminTester:
         self.test_create_personal_trainer()
         self.test_create_nutritionist()
         
-        # Test 4: Professional Login Access
-        print("🔐 Testing Professional Login Access...")
+        # Test 4: Existing Professional Login Access (from review request)
+        print("🔐 Testing Existing Professional Login Access...")
+        self.test_existing_professional_logins()
+        
+        # Test 5: New Professional Login Access
+        print("🔐 Testing New Professional Login Access...")
         self.test_professional_logins()
         
-        # Test 5: Error Handling
+        # Test 6: Error Handling
         print("⚠️ Testing Error Handling...")
         self.test_validation_errors()
         
