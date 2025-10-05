@@ -437,13 +437,13 @@ class AppointmentSystemTester:
 def main():
     """Main test execution"""
     tester = AppointmentSystemTester()
-    success = tester.run_comprehensive_test()
+    success = tester.run_verification_test()
     
     if success:
-        print("\n🎉 ALL APPOINTMENT SYSTEM TESTS PASSED!")
+        print("\n🎉 ALL APPOINTMENT SYSTEM FIXES VERIFIED!")
         sys.exit(0)
     else:
-        print("\n⚠️  SOME TESTS FAILED - CHECK DETAILS ABOVE")
+        print("\n⚠️  SOME FIXES NOT WORKING - CHECK DETAILS ABOVE")
         sys.exit(1)
 
 if __name__ == "__main__":
