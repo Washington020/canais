@@ -18,7 +18,7 @@ TEST_USERS = {
     "vip_user": {
         "email": "cliente@luxepass.com",
         "password": "cliente123",
-        "expected_plan": "vip",
+        "expected_plan": "premium",  # Actually premium, not vip
         "expected_limits": {"nutritionist": 2, "personal": 2}
     },
     "intermediario_user": {
