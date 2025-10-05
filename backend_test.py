@@ -47,189 +47,130 @@ class TestResults:
 class ProfessionalLoginTester:
     def __init__(self):
         self.base_url = BACKEND_URL
-    
-    def test_professional_login(self, email, password, prof_type):
-        """Test professional login"""
-        try:
-            response = requests.post(f"{self.base_url}/professionals/login", json={
-                "email": email,
-                "password": password
-            }, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "access_token" in data:
-                    self.professional_tokens[email] = data["access_token"]
-                    self.log_test(f"Professional Login ({prof_type})", True, 
-                                f"Successfully logged in {email}")
-                    return True
-                else:
-                    self.log_test(f"Professional Login ({prof_type})", False, 
-                                error="No access_token in response")
-                    return False
-            else:
-                self.log_test(f"Professional Login ({prof_type})", False, 
-                            error=f"Status {response.status_code}: {response.text}")
-                return False
-                
-        except Exception as e:
-            self.log_test(f"Professional Login ({prof_type})", False, error=str(e))
-            return False
-    
-    def test_existing_professional_logins(self):
-        """Test login for existing professionals from review request"""
-        existing_professionals = [
-            {"email": "carlos@luxepass.com", "password": "carlos123", "type": "personal"},
-            {"email": "ana@luxepass.com", "password": "ana123", "type": "nutritionist"}
-        ]
-        
-        success_count = 0
-        for prof in existing_professionals:
-            if self.test_professional_login(prof["email"], prof["password"], prof["type"]):
-                success_count += 1
-        
-        return success_count == len(existing_professionals)
-    
-    def test_professional_logins(self):
-        """Test login for all created professionals"""
-        success_count = 0
-        for prof in self.created_professionals:
-            if self.test_professional_login(prof["email"], prof["password"], prof["type"]):
-                success_count += 1
-        
-        return success_count == len(self.created_professionals)
-    
-    def test_validation_errors(self):
-        """Test validation errors for professional creation"""
-        if not self.admin_token:
-            self.log_test("Validation Errors Test", False, error="No admin token available")
-            return False
-            
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.admin_token}",
-                "Content-Type": "application/json"
-            }
-            
-            # Test with missing required fields
-            incomplete_data = {
-                "full_name": "Test Professional",
-                # Missing email, password, professional_type, etc.
-            }
-            
-            response = requests.post(f"{self.base_url}/admin/professionals", 
-                                   headers=headers, json=incomplete_data, timeout=10)
-            
-            if response.status_code in [400, 422]:  # Validation error expected
-                self.log_test("Validation Errors Test", True, 
-                            f"Correctly returned validation error: Status {response.status_code}")
-                return True
-            else:
-                self.log_test("Validation Errors Test", False, 
-                            error=f"Expected validation error but got status {response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Validation Errors Test", False, error=str(e))
-            return False
-    
-    def run_all_tests(self):
-        """Run all tests in sequence"""
-        print("🚀 Starting LuxePass Admin System Testing")
-        print(f"Backend URL: {self.base_url}")
-        print("=" * 60)
-        
-        # Test 1: Admin Authentication
-        if not self.test_admin_authentication():
-            print("❌ Admin authentication failed - stopping tests")
-            return self.generate_summary()
-        
-        # Test 2: Dashboard Endpoints (High Priority)
-        print("📊 Testing Dashboard Endpoints...")
-        self.test_dashboard_stats()
-        self.test_dashboard_recent_users()
-        self.test_dashboard_gym_performance()
-        self.test_dashboard_recent_tokens()
-        self.test_dashboard_appointments()
-        
-        # Test 3: Professional Management Endpoints (High Priority)
-        print("👥 Testing Professional Management...")
-        self.test_get_professionals()
-        self.test_create_personal_trainer()
-        self.test_create_nutritionist()
-        
-        # Test 4: Existing Professional Login Access (from review request)
-        print("🔐 Testing Existing Professional Login Access...")
-        self.test_existing_professional_logins()
-        
-        # Test 5: New Professional Login Access
-        print("🔐 Testing New Professional Login Access...")
-        self.test_professional_logins()
-        
-        # Test 6: Error Handling
-        print("⚠️ Testing Error Handling...")
-        self.test_validation_errors()
-        
-        return self.generate_summary()
-    
-    def generate_summary(self):
-        """Generate test summary"""
-        total_tests = len(self.test_results)
-        passed_tests = sum(1 for result in self.test_results if result["success"])
-        failed_tests = total_tests - passed_tests
-        
-        print("=" * 60)
-        print("📋 TEST SUMMARY")
-        print("=" * 60)
-        print(f"Total Tests: {total_tests}")
-        print(f"Passed: {passed_tests} ✅")
-        print(f"Failed: {failed_tests} ❌")
-        print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
-        print()
-        
-        if failed_tests > 0:
-            print("❌ FAILED TESTS:")
-            for result in self.test_results:
-                if not result["success"]:
-                    print(f"  • {result['test']}: {result['error']}")
-            print()
-        
-        if self.created_professionals:
-            print("👥 CREATED PROFESSIONALS:")
-            for prof in self.created_professionals:
-                print(f"  • {prof['email']} ({prof['type']}) - Password: {prof['password']}")
-            print()
-        
-        print("🎯 FOCUS AREAS FROM REVIEW REQUEST:")
-        dashboard_tests = [r for r in self.test_results if "Dashboard" in r["test"]]
-        dashboard_passed = sum(1 for r in dashboard_tests if r["success"])
-        print(f"  • Dashboard Endpoints: {dashboard_passed}/{len(dashboard_tests)} working")
-        
-        prof_tests = [r for r in self.test_results if "Professional" in r["test"] or "Create" in r["test"]]
-        prof_passed = sum(1 for r in prof_tests if r["success"])
-        print(f"  • Professional Management: {prof_passed}/{len(prof_tests)} working")
-        
-        return {
-            "total_tests": total_tests,
-            "passed": passed_tests,
-            "failed": failed_tests,
-            "success_rate": (passed_tests/total_tests)*100,
-            "dashboard_working": dashboard_passed == len(dashboard_tests),
-            "professional_management_working": prof_passed == len(prof_tests),
-            "created_professionals": self.created_professionals,
-            "failed_tests": [r for r in self.test_results if not r["success"]]
+def test_professional_login(email, password, expected_type, test_name):
+    """Test professional login endpoint"""
+    try:
+        url = f"{BACKEND_URL}/professionals/login"
+        payload = {
+            "email": email,
+            "password": password
         }
+        
+        print(f"\n🔍 Testing {test_name}")
+        print(f"URL: {url}")
+        print(f"Payload: {json.dumps(payload, indent=2)}")
+        
+        response = requests.post(url, json=payload, timeout=30)
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Check if response has required fields
+            required_fields = ["access_token", "token_type", "professional_info"]
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if missing_fields:
+                return False, f"Missing required fields: {missing_fields}"
+            
+            # Check token type
+            if data.get("token_type") != "bearer":
+                return False, f"Expected token_type 'bearer', got '{data.get('token_type')}'"
+            
+            # Check access token exists and is not empty
+            if not data.get("access_token"):
+                return False, "Access token is empty or missing"
+            
+            # Check professional info
+            prof_info = data.get("professional_info", {})
+            if prof_info.get("professional_type") != expected_type:
+                return False, f"Expected professional_type '{expected_type}', got '{prof_info.get('professional_type')}'"
+            
+            # Check professional info has required fields
+            prof_required = ["id", "email", "full_name", "professional_type"]
+            prof_missing = [field for field in prof_required if field not in prof_info]
+            
+            if prof_missing:
+                return False, f"Missing professional_info fields: {prof_missing}"
+            
+            print(f"✅ JWT Token: {data['access_token'][:50]}...")
+            print(f"✅ Professional Type: {prof_info['professional_type']}")
+            print(f"✅ Professional Name: {prof_info['full_name']}")
+            print(f"✅ Professional Email: {prof_info['email']}")
+            
+            return True, "Login successful with valid JWT token and professional info"
+            
+        elif response.status_code == 401:
+            return False, f"Authentication failed: {response.text}"
+        elif response.status_code == 404:
+            return False, f"Endpoint not found: {response.text}"
+        else:
+            return False, f"HTTP {response.status_code}: {response.text}"
+            
+    except requests.exceptions.Timeout:
+        return False, "Request timeout (30s)"
+    except requests.exceptions.ConnectionError:
+        return False, "Connection error - backend may be down"
+    except requests.exceptions.RequestException as e:
+        return False, f"Request error: {str(e)}"
+    except json.JSONDecodeError:
+        return False, f"Invalid JSON response: {response.text}"
+    except Exception as e:
+        return False, f"Unexpected error: {str(e)}"
 
 def main():
-    """Main test execution"""
-    tester = LuxePassAdminTester()
-    summary = tester.run_all_tests()
+    print("🚀 LUXEPASS PROFESSIONAL LOGIN CREDENTIALS TEST")
+    print("=" * 60)
+    print(f"Backend URL: {BACKEND_URL}")
+    print(f"Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 60)
     
-    # Exit with appropriate code
-    if summary["failed"] > 0:
-        sys.exit(1)
+    results = TestResults()
+    
+    # Test 1: Nutritionist Login
+    passed, message = test_professional_login(
+        email="nutri@luxepass.com",
+        password="nutri123", 
+        expected_type="nutritionist",
+        test_name="Nutritionist Login"
+    )
+    results.add_result("Nutritionist Login (nutri@luxepass.com)", passed, message)
+    
+    # Test 2: Personal Trainer Login  
+    passed, message = test_professional_login(
+        email="personal@luxepass.com",
+        password="personal123",
+        expected_type="personal", 
+        test_name="Personal Trainer Login"
+    )
+    results.add_result("Personal Trainer Login (personal@luxepass.com)", passed, message)
+    
+    # Test 3: Invalid credentials test
+    try:
+        url = f"{BACKEND_URL}/professionals/login"
+        payload = {"email": "invalid@luxepass.com", "password": "wrong123"}
+        response = requests.post(url, json=payload, timeout=30)
+        
+        if response.status_code == 401:
+            results.add_result("Invalid Credentials Test", True, "Correctly rejected invalid credentials")
+        else:
+            results.add_result("Invalid Credentials Test", False, f"Expected 401, got {response.status_code}")
+    except Exception as e:
+        results.add_result("Invalid Credentials Test", False, f"Error: {str(e)}")
+    
+    # Print final summary
+    results.print_summary()
+    
+    # Return appropriate exit code
+    if results.tests_failed > 0:
+        print(f"\n🚨 {results.tests_failed} test(s) failed!")
+        return 1
     else:
-        sys.exit(0)
+        print(f"\n🎉 All {results.tests_passed} tests passed!")
+        return 0
 
 if __name__ == "__main__":
-    main()
+    exit_code = main()
+    sys.exit(exit_code)
