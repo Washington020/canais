@@ -113,7 +113,8 @@ export default function PersonalTrainerManagement() {
         specialization: formData.specialization.trim(),
         phone: formData.phone.trim(),
         experience_years: parseInt(formData.experience_years) || 0,
-        bio: formData.bio.trim()
+        bio: formData.bio.trim(),
+        pix_key: formData.pix_key.trim()
       };
 
       const response = await axios.post(`${API_URL}/admin/professionals`, professionalData, {
