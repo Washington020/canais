@@ -540,10 +540,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Client Schedule Monthly Limits Integration"
-    - "Workouts Tab Upgrade Path" 
-    - "Nutrition Tab Upgrade Path"
-  stuck_tasks: []
+    - "Appointment System Monthly Limits and Cancellation"
+  stuck_tasks: 
+    - "Appointment System Monthly Limits and Cancellation"
   test_all: false
   test_priority: "high_first"
 
