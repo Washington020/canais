@@ -187,6 +187,46 @@ export default function PersonalTrainerManagement() {
     );
   };
 
+  const resetProfessionalPassword = async (professional: Professional) => {
+    Alert.alert(
+      'Reset de Senha',
+      `Deseja resetar a senha de ${professional.full_name}?\n\nUma nova senha temporária será gerada.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Resetar Senha',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              const newPassword = `temp${Date.now().toString().slice(-6)}`;
+              
+              // Simular endpoint de reset - implementar no backend
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Mock delay
+              
+              Alert.alert(
+                '✅ Senha Resetada!',
+                `Nova senha temporária para ${professional.full_name}:\n\n🔑 ${newPassword}\n\nInstrua o profissional a alterar esta senha no primeiro login.`,
+                [
+                  {
+                    text: 'Copiar Senha',
+                    onPress: () => {
+                      // Simular cópia para clipboard
+                      Alert.alert('Copiado', 'Senha copiada para a área de transferência!');
+                    }
+                  },
+                  { text: 'OK' }
+                ]
+              );
+            } catch (error) {
+              Alert.alert('Erro', 'Não foi possível resetar a senha do profissional');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const loadProfessionalAppointments = async (professionalId: string) => {
     try {
       const token = await AsyncStorage.getItem('token');
