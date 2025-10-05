@@ -3564,10 +3564,10 @@ async def book_appointment(
         # Check user plan permissions
         user_plan = current_user.plan_type if hasattr(current_user, 'plan_type') else 'basic'
         
-        if user_plan not in ['vip', 'intermediario']:
+        if user_plan not in ['vip', 'premium', 'intermediario']:
             raise HTTPException(
                 status_code=403, 
-                detail="Agendamentos disponíveis apenas para planos VIP e Intermediário."
+                detail="Agendamentos disponíveis apenas para planos VIP, Premium e Intermediário."
             )
         
         # Check monthly appointment limits
