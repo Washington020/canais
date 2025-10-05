@@ -423,28 +423,32 @@ export default function PersonalTrainerManagement() {
                     </View>
                     
                     {appointments[professional.id]?.length > 0 ? (
-                      appointments[professional.id].map((appointment, index) => (
-                        <View key={index} style={styles.appointmentItem}>
-                          <View style={styles.appointmentInfo}>
-                            <Text style={styles.clientName}>{appointment.client_name}</Text>
-                            <Text style={styles.appointmentDate}>
-                              {new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às {appointment.appointment_time}
-                            </Text>
-                            <Text style={styles.clientEmail}>{appointment.client_email}</Text>
+                      <View>
+                        <Text style={styles.summaryText}>
+                          📊 Total de atendimentos: {appointments[professional.id].length}
+                        </Text>
+                        {appointments[professional.id].map((appointment, index) => (
+                          <View key={index} style={styles.appointmentItem}>
+                            <View style={styles.appointmentInfo}>
+                              <Text style={styles.clientName}>{appointment.client_name}</Text>
+                              <Text style={styles.appointmentDate}>
+                                {new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às {appointment.appointment_time}
+                              </Text>
+                              <Text style={styles.clientEmail}>{appointment.client_email}</Text>
+                            </View>
+                            <View style={styles.appointmentStatus}>
+                              <View style={[
+                                styles.statusIndicator,
+                                { backgroundColor: appointment.confirmed_by_professional ? '#22C55E' : '#F59E0B' }
+                              ]}>
+                                <Text style={styles.statusText}>
+                                  {appointment.confirmed_by_professional ? '✓ Confirmado' : '⏱ Aguardando'}
+                                </Text>
+                              </View>
+                            </View>
                           </View>
-                          <View style={styles.appointmentPayment}>
-                            <Text style={styles.paymentAmount}>
-                              {appointment.payment_amount.toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                              })}
-                            </Text>
-                            <Text style={styles.paymentStatus}>
-                              {appointment.status === 'completed' ? 'Concluído' : 'Pendente'}
-                            </Text>
-                          </View>
-                        </View>
-                      ))
+                        ))}
+                      </View>
                     ) : (
                       <Text style={styles.noAppointments}>Nenhum atendimento registrado</Text>
                     )}
