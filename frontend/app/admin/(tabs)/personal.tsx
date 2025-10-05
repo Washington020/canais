@@ -406,6 +406,17 @@ export default function PersonalTrainerManagement() {
               </View>
 
               <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Chave PIX *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="CPF, e-mail, telefone ou chave aleatória"
+                  placeholderTextColor="#64748B"
+                  value={formData.pix_key}
+                  onChangeText={(text) => setFormData({...formData, pix_key: text})}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Bio/Descrição</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
