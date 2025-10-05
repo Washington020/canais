@@ -1635,6 +1635,45 @@ async def get_professionals_admin(credentials: HTTPAuthorizationCredentials = De
         logger.error(f"Erro ao listar profissionais: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
+@api_router.put("/admin/professionals/{professional_id}/reset-password")
+async def reset_professional_password(professional_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Reset professional password"""
+    try:
+        # Verify admin access
+        current_user = await get_current_admin(credentials)
+        
+        # Generate new temporary password
+        import secrets
+        import string
+        temp_password = "temp" + ''.join(secrets.choice(string.digits) for _ in range(6))
+        password_hash = pwd_context.hash(temp_password)
+        
+        # Update professional password
+        result = await db.professionals.update_one(
+            {"_id": ObjectId(professional_id)},
+            {
+                "$set": {
+                    "password_hash": password_hash,
+                    "password_reset_at": datetime.now(timezone.utc),
+                    "requires_password_change": True,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Profissional não encontrado")
+        
+        return {
+            "success": True,
+            "message": "Senha resetada com sucesso",
+            "temp_password": temp_password
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao resetar senha do profissional: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
 @api_router.put("/admin/professionals/{professional_id}/status")
 async def update_professional_status_admin(professional_id: str, active: bool, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Activate/deactivate professional"""
