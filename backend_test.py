@@ -234,8 +234,8 @@ class LuxePassTester:
             
             if response.status_code == 200:
                 data = response.json()
-                if "access_token" in data and "professional_info" in data:
-                    prof_info = data["professional_info"]
+                if "access_token" in data and "professional" in data:
+                    prof_info = data["professional"]
                     if prof_info.get("professional_type") == "nutritionist":
                         self.log_test("Professional Login - Fernanda (Nutritionist)", True, 
                                     f"Successfully logged in: {prof_info.get('full_name')}")
@@ -246,7 +246,7 @@ class LuxePassTester:
                         return False
                 else:
                     self.log_test("Professional Login - Fernanda (Nutritionist)", False, 
-                                "Missing access_token or professional_info", data)
+                                "Missing access_token or professional", data)
                     return False
             else:
                 self.log_test("Professional Login - Fernanda (Nutritionist)", False, 
