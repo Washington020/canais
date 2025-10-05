@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Test the FitPass Brasil backend API with comprehensive coverage of authentication, user management, token generation/validation, gym management, workout tracking, nutrition plans, and admin functionality. Focus on professional management system - fix client assignment and visibility issues."
+user_problem_statement: "Implement monthly appointment limits and cancellation features in the client scheduling interface. Integrate monthly consultation limits into client scheduling (Básico=0, Intermediário=1, VIP=2 consultas/mês for both nutritionist and personal). Also implement upgrade tabs for basic clients (Workout/Nutrition) showing upgrade options and plan information."
 
 backend:
   - task: "Professional Client Assignment System Fix"
