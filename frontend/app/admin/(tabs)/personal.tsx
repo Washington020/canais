@@ -790,4 +790,107 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  expandedSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  loginSection: {
+    marginBottom: 16,
+  },
+  pixSection: {
+    marginBottom: 16,
+  },
+  appointmentsSection: {
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  loginInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  loginLabel: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  loginValue: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  pixValue: {
+    color: '#22C55E',
+    fontSize: 14,
+    fontWeight: '600',
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    padding: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  appointmentItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  appointmentInfo: {
+    flex: 1,
+  },
+  clientName: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  appointmentDate: {
+    color: '#F59E0B',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  clientEmail: {
+    color: '#94A3B8',
+    fontSize: 11,
+  },
+  appointmentPayment: {
+    alignItems: 'flex-end',
+  },
+  paymentAmount: {
+    color: '#22C55E',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  paymentStatus: {
+    color: '#94A3B8',
+    fontSize: 10,
+  },
+  noAppointments: {
+    color: '#94A3B8',
+    fontSize: 12,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    padding: 16,
+  },
+  actionButtons: {
+    marginTop: 16,
+  },
 });
