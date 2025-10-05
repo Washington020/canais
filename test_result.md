@@ -484,7 +484,41 @@ backend:
           comment: "✅ GET /api/admin/dashboard endpoint working correctly. Successfully loads admin dashboard with all statistics: Total Users (4), Active Subscriptions (4), Total Gyms (3), Tokens Generated Today (1), Monthly Revenue (R$ 15000), Overdue Payments (2), Blocked Users (1). Admin interface personalization is operational."
 
 frontend:
-  # Frontend testing not performed as per instructions
+  - task: "Client Schedule Monthly Limits Integration"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/client/(tabs)/schedule.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Successfully integrated monthly appointment limits and cancellation features into client schedule interface. Added AppointmentLimits state management, real API integration for appointments, limits display on service cards, cancellation functionality with 24h restriction, and proper limit validation before booking."
+
+  - task: "Workouts Tab Upgrade Path"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/client/(tabs)/workouts.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Workouts tab already properly implemented with upgrade functionality for basic users and workout plan display for premium users. Shows plan pricing, features comparison, and upgrade modal with next month effective date."
+
+  - task: "Nutrition Tab Upgrade Path"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/client/(tabs)/nutrition.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Nutrition tab already properly implemented with upgrade functionality for basic users and nutrition plan display for premium users. Includes nutritional tips for basic users, plan comparison cards, and upgrade flow with proper pricing display."
 
 metadata:
   created_by: "testing_agent"
