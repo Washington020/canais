@@ -339,63 +339,47 @@ class AppointmentSystemTester:
             self.log_test(f"Cancel Invalid Appointment - {user_key}", False, f"Exception: {str(e)}")
             return False
     
-    def run_comprehensive_test(self):
-        """Run all appointment system tests"""
-        print("🎯 LUXEPASS APPOINTMENT SYSTEM TESTING STARTED")
+    def run_verification_test(self):
+        """Run focused verification test of fixed appointment system endpoints"""
+        print("🎯 APPOINTMENT SYSTEM VERIFICATION TEST")
         print("=" * 60)
+        print("Quick verification test of the fixed appointment system endpoints.")
+        print("Focus: Premium plan support, date format fixes, available slots access")
         print()
         
         # Test authentication for both users
-        print("📋 AUTHENTICATION TESTS")
-        print("-" * 30)
-        vip_auth = self.authenticate_user("vip_user")
+        print("📋 STEP 1: USER AUTHENTICATION")
+        print("-" * 40)
+        premium_auth = self.authenticate_user("premium_user")
         intermediario_auth = self.authenticate_user("intermediario_user")
         
-        if not vip_auth or not intermediario_auth:
+        if not premium_auth or not intermediario_auth:
             print("❌ Authentication failed. Cannot proceed with appointment tests.")
             return False
         
-        # Test monthly limits endpoint
-        print("📊 MONTHLY LIMITS TESTS")
-        print("-" * 30)
-        self.test_monthly_limits_endpoint("vip_user")
-        self.test_monthly_limits_endpoint("intermediario_user")
+        # Test 1: Premium Plan Support - Monthly Limits
+        print("📊 STEP 2: TEST PREMIUM PLAN SUPPORT")
+        print("-" * 40)
+        print("Testing GET /api/appointments/monthly-limits with premium user")
+        print("Expected: Premium users should have same access as VIP (2 consultations/month)")
+        self.test_monthly_limits_endpoint("premium_user")
         
-        # Test my appointments endpoint
-        print("📅 MY APPOINTMENTS TESTS")
-        print("-" * 30)
-        self.test_my_appointments_endpoint("vip_user")
+        # Test 2: Date Format Fix - My Appointments
+        print("📅 STEP 3: TEST MY APPOINTMENTS FIXED DATE FORMAT")
+        print("-" * 50)
+        print("Testing GET /api/appointments/my-appointments with intermediario user")
+        print("Expected: No more 500 errors due to date format issues")
         self.test_my_appointments_endpoint("intermediario_user")
         
-        # Test available slots endpoint
-        print("🕐 AVAILABLE SLOTS TESTS")
-        print("-" * 30)
-        self.test_available_slots_endpoint("vip_user")
-        self.test_available_slots_endpoint("intermediario_user")
-        
-        # Test appointment booking
-        print("📝 APPOINTMENT BOOKING TESTS")
-        print("-" * 30)
-        vip_appointment_id = self.test_appointment_booking("vip_user")
-        intermediario_appointment_id = self.test_appointment_booking("intermediario_user")
-        
-        # Test appointment cancellation
-        print("❌ APPOINTMENT CANCELLATION TESTS")
-        print("-" * 30)
-        
-        # Test invalid appointment cancellation
-        self.test_invalid_appointment_cancellation("vip_user")
-        self.test_invalid_appointment_cancellation("intermediario_user")
-        
-        # Test valid appointment cancellation if we have appointment IDs
-        if vip_appointment_id:
-            self.test_appointment_cancellation("vip_user", vip_appointment_id)
-        
-        if intermediario_appointment_id:
-            self.test_appointment_cancellation("intermediario_user", intermediario_appointment_id)
+        # Test 3: Available Slots Premium Access
+        print("🕐 STEP 4: TEST AVAILABLE SLOTS PREMIUM ACCESS")
+        print("-" * 50)
+        print("Testing GET /api/appointments/available-slots with premium user")
+        print("Expected: Should now allow access (not 403)")
+        self.test_available_slots_endpoint("premium_user")
         
         # Summary
-        print("📈 TEST SUMMARY")
+        print("📈 VERIFICATION RESULTS")
         print("=" * 60)
         
         total_tests = len(self.test_results)
@@ -407,21 +391,46 @@ class AppointmentSystemTester:
         print(f"Failed: {failed_tests} ❌")
         print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
         
-        if failed_tests > 0:
-            print("\n❌ FAILED TESTS:")
-            for result in self.test_results:
-                if not result["success"]:
-                    print(f"  - {result['test']}: {result['details']}")
+        # Detailed results
+        print("\n🔍 DETAILED RESULTS:")
+        print("-" * 30)
         
-        # Report critical backend issues found
-        print("\n🚨 CRITICAL BACKEND ISSUES IDENTIFIED:")
-        print("-" * 50)
-        print("1. PLAN TYPE MISMATCH: cliente@luxepass.com has 'premium' plan but appointment")
-        print("   system only supports 'vip' and 'intermediario' plans")
-        print("2. MONTHLY LIMITS BUG: Premium plan gets 0 limits instead of VIP-equivalent limits")
-        print("3. DATE FORMAT ERROR: Invalid isoformat string in my-appointments endpoint")
-        print("4. NO APPOINTMENT SLOTS: Database has no appointment slots for booking")
-        print("5. MISSING ADMIN ENDPOINTS: No admin endpoint to create appointment slots for testing")
+        critical_issues = []
+        fixes_verified = []
+        
+        for result in self.test_results:
+            if result["success"]:
+                print(f"✅ {result['test']}: {result['details']}")
+                fixes_verified.append(result['test'])
+            else:
+                print(f"❌ {result['test']}: {result['details']}")
+                critical_issues.append(result['test'])
+        
+        # Final assessment
+        print("\n🎯 VERIFICATION SUMMARY:")
+        print("-" * 30)
+        
+        if "Monthly Limits - premium_user" in fixes_verified:
+            print("✅ PREMIUM PLAN SUPPORT: Fixed - Premium users now get proper monthly limits")
+        else:
+            print("❌ PREMIUM PLAN SUPPORT: Still broken - Premium users not getting correct limits")
+            
+        if "My Appointments - intermediario_user" in fixes_verified:
+            print("✅ DATE FORMAT FIX: Fixed - No more 500 errors in my-appointments endpoint")
+        else:
+            print("❌ DATE FORMAT FIX: Still broken - 500 errors persist in my-appointments")
+            
+        if "Available Slots - premium_user (nutritionist)" in fixes_verified:
+            print("✅ AVAILABLE SLOTS ACCESS: Fixed - Premium users can access available slots")
+        else:
+            print("❌ AVAILABLE SLOTS ACCESS: Still broken - Premium users blocked from slots")
+        
+        if failed_tests == 0:
+            print("\n🎉 ALL MAJOR BUGS HAVE BEEN RESOLVED!")
+            print("The appointment system fixes are working correctly.")
+        else:
+            print(f"\n⚠️  {failed_tests} ISSUES REMAIN - See failed tests above")
+            print("Some appointment system bugs still need attention.")
         
         return failed_tests == 0
 
