@@ -939,18 +939,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 11,
   },
-  appointmentPayment: {
-    alignItems: 'flex-end',
-  },
-  paymentAmount: {
-    color: '#22C55E',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  paymentStatus: {
-    color: '#94A3B8',
-    fontSize: 10,
-  },
+  // Removido paymentAmount e paymentStatus - sem valores monetários
   noAppointments: {
     color: '#94A3B8',
     fontSize: 12,
