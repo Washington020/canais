@@ -412,6 +412,16 @@ class AppointmentSystemTester:
                 if not result["success"]:
                     print(f"  - {result['test']}: {result['details']}")
         
+        # Report critical backend issues found
+        print("\n🚨 CRITICAL BACKEND ISSUES IDENTIFIED:")
+        print("-" * 50)
+        print("1. PLAN TYPE MISMATCH: cliente@luxepass.com has 'premium' plan but appointment")
+        print("   system only supports 'vip' and 'intermediario' plans")
+        print("2. MONTHLY LIMITS BUG: Premium plan gets 0 limits instead of VIP-equivalent limits")
+        print("3. DATE FORMAT ERROR: Invalid isoformat string in my-appointments endpoint")
+        print("4. NO APPOINTMENT SLOTS: Database has no appointment slots for booking")
+        print("5. MISSING ADMIN ENDPOINTS: No admin endpoint to create appointment slots for testing")
+        
         return failed_tests == 0
 
 def main():
