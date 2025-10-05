@@ -440,6 +440,25 @@ export default function ClientSchedule() {
                 {appointment.notes && (
                   <Text style={styles.appointmentNotes}>{appointment.notes}</Text>
                 )}
+                
+                {appointment.can_cancel && appointment.status === 'scheduled' && (
+                  <TouchableOpacity 
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      Alert.alert(
+                        'Cancelar Agendamento',
+                        'Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.',
+                        [
+                          { text: 'Não', style: 'cancel' },
+                          { text: 'Sim, Cancelar', style: 'destructive', onPress: () => cancelAppointment(appointment.id) }
+                        ]
+                      );
+                    }}
+                  >
+                    <Ionicons name="close-circle" size={16} color="#EF4444" />
+                    <Text style={styles.cancelButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ))
           )}
