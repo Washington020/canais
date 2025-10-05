@@ -3760,7 +3760,7 @@ async def get_monthly_appointment_limits(current_user: User = Depends(get_curren
             limits = {"nutritionist": 0, "personal": 0}
         elif user_plan == 'intermediario':
             limits = {"nutritionist": 1, "personal": 1}
-        elif user_plan == 'vip':
+        elif user_plan in ['vip', 'premium']:
             limits = {"nutritionist": 2, "personal": 2}
         else:
             limits = {"nutritionist": 0, "personal": 0}
