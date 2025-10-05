@@ -294,6 +294,7 @@ class ProfessionalRegister(BaseModel):
     bio: Optional[str] = None
     phone: Optional[str] = None
     experience_years: Optional[int] = None
+    pix_key: Optional[str] = None
 
 # Admin Models
 class AdminStats(BaseModel):
