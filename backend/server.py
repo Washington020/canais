@@ -1624,6 +1624,7 @@ async def get_professionals_admin(credentials: HTTPAuthorizationCredentials = De
                 "specialization": prof.get("specialization", ""),
                 "phone": prof.get("phone", ""),
                 "experience_years": prof.get("experience_years", 0),
+                "pix_key": prof.get("pix_key", ""),
                 "active": prof.get("active", True),
                 "created_at": prof.get("created_at", datetime.now(timezone.utc))
             })
