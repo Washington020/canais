@@ -217,6 +217,21 @@ export default function ClientSchedule() {
       return;
     }
 
+    // Check monthly limits
+    if (appointmentLimits) {
+      const remaining = appointmentLimits.remaining[professionalType as keyof typeof appointmentLimits.remaining];
+      if (remaining <= 0) {
+        const serviceType = professionalType === 'nutritionist' ? 'consultas nutricionais' : 'sessões de personal training';
+        const planName = user.plan_type === 'vip' ? 'VIP' : 'Intermediário';
+        Alert.alert(
+          'Limite Atingido',
+          `Você atingiu o limite mensal de ${serviceType} para o plano ${planName}. Aguarde o próximo mês ou cancele um agendamento existente.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+
     setSelectedProfessionalType(professionalType);
     setShowBookingModal(true);
   };
