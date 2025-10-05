@@ -196,6 +196,7 @@ export default function ClientSchedule() {
         [{ text: 'OK', onPress: () => {
           setShowBookingModal(false);
           loadMyAppointments();
+          loadAppointmentLimits();
         }}]
       );
     } catch (error: any) {
