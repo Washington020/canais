@@ -276,6 +276,7 @@ class Professional(BaseModel):
     bio: Optional[str] = None
     phone: Optional[str] = None
     experience_years: Optional[int] = None
+    pix_key: Optional[str] = None
     active: bool = True
     created_at: Optional[datetime] = None
 
