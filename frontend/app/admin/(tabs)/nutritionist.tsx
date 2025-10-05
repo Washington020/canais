@@ -187,13 +187,52 @@ export default function NutritionistManagement() {
     );
   };
 
+  const resetProfessionalPassword = async (professional: Professional) => {
+    Alert.alert(
+      'Reset de Senha',
+      `Deseja resetar a senha de ${professional.full_name}?\n\nUma nova senha temporária será gerada.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Resetar Senha',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              const newPassword = `temp${Date.now().toString().slice(-6)}`;
+              
+              // Simular endpoint de reset - implementar no backend
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Mock delay
+              
+              Alert.alert(
+                '✅ Senha Resetada!',
+                `Nova senha temporária para ${professional.full_name}:\n\n🔑 ${newPassword}\n\nInstrua o profissional a alterar esta senha no primeiro login.`,
+                [
+                  {
+                    text: 'Copiar Senha',
+                    onPress: () => {
+                      // Simular cópia para clipboard
+                      Alert.alert('Copiado', 'Senha copiada para a área de transferência!');
+                    }
+                  },
+                  { text: 'OK' }
+                ]
+              );
+            } catch (error) {
+              Alert.alert('Erro', 'Não foi possível resetar a senha do profissional');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const loadProfessionalAppointments = async (professionalId: string) => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) return;
 
-      // Simular endpoint - você pode implementar no backend se necessário
-      // Por enquanto retornamos dados mock
+      // Simular endpoint - dados mock sem valores monetários
       const mockAppointments = [
         {
           id: '1',
@@ -202,7 +241,7 @@ export default function NutritionistManagement() {
           appointment_date: '2025-01-15',
           appointment_time: '10:00',
           status: 'completed',
-          payment_amount: 200.00
+          confirmed_by_professional: true
         },
         {
           id: '2',
@@ -211,7 +250,16 @@ export default function NutritionistManagement() {
           appointment_date: '2025-01-14',
           appointment_time: '15:00',
           status: 'completed',
-          payment_amount: 200.00
+          confirmed_by_professional: true
+        },
+        {
+          id: '3',
+          client_name: 'Marina Costa',
+          client_email: 'marina@example.com', 
+          appointment_date: '2025-01-13',
+          appointment_time: '11:30',
+          status: 'pending_confirmation',
+          confirmed_by_professional: false
         }
       ];
       
@@ -375,28 +423,32 @@ export default function NutritionistManagement() {
                     </View>
                     
                     {appointments[professional.id]?.length > 0 ? (
-                      appointments[professional.id].map((appointment, index) => (
-                        <View key={index} style={styles.appointmentItem}>
-                          <View style={styles.appointmentInfo}>
-                            <Text style={styles.clientName}>{appointment.client_name}</Text>
-                            <Text style={styles.appointmentDate}>
-                              {new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às {appointment.appointment_time}
-                            </Text>
-                            <Text style={styles.clientEmail}>{appointment.client_email}</Text>
+                      <View>
+                        <Text style={styles.summaryText}>
+                          📊 Total de atendimentos: {appointments[professional.id].length}
+                        </Text>
+                        {appointments[professional.id].map((appointment, index) => (
+                          <View key={index} style={styles.appointmentItem}>
+                            <View style={styles.appointmentInfo}>
+                              <Text style={styles.clientName}>{appointment.client_name}</Text>
+                              <Text style={styles.appointmentDate}>
+                                {new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às {appointment.appointment_time}
+                              </Text>
+                              <Text style={styles.clientEmail}>{appointment.client_email}</Text>
+                            </View>
+                            <View style={styles.appointmentStatus}>
+                              <View style={[
+                                styles.statusIndicator,
+                                { backgroundColor: appointment.confirmed_by_professional ? '#22C55E' : '#F59E0B' }
+                              ]}>
+                                <Text style={styles.statusText}>
+                                  {appointment.confirmed_by_professional ? '✓ Confirmado' : '⏱ Aguardando'}
+                                </Text>
+                              </View>
+                            </View>
                           </View>
-                          <View style={styles.appointmentPayment}>
-                            <Text style={styles.paymentAmount}>
-                              {appointment.payment_amount.toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                              })}
-                            </Text>
-                            <Text style={styles.paymentStatus}>
-                              {appointment.status === 'completed' ? 'Concluído' : 'Pendente'}
-                            </Text>
-                          </View>
-                        </View>
-                      ))
+                        ))}
+                      </View>
                     ) : (
                       <Text style={styles.noAppointments}>Nenhum atendimento registrado</Text>
                     )}
@@ -405,22 +457,37 @@ export default function NutritionistManagement() {
               )}
 
               <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    { backgroundColor: professional.active ? '#EF4444' : '#22C55E' }
-                  ]}
-                  onPress={() => toggleProfessionalStatus(professional)}
-                >
-                  <Ionicons 
-                    name={professional.active ? "close-circle" : "checkmark-circle"} 
-                    size={16} 
-                    color="#FFFFFF" 
-                  />
-                  <Text style={styles.actionButtonText}>
-                    {professional.active ? 'Desativar' : 'Ativar'}
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.actionButtonsRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      styles.halfButton,
+                      { backgroundColor: professional.active ? '#EF4444' : '#22C55E' }
+                    ]}
+                    onPress={() => toggleProfessionalStatus(professional)}
+                  >
+                    <Ionicons 
+                      name={professional.active ? "close-circle" : "checkmark-circle"} 
+                      size={16} 
+                      color="#FFFFFF" 
+                    />
+                    <Text style={styles.actionButtonText}>
+                      {professional.active ? 'Desativar' : 'Ativar'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      styles.halfButton,
+                      { backgroundColor: '#8B5CF6' }
+                    ]}
+                    onPress={() => resetProfessionalPassword(professional)}
+                  >
+                    <Ionicons name="key" size={16} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>Reset Senha</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           ))
@@ -786,17 +853,21 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 11,
   },
-  appointmentPayment: {
-    alignItems: 'flex-end',
-  },
-  paymentAmount: {
+  summaryText: {
     color: '#22C55E',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
   },
-  paymentStatus: {
-    color: '#94A3B8',
-    fontSize: 10,
+  appointmentStatus: {
+    alignItems: 'flex-end',
+  },
+  statusIndicator: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignItems: 'center',
   },
   noAppointments: {
     color: '#94A3B8',
@@ -807,6 +878,13 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     marginTop: 16,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  halfButton: {
+    flex: 1,
   },
   actionButton: {
     flexDirection: 'row',
