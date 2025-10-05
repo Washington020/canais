@@ -378,6 +378,18 @@ backend:
           agent: "testing"
           comment: "✅ PUT /api/admin/gyms/{gym_id}/reset-password endpoint working correctly. Successfully tested complete flow: 1) Created test gym 'Academia Reset Password Test' with original credentials (gym_academia_r_6189/1Tv0HfRk), 2) Reset password endpoint generated new password (YzkY64Lk64), 3) Verified all required fields returned: success, new_password, login, message, 4) Confirmed login remains same while password changes, 5) Portuguese message 'Nova senha gerada para Academia Reset Password Test' working correctly. Complete gym credential management system operational."
 
+  - task: "Appointment System Monthly Limits and Cancellation"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "❌ APPOINTMENT SYSTEM TESTING COMPLETED WITH CRITICAL ISSUES (2025-10-05): Successfully tested LuxePass appointment system endpoints with focus on monthly limits and cancellation features as requested. TEST RESULTS: 13 total tests, 9 passed (69.2% success rate), 4 critical failures. ✅ WORKING FEATURES: Authentication (cliente@luxepass.com/cliente123 and intermediario@luxepass.com/inter123) ✅, Monthly limits for intermediario users (1 consultation/month) ✅, My appointments retrieval for premium users ✅, Available slots for intermediario users ✅, Invalid appointment cancellation handling ✅. ❌ CRITICAL BACKEND ISSUES IDENTIFIED: 1) PLAN TYPE MISMATCH - cliente@luxepass.com has 'premium' plan but appointment system only supports 'vip' and 'intermediario' plans, 2) MONTHLY LIMITS BUG - Premium plan gets 0 limits instead of VIP-equivalent 2 consultations/month, 3) DATE FORMAT ERROR - Invalid isoformat string '2025-09-19 08:00:00T08:00:00' in my-appointments endpoint causing 500 errors, 4) NO APPOINTMENT SLOTS - Database has no appointment slots available for booking, 5) MISSING ADMIN ENDPOINTS - No admin endpoint to create appointment slots for testing. CONCLUSION: Core appointment endpoints exist but have implementation bugs preventing proper functionality for premium users and causing server errors for intermediario users."
+
   - task: "Payment Plans API"
     implemented: true
     working: true
