@@ -233,8 +233,10 @@ class LuxePassTester:
     def test_professional_login_fernanda(self):
         """Test professional login for Fernanda (Nutritionist)"""
         try:
+            # Use the created professional's email if available, otherwise use existing one
+            email = self.created_professionals[1]["email"] if len(self.created_professionals) > 1 else "fernanda@luxepass.com"
             response = self.session.post(f"{BACKEND_URL}/professionals/login", json={
-                "email": "fernanda@luxepass.com",
+                "email": email,
                 "password": "fernanda123"
             })
             
