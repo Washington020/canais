@@ -113,9 +113,11 @@ class LuxePassTester:
     def test_create_nutritionist_with_pix(self):
         """Test creating Nutritionist with PIX key"""
         try:
+            # Use unique email to avoid conflicts
+            unique_id = uuid.uuid4().hex[:8]
             professional_data = {
                 "full_name": "Dra. Fernanda Costa",
-                "email": "fernanda@luxepass.com",
+                "email": f"fernanda_{unique_id}@luxepass.com",
                 "password": "fernanda123",
                 "professional_type": "nutritionist",
                 "cref_crn": "CRN-555555/SP",
