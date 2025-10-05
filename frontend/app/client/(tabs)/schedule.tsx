@@ -70,6 +70,7 @@ export default function ClientSchedule() {
   useEffect(() => {
     loadUserProfile();
     loadMyAppointments();
+    loadAppointmentLimits();
   }, []);
 
   const loadUserProfile = async () => {
