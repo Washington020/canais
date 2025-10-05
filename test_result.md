@@ -544,8 +544,7 @@ metadata:
 test_plan:
   current_focus:
     - "Appointment System Monthly Limits and Cancellation"
-  stuck_tasks: 
-    - "Appointment System Monthly Limits and Cancellation"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
