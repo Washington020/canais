@@ -14,15 +14,13 @@ from datetime import datetime
 BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://trainer-client-app-4.preview.emergentagent.com')
 API_BASE = f"{BACKEND_URL}/api"
 
-class LuxePassLoginTester:
+class LuxePassAcademiaTest:
     def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        })
+        self.admin_token = None
+        self.created_gym_id = None
+        self.created_login = None
+        self.created_password = None
         self.test_results = []
-        self.tokens = {}  # Store tokens for cross-integration testing
         
     def log_test(self, test_name, success, details, response_data=None):
         """Log test results"""
