@@ -35,7 +35,9 @@ class LuxePassTester:
         })
     
     def test_admin_login(self):
-        """Test admin login with admin@luxepass.com/admin123"""
+        """Test 1: Admin Login"""
+        print("\n🔐 Testing Admin Login...")
+        
         try:
             response = self.session.post(f"{BACKEND_URL}/auth/login", json={
                 "email": "admin@luxepass.com",
@@ -46,16 +48,14 @@ class LuxePassTester:
                 data = response.json()
                 if "access_token" in data:
                     self.admin_token = data["access_token"]
-                    self.session.headers.update({
-                        "Authorization": f"Bearer {self.admin_token}"
-                    })
-                    self.log_test("Admin Login", True, f"Successfully logged in as admin")
+                    self.session.headers.update({"Authorization": f"Bearer {self.admin_token}"})
+                    self.log_test("Admin Login", True, f"Token received: {self.admin_token[:20]}...")
                     return True
                 else:
-                    self.log_test("Admin Login", False, "No access token in response", data)
+                    self.log_test("Admin Login", False, "No access token in response")
                     return False
             else:
-                self.log_test("Admin Login", False, f"HTTP {response.status_code}", response.text)
+                self.log_test("Admin Login", False, f"Status: {response.status_code}, Response: {response.text}")
                 return False
                 
         except Exception as e:
