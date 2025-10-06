@@ -7,9 +7,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  ScrollView,
-  Modal,
-  Image
+  ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -21,45 +19,6 @@ import axios from 'axios';
 
 const API_URL = '/api';
 
-interface ClientData {
-  id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  plan_type: string;
-  total_visits: number;
-  profile_photo?: string;
-  first_visit: string;
-}
-
-interface RevenueData {
-  gym_id: string;
-  check_in_value: number;
-  monthly_stats: {
-    checkins: number;
-    revenue: number;
-    month: string;
-  };
-  total_stats: {
-    checkins: number;
-    revenue: number;
-  };
-  last_30_days: {
-    checkins: number;
-    revenue: number;
-  };
-  contract_status: string;
-}
-
-interface ContractData {
-  gym_id: string;
-  contract_exists: boolean;
-  check_in_value: number;
-  contract_document?: string;
-  signed_at?: string;
-  status: string;
-}
-
 export default function GymDashboard() {
   const [activeTab, setActiveTab] = useState<'validation' | 'clients' | 'revenue' | 'contract'>('validation');
   const [tokenCode, setTokenCode] = useState('');
@@ -67,12 +26,9 @@ export default function GymDashboard() {
   const [gymInfo, setGymInfo] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [lastValidation, setLastValidation] = useState<any>(null);
-  const [clients, setClients] = useState<ClientData[]>([]);
-  const [revenueData, setRevenueData] = useState<RevenueData | null>(null);
-  const [contractData, setContractData] = useState<ContractData | null>(null);
-  const [showClientModal, setShowClientModal] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
-  const [showContractModal, setShowContractModal] = useState(false);
+  const [clients, setClients] = useState([]);
+  const [revenueData, setRevenueData] = useState<any>(null);
+  const [contractData, setContractData] = useState<any>(null);
   const [newCheckInValue, setNewCheckInValue] = useState('');
   const router = useRouter();
 
@@ -179,9 +135,10 @@ Check-in realizado com sucesso!`,
       const headers = { 'Authorization': `Bearer ${gymToken}` };
       
       const response = await axios.get(`${API_URL}/gym/${gymInfo.id}/clients-report`, { headers });
-      setClients(response.data.clients);
+      setClients(response.data.clients || []);
     } catch (error) {
       console.error('Erro ao carregar relatório de clientes:', error);
+      Alert.alert('Erro', 'Não foi possível carregar o relatório de clientes');
     }
   }, [gymInfo]);
 
@@ -196,6 +153,7 @@ Check-in realizado com sucesso!`,
       setRevenueData(response.data);
     } catch (error) {
       console.error('Erro ao carregar relatório de receita:', error);
+      Alert.alert('Erro', 'Não foi possível carregar o relatório de receita');
     }
   }, [gymInfo]);
 
@@ -213,6 +171,7 @@ Check-in realizado com sucesso!`,
       }
     } catch (error) {
       console.error('Erro ao carregar contrato:', error);
+      Alert.alert('Erro', 'Não foi possível carregar o contrato');
     }
   }, [gymInfo]);
 
@@ -239,17 +198,6 @@ Check-in realizado com sucesso!`,
       console.error('Erro ao atualizar valor:', error);
       Alert.alert('Erro', 'Não foi possível atualizar o valor.');
     }
-  };
-
-  const pickDocument = async () => {
-    Alert.alert(
-      'Anexar Contrato',
-      'Funcionalidade de upload de documento será implementada em breve. Por enquanto, entre em contato com o suporte para anexar o contrato assinado.',
-      [
-        { text: 'Contatar Suporte', onPress: () => Alert.alert('Suporte', 'Entre em contato: suporte@luxepass.com') },
-        { text: 'OK' }
-      ]
-    );
   };
 
   useEffect(() => {
@@ -352,12 +300,6 @@ Check-in realizado com sucesso!`,
                   <Text style={styles.planText}>{lastValidation.user?.plan_type}</Text>
                 </View>
               </View>
-              {lastValidation.user?.profile_photo && (
-                <Image 
-                  source={{ uri: lastValidation.user.profile_photo }} 
-                  style={styles.clientPhoto}
-                />
-              )}
             </View>
           </LinearGradient>
         </View>
@@ -373,15 +315,8 @@ Check-in realizado com sucesso!`,
       </View>
 
       <ScrollView style={styles.clientsList}>
-        {clients.map((client) => (
-          <TouchableOpacity
-            key={client.id}
-            style={styles.clientCard}
-            onPress={() => {
-              setSelectedClient(client);
-              setShowClientModal(true);
-            }}
-          >
+        {clients.map((client: any) => (
+          <TouchableOpacity key={client.id} style={styles.clientCard}>
             <LinearGradient colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']} style={styles.clientCardGradient}>
               <View style={styles.clientCardContent}>
                 <View style={styles.clientCardInfo}>
@@ -414,32 +349,24 @@ Check-in realizado com sucesso!`,
             <LinearGradient colors={['rgba(34, 197, 94, 0.15)', 'rgba(34, 197, 94, 0.08)']} style={styles.revenueCard}>
               <Text style={styles.revenueCardTitle}>💵 Valor por Check-in</Text>
               <Text style={styles.revenueCardValue}>
-                {revenueData.check_in_value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {revenueData.check_in_value?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
               </Text>
             </LinearGradient>
 
             <LinearGradient colors={['rgba(59, 130, 246, 0.15)', 'rgba(59, 130, 246, 0.08)']} style={styles.revenueCard}>
-              <Text style={styles.revenueCardTitle}>📅 {revenueData.monthly_stats.month}</Text>
+              <Text style={styles.revenueCardTitle}>📅 {revenueData.monthly_stats?.month || 'Este Mês'}</Text>
               <Text style={styles.revenueCardValue}>
-                {revenueData.monthly_stats.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {revenueData.monthly_stats?.revenue?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
               </Text>
-              <Text style={styles.revenueCardSubtitle}>{revenueData.monthly_stats.checkins} check-ins</Text>
-            </LinearGradient>
-
-            <LinearGradient colors={['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.08)']} style={styles.revenueCard}>
-              <Text style={styles.revenueCardTitle}>📈 Últimos 30 Dias</Text>
-              <Text style={styles.revenueCardValue}>
-                {revenueData.last_30_days.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-              </Text>
-              <Text style={styles.revenueCardSubtitle}>{revenueData.last_30_days.checkins} check-ins</Text>
+              <Text style={styles.revenueCardSubtitle}>{revenueData.monthly_stats?.checkins || 0} check-ins</Text>
             </LinearGradient>
 
             <LinearGradient colors={['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0.08)']} style={styles.revenueCard}>
               <Text style={styles.revenueCardTitle}>🏆 Total Geral</Text>
               <Text style={styles.revenueCardValue}>
-                {revenueData.total_stats.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {revenueData.total_stats?.revenue?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
               </Text>
-              <Text style={styles.revenueCardSubtitle}>{revenueData.total_stats.checkins} check-ins</Text>
+              <Text style={styles.revenueCardSubtitle}>{revenueData.total_stats?.checkins || 0} check-ins</Text>
             </LinearGradient>
           </View>
         </ScrollView>
@@ -488,7 +415,10 @@ Check-in realizado com sucesso!`,
               </Text>
             )}
             
-            <TouchableOpacity style={styles.documentButton} onPress={pickDocument}>
+            <TouchableOpacity 
+              style={styles.documentButton} 
+              onPress={() => Alert.alert('Em Breve', 'Funcionalidade de upload será implementada em breve.')}
+            >
               <LinearGradient colors={['#3B82F6', '#1D4ED8']} style={styles.documentButtonGradient}>
                 <Ionicons name="document-attach" size={20} color="#FFFFFF" />
                 <Text style={styles.documentButtonText}>Anexar Contrato Assinado</Text>
@@ -571,35 +501,6 @@ Check-in realizado com sucesso!`,
           {activeTab === 'revenue' && renderRevenueTab()}
           {activeTab === 'contract' && renderContractTab()}
         </ScrollView>
-
-        {/* Client Details Modal */}
-        <Modal visible={showClientModal} animationType="slide" presentationStyle="pageSheet">
-          <SafeAreaView style={styles.modalContainer}>
-            <LinearGradient colors={['#0B0D17', '#1E1A3C', '#2A1B4A']} style={styles.modalGradient}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Detalhes do Cliente</Text>
-                <TouchableOpacity onPress={() => setShowClientModal(false)}>
-                  <Ionicons name="close" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-              
-              {selectedClient && (
-                <ScrollView style={styles.modalContent}>
-                  <View style={styles.clientDetailCard}>
-                    <Text style={styles.clientDetailName}>{selectedClient.full_name}</Text>
-                    <Text style={styles.clientDetailInfo}>📧 {selectedClient.email}</Text>
-                    <Text style={styles.clientDetailInfo}>📱 {selectedClient.phone}</Text>
-                    <Text style={styles.clientDetailInfo}>🏃‍♂️ {selectedClient.total_visits} visitas total</Text>
-                    <Text style={styles.clientDetailInfo}>📅 Primeira visita: {new Date(selectedClient.first_visit).toLocaleDateString('pt-BR')}</Text>
-                    <View style={styles.planBadgeLarge}>
-                      <Text style={styles.planTextLarge}>{selectedClient.plan_type}</Text>
-                    </View>
-                  </View>
-                </ScrollView>
-              )}
-            </LinearGradient>
-          </SafeAreaView>
-        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -829,12 +730,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  clientPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginLeft: 16,
-  },
   sectionHeader: {
     marginBottom: 20,
   },
@@ -987,60 +882,6 @@ const styles = StyleSheet.create({
   },
   documentButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-  },
-  modalGradient: {
-    flex: 1,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  modalTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  modalContent: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-  },
-  clientDetailCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
-    padding: 20,
-  },
-  clientDetailName: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  clientDetailInfo: {
-    color: '#E2E8F0',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  planBadgeLarge: {
-    backgroundColor: 'rgba(34, 197, 94, 0.3)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
-    marginTop: 12,
-  },
-  planTextLarge: {
-    color: '#22C55E',
     fontSize: 14,
     fontWeight: '600',
   },
