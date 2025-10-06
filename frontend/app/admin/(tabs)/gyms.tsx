@@ -265,7 +265,7 @@ export default function GymsManagement() {
         'Content-Type': 'application/json'
       };
       
-      const response = await axios.post(`${API_URL}/api/integration/admin/gym/register`, gymData, { 
+      const response = await axios.post(`/api/admin/gyms/register`, gymData, { 
         headers,
         timeout: 15000 // 15 segundos para cadastro
       });
