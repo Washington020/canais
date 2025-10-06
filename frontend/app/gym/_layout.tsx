@@ -23,10 +23,10 @@ export default function GymLayout() {
           return;
         }
         
-        // Se tem token e está na página de login, ir para validação
+        // Se tem token e está na página de login, ir para dashboard principal
         if (gymToken && currentPath.includes('login')) {
-          console.log('✅ [GYM_LAYOUT] Academia já autenticada, redirecionando para validação');
-          router.replace('/gym/validation');
+          console.log('✅ [GYM_LAYOUT] Academia já autenticada, redirecionando para dashboard');
+          router.replace('/gym/index');
           return;
         }
         
