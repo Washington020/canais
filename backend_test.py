@@ -1,38 +1,41 @@
 #!/usr/bin/env python3
 """
-LuxePass Backend Integration Test Suite
-Testing complete admin-created professional login integration system
+LuxePass Gym Management System Backend Testing
+Enhanced testing for comprehensive client data, revenue reports, and contract management
 """
 
 import requests
 import json
+import base64
+from datetime import datetime, timezone
 import sys
-import uuid
-from datetime import datetime
-import time
+import os
 
 # Configuration
 BACKEND_URL = "https://trainer-client-app-4.preview.emergentagent.com/api"
 
 class LuxePassTester:
     def __init__(self):
+        self.backend_url = BACKEND_URL
         self.session = requests.Session()
-        self.admin_token = None
-        self.created_professionals = []
+        self.gym_token = None
+        self.gym_id = None
+        self.client_token = None
         self.test_results = []
         
-    def log_test(self, test_name, success, details=""):
-        """Log test result"""
+    def log_test(self, test_name, success, message, details=None):
+        """Log test results"""
         status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status}: {test_name}")
-        if details:
-            print(f"   Details: {details}")
-        
-        self.test_results.append({
+        result = {
             "test": test_name,
-            "success": success,
-            "details": details
-        })
+            "status": status,
+            "message": message,
+            "details": details or {}
+        }
+        self.test_results.append(result)
+        print(f"{status}: {test_name} - {message}")
+        if details and not success:
+            print(f"   Details: {details}")
     
     def test_admin_login(self):
         """Test 1: Admin Login"""
