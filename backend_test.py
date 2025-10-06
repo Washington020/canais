@@ -1,22 +1,18 @@
 #!/usr/bin/env python3
 """
-LuxePass Login Integration System Comprehensive Test
-Testing ALL login integrations across the LuxePass ecosystem
+LuxePass Academia Creation and Login Integration Flow Test
+Testing complete flow from admin creation to gym system access
 """
 
 import requests
 import json
 import sys
-from datetime import datetime
 import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv('/app/frontend/.env')
+from datetime import datetime
 
 # Get backend URL from environment
-BACKEND_URL = os.getenv('EXPO_PUBLIC_BACKEND_URL', 'https://trainer-client-app-4.preview.emergentagent.com')
-API_BASE_URL = f"{BACKEND_URL}/api"
+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://trainer-client-app-4.preview.emergentagent.com')
+API_BASE = f"{BACKEND_URL}/api"
 
 class LuxePassLoginTester:
     def __init__(self):
