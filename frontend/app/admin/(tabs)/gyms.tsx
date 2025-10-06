@@ -391,7 +391,7 @@ export default function GymsManagement() {
                 };
                 
                 const response = await axios.put(
-                  `${API_URL}/api/admin/gyms/${gymId}/reset-password`, 
+                  `/api/admin/gyms/${gymId}/reset-password`, 
                   {}, 
                   { headers, timeout: 10000 }
                 );
