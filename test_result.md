@@ -378,6 +378,18 @@ backend:
           agent: "testing"
           comment: "✅ PUT /api/admin/gyms/{gym_id}/reset-password endpoint working correctly. Successfully tested complete flow: 1) Created test gym 'Academia Reset Password Test' with original credentials (gym_academia_r_6189/1Tv0HfRk), 2) Reset password endpoint generated new password (YzkY64Lk64), 3) Verified all required fields returned: success, new_password, login, message, 4) Confirmed login remains same while password changes, 5) Portuguese message 'Nova senha gerada para Academia Reset Password Test' working correctly. Complete gym credential management system operational."
 
+  - task: "Academia Creation and Login Integration Flow"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "🎯 ACADEMIA CREATION AND LOGIN INTEGRATION FLOW TEST COMPLETED (2025-10-06): Successfully executed comprehensive end-to-end testing of the complete academia creation and login integration flow as specifically requested in review. PERFECT RESULTS: 100% pass rate (7/7 tests) with complete business workflow validation. CRITICAL TEST RESULTS: ✅ Admin Login Test - admin@luxepass.com/admin123 authentication successful, JWT token received (169 chars) ✅, ✅ Create New Academia via Admin - Successfully created 'Academia Teste Admin' with custom credentials (academia_admin_teste/admintest123) using POST /api/admin/gyms/register, returned gym_id: 68e313b7c43afbd529254e39 ✅, ✅ Verify Academia Creation - Created academia found in admin gyms list with correct name 'Academia Teste Admin' ✅, ✅ Approve Academia - PUT /api/admin/gyms/{gym_id}/status successfully updated status to 'approved' ✅, ✅ Test Login Integration - POST /api/gym/auth with created credentials (academia_admin_teste/admintest123) works immediately, returns valid JWT token (167 chars) and complete gym_info ✅, ✅ Test Password Reset Function - PUT /api/admin/gyms/{gym_id}/reset-password generates new password that works for login ✅, ✅ Test Custom Password Setting - PUT /api/admin/gyms/{gym_id}/set-password with custom password 'novasenha456' works for login ✅. BUSINESS CASE VALIDATION CONFIRMED: Admin can create academias with custom login credentials ✅, Created credentials work immediately in gym validation system ✅, Complete integration between admin → gym login system working ✅, Password reset and custom password functions operational ✅. CONCLUSION: The complete business workflow from admin academia creation to gym system access is fully functional and production-ready. All requested functionality validated successfully."
+
   - task: "Appointment System Monthly Limits and Cancellation"
     implemented: true
     working: true
