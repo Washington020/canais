@@ -307,7 +307,7 @@ class LuxePassLoginTester:
                     login_url = f"{API_BASE_URL}/professionals/login"
                     login_payload = {
                         "email": created_email,
-                        "password": temp_password
+                        "password": "testpass123"  # Use the password we set
                     }
                     
                     login_response = self.session.post(login_url, json=login_payload)
