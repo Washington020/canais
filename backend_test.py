@@ -284,6 +284,7 @@ class LuxePassLoginTester:
             test_professional = {
                 "full_name": "Dr. Test Professional",
                 "email": f"testprof_{datetime.now().strftime('%H%M%S')}@luxepass.com",
+                "password": "testpass123",
                 "professional_type": "nutritionist",
                 "cref_crn": "CRN-TEST123/SP",
                 "specialization": "Test Nutrition",
