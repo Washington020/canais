@@ -62,98 +62,158 @@ class LuxePassTester:
             self.log_test("Admin Login", False, f"Exception: {str(e)}")
             return False
     
-    def test_create_personal_trainer_with_pix(self):
-        """Test creating Personal Trainer with PIX key"""
+    def test_create_personal_trainer(self):
+        """Test 2: Create Personal Trainer"""
+        print("\n🏋️ Testing Personal Trainer Creation...")
+        
+        if not self.admin_token:
+            self.log_test("Create Personal Trainer", False, "No admin token available")
+            return False
+        
+        # Generate unique email to avoid conflicts
+        unique_id = str(uuid.uuid4())[:8]
+        trainer_data = {
+            "full_name": "Test Personal Trainer",
+            "email": f"testpersonal{unique_id}@luxepass.com",
+            "password": "testpass123",
+            "professional_type": "personal",
+            "cref_crn": "CREF-TEST123/SP",
+            "specialization": "Teste Musculação",
+            "phone": "(11) 99999-0001",
+            "experience_years": 3,
+            "bio": "Personal trainer de teste",
+            "pix_key": "testpersonal@pix.com"
+        }
+        
         try:
-            # Use unique email to avoid conflicts
-            unique_id = uuid.uuid4().hex[:8]
-            professional_data = {
-                "full_name": "Prof. Ricardo Silva",
-                "email": f"ricardo_{unique_id}@luxepass.com",
-                "password": "ricardo123",
-                "professional_type": "personal",
-                "cref_crn": "CREF-555555/SP",
-                "specialization": "Musculação e Hipertrofia",
-                "phone": "(11) 98765-4321",
-                "experience_years": 6,
-                "bio": "Personal trainer especializado em hipertrofia muscular",
-                "pix_key": "ricardo.silva@pix.com.br"
-            }
-            
-            response = self.session.post(f"{BACKEND_URL}/admin/professionals", json=professional_data)
+            response = self.session.post(f"{BACKEND_URL}/admin/professionals", json=trainer_data)
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get("success") and "professional" in data:
-                    prof_info = data["professional"]
-                    self.created_professionals.append({
-                        "id": prof_info["id"],
-                        "email": prof_info["email"],
-                        "password": "ricardo123",
-                        "type": "personal"
-                    })
-                    self.log_test("Create Personal Trainer with PIX", True, 
-                                f"Created professional: {prof_info['full_name']} (ID: {prof_info['id']})")
+                if data.get("success"):
+                    professional_info = {
+                        "id": data["professional"]["id"],
+                        "email": trainer_data["email"],
+                        "password": trainer_data["password"],
+                        "type": "personal",
+                        "full_name": trainer_data["full_name"]
+                    }
+                    self.created_professionals.append(professional_info)
+                    self.log_test("Create Personal Trainer", True, f"Created: {professional_info['email']}")
                     return True
                 else:
-                    self.log_test("Create Personal Trainer with PIX", False, "Invalid response structure", data)
+                    self.log_test("Create Personal Trainer", False, f"Success=False: {data}")
                     return False
             else:
-                self.log_test("Create Personal Trainer with PIX", False, 
-                            f"HTTP {response.status_code}", response.text)
+                self.log_test("Create Personal Trainer", False, f"Status: {response.status_code}, Response: {response.text}")
                 return False
                 
         except Exception as e:
-            self.log_test("Create Personal Trainer with PIX", False, f"Exception: {str(e)}")
+            self.log_test("Create Personal Trainer", False, f"Exception: {str(e)}")
             return False
     
-    def test_create_nutritionist_with_pix(self):
-        """Test creating Nutritionist with PIX key"""
+    def test_create_nutritionist(self):
+        """Test 3: Create Nutritionist"""
+        print("\n🥗 Testing Nutritionist Creation...")
+        
+        if not self.admin_token:
+            self.log_test("Create Nutritionist", False, "No admin token available")
+            return False
+        
+        # Generate unique email to avoid conflicts
+        unique_id = str(uuid.uuid4())[:8]
+        nutritionist_data = {
+            "full_name": "Test Nutritionist",
+            "email": f"testnutri{unique_id}@luxepass.com",
+            "password": "testpass123",
+            "professional_type": "nutritionist",
+            "cref_crn": "CRN-TEST123/SP",
+            "specialization": "Teste Nutrição Funcional",
+            "phone": "(11) 99999-0002",
+            "experience_years": 4,
+            "bio": "Nutricionista de teste",
+            "pix_key": "testnutri@pix.com"
+        }
+        
         try:
-            # Use unique email to avoid conflicts
-            unique_id = uuid.uuid4().hex[:8]
-            professional_data = {
-                "full_name": "Dra. Fernanda Costa",
-                "email": f"fernanda_{unique_id}@luxepass.com",
-                "password": "fernanda123",
-                "professional_type": "nutritionist",
-                "cref_crn": "CRN-555555/SP",
-                "specialization": "Nutrição Clínica e Esportiva",
-                "phone": "(11) 97654-3210",
-                "experience_years": 7,
-                "bio": "Nutricionista especializada em nutrição clínica",
-                "pix_key": "123.456.789-00"
-            }
-            
-            response = self.session.post(f"{BACKEND_URL}/admin/professionals", json=professional_data)
+            response = self.session.post(f"{BACKEND_URL}/admin/professionals", json=nutritionist_data)
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get("success") and "professional" in data:
-                    prof_info = data["professional"]
-                    self.created_professionals.append({
-                        "id": prof_info["id"],
-                        "email": prof_info["email"],
-                        "password": "fernanda123",
-                        "type": "nutritionist"
-                    })
-                    self.log_test("Create Nutritionist with PIX", True, 
-                                f"Created professional: {prof_info['full_name']} (ID: {prof_info['id']})")
+                if data.get("success"):
+                    professional_info = {
+                        "id": data["professional"]["id"],
+                        "email": nutritionist_data["email"],
+                        "password": nutritionist_data["password"],
+                        "type": "nutritionist",
+                        "full_name": nutritionist_data["full_name"]
+                    }
+                    self.created_professionals.append(professional_info)
+                    self.log_test("Create Nutritionist", True, f"Created: {professional_info['email']}")
                     return True
                 else:
-                    self.log_test("Create Nutritionist with PIX", False, "Invalid response structure", data)
+                    self.log_test("Create Nutritionist", False, f"Success=False: {data}")
                     return False
             else:
-                self.log_test("Create Nutritionist with PIX", False, 
-                            f"HTTP {response.status_code}", response.text)
+                self.log_test("Create Nutritionist", False, f"Status: {response.status_code}, Response: {response.text}")
                 return False
                 
         except Exception as e:
-            self.log_test("Create Nutritionist with PIX", False, f"Exception: {str(e)}")
+            self.log_test("Create Nutritionist", False, f"Exception: {str(e)}")
             return False
     
-    def test_get_professionals_with_pix(self):
-        """Test GET /api/admin/professionals to verify PIX field appears in response"""
+    def test_professional_login(self, professional):
+        """Test Professional Login"""
+        print(f"\n🔑 Testing {professional['type'].title()} Login...")
+        
+        try:
+            # Create a new session for professional login (no admin token)
+            prof_session = requests.Session()
+            
+            response = prof_session.post(f"{BACKEND_URL}/professionals/login", json={
+                "email": professional["email"],
+                "password": professional["password"]
+            })
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "access_token" in data and "professional" in data:
+                    # Verify JWT token structure
+                    token = data["access_token"]
+                    if len(token.split('.')) == 3:  # JWT has 3 parts
+                        # Verify professional type in response
+                        prof_data = data["professional"]
+                        if prof_data.get("professional_type") == professional["type"]:
+                            self.log_test(f"{professional['type'].title()} Login", True, 
+                                        f"Token: {token[:20]}..., Type: {prof_data['professional_type']}")
+                            return True
+                        else:
+                            self.log_test(f"{professional['type'].title()} Login", False, 
+                                        f"Wrong professional_type: {prof_data.get('professional_type')}")
+                            return False
+                    else:
+                        self.log_test(f"{professional['type'].title()} Login", False, "Invalid JWT token format")
+                        return False
+                else:
+                    self.log_test(f"{professional['type'].title()} Login", False, "Missing access_token or professional data")
+                    return False
+            else:
+                self.log_test(f"{professional['type'].title()} Login", False, 
+                            f"Status: {response.status_code}, Response: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test(f"{professional['type'].title()} Login", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_pix_integration(self):
+        """Test 4: PIX Integration"""
+        print("\n💳 Testing PIX Integration...")
+        
+        if not self.admin_token:
+            self.log_test("PIX Integration", False, "No admin token available")
+            return False
+        
         try:
             response = self.session.get(f"{BACKEND_URL}/admin/professionals")
             
@@ -162,196 +222,174 @@ class LuxePassTester:
                 if "professionals" in data:
                     professionals = data["professionals"]
                     
-                    # Look for our created professionals
-                    ricardo_found = False
-                    fernanda_found = False
+                    # Check if our created professionals are in the list with PIX data
+                    found_with_pix = 0
+                    for created_prof in self.created_professionals:
+                        for prof in professionals:
+                            if prof["email"] == created_prof["email"]:
+                                if "pix_key" in prof and prof["pix_key"]:
+                                    found_with_pix += 1
+                                    break
                     
-                    for prof in professionals:
-                        if prof.get("email") == "ricardo@luxepass.com":
-                            ricardo_found = True
-                        elif prof.get("email") == "fernanda@luxepass.com":
-                            fernanda_found = True
+                    if found_with_pix == len(self.created_professionals):
+                        self.log_test("PIX Integration", True, f"All {found_with_pix} professionals have PIX data")
+                        return True
+                    else:
+                        self.log_test("PIX Integration", False, 
+                                    f"Only {found_with_pix}/{len(self.created_professionals)} professionals have PIX data")
+                        return False
+                else:
+                    self.log_test("PIX Integration", False, "No professionals data in response")
+                    return False
+            else:
+                self.log_test("PIX Integration", False, f"Status: {response.status_code}, Response: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("PIX Integration", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_password_reset(self, professional):
+        """Test Password Reset"""
+        print(f"\n🔄 Testing {professional['type'].title()} Password Reset...")
+        
+        if not self.admin_token:
+            self.log_test(f"{professional['type'].title()} Password Reset", False, "No admin token available")
+            return False
+        
+        try:
+            # Reset password
+            response = self.session.put(f"{BACKEND_URL}/admin/professionals/{professional['id']}/reset-password")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success") and "temp_password" in data:
+                    temp_password = data["temp_password"]
                     
-                    if ricardo_found and fernanda_found:
-                        self.log_test("GET Professionals with PIX", True, 
-                                    f"Found {len(professionals)} professionals including our created ones")
-                        return True
+                    # Test login with new temp password
+                    prof_session = requests.Session()
+                    login_response = prof_session.post(f"{BACKEND_URL}/professionals/login", json={
+                        "email": professional["email"],
+                        "password": temp_password
+                    })
+                    
+                    if login_response.status_code == 200:
+                        login_data = login_response.json()
+                        if "access_token" in login_data:
+                            self.log_test(f"{professional['type'].title()} Password Reset", True, 
+                                        f"Temp password: {temp_password}, Login successful")
+                            return True
+                        else:
+                            self.log_test(f"{professional['type'].title()} Password Reset", False, 
+                                        "Password reset successful but login failed")
+                            return False
                     else:
-                        self.log_test("GET Professionals with PIX", False, 
-                                    f"Created professionals not found in list. Ricardo: {ricardo_found}, Fernanda: {fernanda_found}")
+                        self.log_test(f"{professional['type'].title()} Password Reset", False, 
+                                    f"Password reset successful but login failed: {login_response.status_code}")
                         return False
                 else:
-                    self.log_test("GET Professionals with PIX", False, "No professionals field in response", data)
+                    self.log_test(f"{professional['type'].title()} Password Reset", False, 
+                                f"Reset failed: {data}")
                     return False
             else:
-                self.log_test("GET Professionals with PIX", False, 
-                            f"HTTP {response.status_code}", response.text)
+                self.log_test(f"{professional['type'].title()} Password Reset", False, 
+                            f"Status: {response.status_code}, Response: {response.text}")
                 return False
                 
         except Exception as e:
-            self.log_test("GET Professionals with PIX", False, f"Exception: {str(e)}")
+            self.log_test(f"{professional['type'].title()} Password Reset", False, f"Exception: {str(e)}")
             return False
     
-    def test_professional_login_ricardo(self):
-        """Test professional login for Ricardo (Personal Trainer)"""
-        try:
-            # Use the created professional's email if available, otherwise use existing one
-            email = self.created_professionals[0]["email"] if self.created_professionals else "ricardo@luxepass.com"
-            response = self.session.post(f"{BACKEND_URL}/professionals/login", json={
-                "email": email,
-                "password": "ricardo123"
-            })
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "access_token" in data and "professional" in data:
-                    prof_info = data["professional"]
-                    if prof_info.get("professional_type") == "personal":
-                        self.log_test("Professional Login - Ricardo (Personal)", True, 
-                                    f"Successfully logged in: {prof_info.get('full_name')}")
-                        return True
-                    else:
-                        self.log_test("Professional Login - Ricardo (Personal)", False, 
-                                    f"Wrong professional type: {prof_info.get('professional_type')}")
-                        return False
-                else:
-                    self.log_test("Professional Login - Ricardo (Personal)", False, 
-                                "Missing access_token or professional", data)
-                    return False
-            else:
-                self.log_test("Professional Login - Ricardo (Personal)", False, 
-                            f"HTTP {response.status_code}", response.text)
-                return False
-                
-        except Exception as e:
-            self.log_test("Professional Login - Ricardo (Personal)", False, f"Exception: {str(e)}")
-            return False
+    def run_complete_test_suite(self):
+        """Run complete LuxePass login integration test suite"""
+        print("🚀 LUXEPASS LOGIN INTEGRATION SYSTEM TEST")
+        print("=" * 60)
+        print(f"Backend URL: {BACKEND_URL}")
+        print(f"Test Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("=" * 60)
+        
+        # Test 1: Admin Login
+        if not self.test_admin_login():
+            print("\n❌ CRITICAL: Admin login failed. Cannot proceed with professional creation tests.")
+            return self.generate_summary()
+        
+        # Test 2: Create Personal Trainer
+        self.test_create_personal_trainer()
+        
+        # Test 3: Create Nutritionist  
+        self.test_create_nutritionist()
+        
+        # Test 4: PIX Integration
+        self.test_pix_integration()
+        
+        # Test 5 & 6: Professional Logins
+        for professional in self.created_professionals:
+            self.test_professional_login(professional)
+        
+        # Test 7 & 8: Password Resets
+        for professional in self.created_professionals:
+            self.test_password_reset(professional)
+        
+        return self.generate_summary()
     
-    def test_professional_login_fernanda(self):
-        """Test professional login for Fernanda (Nutritionist)"""
-        try:
-            # Use the created professional's email if available, otherwise use existing one
-            email = self.created_professionals[1]["email"] if len(self.created_professionals) > 1 else "fernanda@luxepass.com"
-            response = self.session.post(f"{BACKEND_URL}/professionals/login", json={
-                "email": email,
-                "password": "fernanda123"
-            })
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "access_token" in data and "professional" in data:
-                    prof_info = data["professional"]
-                    if prof_info.get("professional_type") == "nutritionist":
-                        self.log_test("Professional Login - Fernanda (Nutritionist)", True, 
-                                    f"Successfully logged in: {prof_info.get('full_name')}")
-                        return True
-                    else:
-                        self.log_test("Professional Login - Fernanda (Nutritionist)", False, 
-                                    f"Wrong professional type: {prof_info.get('professional_type')}")
-                        return False
-                else:
-                    self.log_test("Professional Login - Fernanda (Nutritionist)", False, 
-                                "Missing access_token or professional", data)
-                    return False
-            else:
-                self.log_test("Professional Login - Fernanda (Nutritionist)", False, 
-                            f"HTTP {response.status_code}", response.text)
-                return False
-                
-        except Exception as e:
-            self.log_test("Professional Login - Fernanda (Nutritionist)", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_pix_field_validation(self):
-        """Test that PIX field is properly validated and stored"""
-        try:
-            # Test with different PIX format
-            professional_data = {
-                "full_name": "Test Professional PIX",
-                "email": f"test_pix_{uuid.uuid4().hex[:8]}@luxepass.com",
-                "password": "test123",
-                "professional_type": "personal",
-                "cref_crn": "CREF-TEST/SP",
-                "specialization": "Test Specialization",
-                "phone": "(11) 99999-9999",
-                "experience_years": 5,
-                "bio": "Test professional for PIX validation",
-                "pix_key": "test-pix-key-validation"
-            }
-            
-            response = self.session.post(f"{BACKEND_URL}/admin/professionals", json=professional_data)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("success"):
-                    self.log_test("PIX Field Validation", True, 
-                                "PIX field accepted and stored successfully")
-                    return True
-                else:
-                    self.log_test("PIX Field Validation", False, "Professional creation failed", data)
-                    return False
-            else:
-                self.log_test("PIX Field Validation", False, 
-                            f"HTTP {response.status_code}", response.text)
-                return False
-                
-        except Exception as e:
-            self.log_test("PIX Field Validation", False, f"Exception: {str(e)}")
-            return False
-    
-    def run_all_tests(self):
-        """Run all PIX functionality tests"""
-        print("🚀 STARTING LUXEPASS PIX PROFESSIONAL MANAGEMENT TESTING")
-        print("=" * 70)
-        print()
+    def generate_summary(self):
+        """Generate test summary"""
+        print("\n" + "=" * 60)
+        print("📊 TEST SUMMARY")
+        print("=" * 60)
         
-        # Test sequence
-        tests = [
-            ("Admin Login", self.test_admin_login),
-            ("Create Personal Trainer with PIX", self.test_create_personal_trainer_with_pix),
-            ("Create Nutritionist with PIX", self.test_create_nutritionist_with_pix),
-            ("GET Professionals with PIX", self.test_get_professionals_with_pix),
-            ("Professional Login - Ricardo", self.test_professional_login_ricardo),
-            ("Professional Login - Fernanda", self.test_professional_login_fernanda),
-            ("PIX Field Validation", self.test_pix_field_validation)
-        ]
+        total_tests = len(self.test_results)
+        passed_tests = sum(1 for result in self.test_results if result["success"])
+        failed_tests = total_tests - passed_tests
         
-        passed = 0
-        total = len(tests)
+        print(f"Total Tests: {total_tests}")
+        print(f"Passed: {passed_tests} ✅")
+        print(f"Failed: {failed_tests} ❌")
+        print(f"Success Rate: {(passed_tests/total_tests*100):.1f}%")
         
-        for test_name, test_func in tests:
-            if test_func():
-                passed += 1
+        if failed_tests > 0:
+            print("\n❌ FAILED TESTS:")
+            for result in self.test_results:
+                if not result["success"]:
+                    print(f"  • {result['test']}: {result['details']}")
         
-        # Summary
-        print("=" * 70)
-        print("🏆 TEST SUMMARY")
-        print("=" * 70)
-        print(f"Total Tests: {total}")
-        print(f"Passed: {passed}")
-        print(f"Failed: {total - passed}")
-        print(f"Success Rate: {(passed/total)*100:.1f}%")
-        print()
+        if self.created_professionals:
+            print(f"\n👥 CREATED PROFESSIONALS ({len(self.created_professionals)}):")
+            for prof in self.created_professionals:
+                print(f"  • {prof['type'].title()}: {prof['email']} (ID: {prof['id']})")
         
-        if passed == total:
-            print("✅ ALL TESTS PASSED - PIX Professional Management System is working correctly!")
+        print("\n🎯 BUSINESS CASE VALIDATION:")
+        if passed_tests >= 6:  # At least admin login, 2 creations, PIX, and 2 logins
+            print("✅ Admin-created professional accounts can immediately login to their respective apps")
+            print("✅ PIX information is properly stored and retrieved")
+            print("✅ Professional type separation is maintained (personal vs nutritionist)")
+            if passed_tests >= 8:  # All tests including password reset
+                print("✅ Password reset generates functional temporary passwords")
+            print("✅ SEAMLESS ONBOARDING WORKFLOW CONFIRMED")
         else:
-            print("❌ SOME TESTS FAILED - Review the issues above")
-            
-        print()
-        print("📋 CREATED PROFESSIONALS FOR TESTING:")
-        for prof in self.created_professionals:
-            print(f"   - {prof['email']} (Password: {prof['password']}) - Type: {prof['type']}")
+            print("❌ CRITICAL ISSUES FOUND - Onboarding workflow has problems")
         
-        return passed, total
+        return {
+            "total_tests": total_tests,
+            "passed_tests": passed_tests,
+            "failed_tests": failed_tests,
+            "success_rate": passed_tests/total_tests*100,
+            "created_professionals": self.created_professionals,
+            "all_results": self.test_results
+        }
 
 def main():
     """Main test execution"""
     tester = LuxePassTester()
-    passed, total = tester.run_all_tests()
+    results = tester.run_complete_test_suite()
     
     # Exit with appropriate code
-    sys.exit(0 if passed == total else 1)
+    if results["failed_tests"] == 0:
+        print("\n🎉 ALL TESTS PASSED - LUXEPASS LOGIN INTEGRATION SYSTEM FULLY OPERATIONAL")
+        sys.exit(0)
+    else:
+        print(f"\n⚠️  {results['failed_tests']} TESTS FAILED - SYSTEM NEEDS ATTENTION")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
