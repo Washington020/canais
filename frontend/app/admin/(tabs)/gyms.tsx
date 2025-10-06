@@ -149,7 +149,7 @@ export default function GymsManagement() {
         'Content-Type': 'application/json'
       };
       
-      const response = await axios.get(`${API_URL}/api/integration/admin/gyms`, { 
+      const response = await axios.get(`/api/admin/gyms`, { 
         headers,
         timeout: 10000 // 10 segundos de timeout
       });
