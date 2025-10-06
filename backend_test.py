@@ -108,17 +108,16 @@ class LuxePassTester:
                 data = response.json()
                 client_token = data.get("access_token")
                 
-                # Generate a token for the VIP client
+                # Generate a token for the VIP client using simple endpoint
                 token_response = self.session.post(
-                    f"{self.backend_url}/tokens/generate",
+                    f"{self.backend_url}/tokens/generate-simple",
                     headers={
                         "Authorization": f"Bearer {client_token}",
                         "Content-Type": "application/json"
                     },
                     params={
                         "token_type": "gym",
-                        "validity_hours": 3,
-                        "gym_id": self.gym_id
+                        "validity_hours": 3
                     }
                 )
                 
