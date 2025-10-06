@@ -342,7 +342,7 @@ export default function GymsManagement() {
       
       // Usar o endpoint correto com MongoDB ID e status no body
       const response = await axios.put(
-        `${API_URL}/api/admin/gyms/${gymId}/status`, 
+        `/api/admin/gyms/${gymId}/status`, 
         { status: status === 'active' ? 'approved' : status }, // Mapear active -> approved
         { headers, timeout: 10000 }
       );
