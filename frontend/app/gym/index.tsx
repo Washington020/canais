@@ -18,7 +18,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-// import * as DocumentPicker from 'expo-document-picker'; // Removido temporariamente
 
 const API_URL = '/api';
 
