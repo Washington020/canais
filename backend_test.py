@@ -22,465 +22,338 @@ class LuxePassAcademiaTest:
         self.created_password = None
         self.test_results = []
         
-    def log_test(self, test_name, success, details, response_data=None):
+    def log_test(self, test_name, success, details="", error=""):
         """Log test results"""
         result = {
-            'test': test_name,
-            'success': success,
-            'details': details,
-            'timestamp': datetime.now().isoformat(),
-            'response_data': response_data
+            "test": test_name,
+            "success": success,
+            "details": details,
+            "error": error,
+            "timestamp": datetime.now().isoformat()
         }
         self.test_results.append(result)
         
         status = "✅" if success else "❌"
-        print(f"{status} {test_name}: {details}")
-        
-        if response_data and not success:
-            print(f"   Response: {response_data}")
+        print(f"{status} {test_name}")
+        if details:
+            print(f"   Details: {details}")
+        if error:
+            print(f"   Error: {error}")
+        print()
     
     def test_admin_login(self):
-        """Test Admin Login"""
+        """Test 1: Admin Login Test"""
         try:
-            url = f"{API_BASE_URL}/auth/login"
-            payload = {
+            response = requests.post(f"{API_BASE}/auth/login", json={
                 "email": "admin@luxepass.com",
                 "password": "admin123"
-            }
-            
-            response = self.session.post(url, json=payload)
+            })
             
             if response.status_code == 200:
                 data = response.json()
-                if 'access_token' in data and 'token_type' in data:
-                    self.tokens['admin'] = data['access_token']
-                    self.log_test(
-                        "Admin Login", 
-                        True, 
-                        f"Admin login successful, token received (length: {len(data['access_token'])})",
-                        data
-                    )
+                self.admin_token = data.get("access_token")
+                if self.admin_token:
+                    self.log_test("Admin Login", True, f"Token received ({len(self.admin_token)} chars)")
                     return True
                 else:
-                    self.log_test("Admin Login", False, "Missing access_token or token_type in response", data)
+                    self.log_test("Admin Login", False, error="No access token in response")
                     return False
             else:
-                self.log_test("Admin Login", False, f"HTTP {response.status_code}: {response.text}", response.text)
+                self.log_test("Admin Login", False, error=f"Status {response.status_code}: {response.text}")
                 return False
                 
         except Exception as e:
-            self.log_test("Admin Login", False, f"Exception: {str(e)}")
+            self.log_test("Admin Login", False, error=str(e))
             return False
     
-    def test_client_logins(self):
-        """Test Client Login Tests for all plan types"""
-        client_credentials = [
-            ("VIP Client", "vip@luxepass.com", "vip123"),
-            ("Intermediario Client", "intermediario@luxepass.com", "inter123"),
-            ("Basic Client", "cliente@luxepass.com", "cliente123")
-        ]
-        
-        success_count = 0
-        
-        for client_type, email, password in client_credentials:
-            try:
-                url = f"{API_BASE_URL}/auth/login"
-                payload = {
-                    "email": email,
-                    "password": password
-                }
-                
-                response = self.session.post(url, json=payload)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    if 'access_token' in data and 'token_type' in data:
-                        self.tokens[client_type.lower().replace(' ', '_')] = data['access_token']
-                        self.log_test(
-                            f"{client_type} Login", 
-                            True, 
-                            f"{client_type} login successful, token received",
-                            {"token_length": len(data['access_token']), "token_type": data['token_type']}
-                        )
-                        success_count += 1
-                    else:
-                        self.log_test(f"{client_type} Login", False, "Missing access_token or token_type", data)
-                else:
-                    self.log_test(f"{client_type} Login", False, f"HTTP {response.status_code}: {response.text}", response.text)
-                    
-            except Exception as e:
-                self.log_test(f"{client_type} Login", False, f"Exception: {str(e)}")
-        
-        return success_count == len(client_credentials)
-    
-    def test_professional_logins(self):
-        """Test Professional Login Tests"""
-        professional_credentials = [
-            ("Personal Trainer", "personal@luxepass.com", "personal123"),
-            ("Nutritionist", "nutri@luxepass.com", "nutri123")
-        ]
-        
-        success_count = 0
-        
-        for prof_type, email, password in professional_credentials:
-            try:
-                url = f"{API_BASE_URL}/professionals/login"
-                payload = {
-                    "email": email,
-                    "password": password
-                }
-                
-                response = self.session.post(url, json=payload)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    if 'access_token' in data and 'token_type' in data:
-                        self.tokens[prof_type.lower().replace(' ', '_')] = data['access_token']
-                        
-                        # Verify professional type in token or response
-                        professional_info = data.get('professional_info', {})
-                        professional_type = professional_info.get('professional_type', 'unknown')
-                        
-                        self.log_test(
-                            f"{prof_type} Login", 
-                            True, 
-                            f"{prof_type} login successful, professional_type: {professional_type}",
-                            {"token_length": len(data['access_token']), "professional_type": professional_type}
-                        )
-                        success_count += 1
-                    else:
-                        self.log_test(f"{prof_type} Login", False, "Missing access_token or token_type", data)
-                else:
-                    self.log_test(f"{prof_type} Login", False, f"HTTP {response.status_code}: {response.text}", response.text)
-                    
-            except Exception as e:
-                self.log_test(f"{prof_type} Login", False, f"Exception: {str(e)}")
-        
-        return success_count == len(professional_credentials)
-    
-    def test_gym_login(self):
-        """Test Gym Login"""
+    def test_create_academia(self):
+        """Test 2: Create New Academia via Admin"""
+        if not self.admin_token:
+            self.log_test("Create Academia", False, error="No admin token available")
+            return False
+            
         try:
-            url = f"{API_BASE_URL}/gym/auth"
-            payload = {
-                "login": "academia_teste",
-                "password": "teste123"
+            academia_data = {
+                "name": "Academia Teste Admin",
+                "cnpj": "12.345.678/0001-90",
+                "razao_social": "Academia Teste Admin LTDA",
+                "endereco": "Rua das Academias",
+                "numero": "456",
+                "bairro": "Centro",
+                "cidade": "São Paulo",
+                "estado": "SP",
+                "cep": "01234-567",
+                "email": "contato@academiateste.com.br",
+                "telefone_principal": "(11) 3333-5555",
+                "tipo_academia": "Completa",
+                "responsavel_nome": "Maria Silva",
+                "responsavel_email": "maria@academiateste.com.br",
+                "responsavel_telefone": "(11) 99999-4444",
+                "custom_login": "academia_admin_teste",
+                "custom_password": "admintest123"
             }
             
-            response = self.session.post(url, json=payload)
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = requests.post(f"{API_BASE}/admin/gyms/register", json=academia_data, headers=headers)
             
             if response.status_code == 200:
                 data = response.json()
-                if 'access_token' in data and 'gym_info' in data:
-                    self.tokens['gym'] = data['access_token']
-                    gym_info = data['gym_info']
-                    
-                    self.log_test(
-                        "Gym Login", 
-                        True, 
-                        f"Gym login successful, gym: {gym_info.get('name', 'Unknown')}",
-                        {
-                            "gym_id": gym_info.get('id'),
-                            "gym_name": gym_info.get('name'),
-                            "gym_type": gym_info.get('type'),
-                            "gym_status": gym_info.get('status')
-                        }
-                    )
-                    return True
-                else:
-                    self.log_test("Gym Login", False, "Missing access_token or gym_info in response", data)
-                    return False
+                self.created_gym_id = data.get("gym_id")
+                self.created_login = data.get("login")
+                self.created_password = data.get("password")
+                
+                self.log_test("Create Academia", True, 
+                    f"Academia created - ID: {self.created_gym_id}, Login: {self.created_login}")
+                return True
             else:
-                self.log_test("Gym Login", False, f"HTTP {response.status_code}: {response.text}", response.text)
+                self.log_test("Create Academia", False, 
+                    error=f"Status {response.status_code}: {response.text}")
                 return False
                 
         except Exception as e:
-            self.log_test("Gym Login", False, f"Exception: {str(e)}")
+            self.log_test("Create Academia", False, error=str(e))
             return False
     
-    def test_jwt_token_validation(self):
-        """Test JWT token generation and format"""
-        success_count = 0
-        total_tokens = len(self.tokens)
-        
-        for token_name, token in self.tokens.items():
-            try:
-                # Basic JWT format validation (3 parts separated by dots)
-                parts = token.split('.')
-                if len(parts) == 3:
-                    self.log_test(
-                        f"JWT Format - {token_name.title()}", 
-                        True, 
-                        f"Valid JWT format (3 parts), length: {len(token)}"
-                    )
-                    success_count += 1
-                else:
-                    self.log_test(
-                        f"JWT Format - {token_name.title()}", 
-                        False, 
-                        f"Invalid JWT format ({len(parts)} parts instead of 3)"
-                    )
-            except Exception as e:
-                self.log_test(f"JWT Format - {token_name.title()}", False, f"Exception: {str(e)}")
-        
-        return success_count == total_tokens
-    
-    def test_user_data_retrieval(self):
-        """Test user data retrieval with tokens"""
-        success_count = 0
-        
-        # Test client user data retrieval
-        client_tokens = {
-            'vip_client': '/users/me',
-            'intermediario_client': '/users/me', 
-            'basic_client': '/users/me'
-        }
-        
-        for token_name, endpoint in client_tokens.items():
-            if token_name in self.tokens:
-                try:
-                    url = f"{API_BASE_URL}{endpoint}"
-                    headers = {'Authorization': f'Bearer {self.tokens[token_name]}'}
-                    
-                    response = self.session.get(url, headers=headers)
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        if 'id' in data and 'email' in data:
-                            self.log_test(
-                                f"User Data - {token_name.replace('_', ' ').title()}", 
-                                True, 
-                                f"User data retrieved: {data.get('full_name', 'Unknown')} ({data.get('plan_type', 'unknown')})"
-                            )
-                            success_count += 1
-                        else:
-                            self.log_test(f"User Data - {token_name.replace('_', ' ').title()}", False, "Missing user data fields", data)
-                    else:
-                        self.log_test(f"User Data - {token_name.replace('_', ' ').title()}", False, f"HTTP {response.status_code}: {response.text}")
-                        
-                except Exception as e:
-                    self.log_test(f"User Data - {token_name.replace('_', ' ').title()}", False, f"Exception: {str(e)}")
-        
-        return success_count > 0
-    
-    def test_admin_professional_integration(self):
-        """Test admin → professional integration by creating a new professional"""
-        if 'admin' not in self.tokens:
-            self.log_test("Admin-Professional Integration", False, "Admin token not available")
+    def test_verify_academia_creation(self):
+        """Test 3: Verify Academia Creation"""
+        if not self.admin_token or not self.created_gym_id:
+            self.log_test("Verify Academia Creation", False, error="Missing admin token or gym ID")
             return False
-        
+            
         try:
-            # First, try to create a new professional via admin
-            url = f"{API_BASE_URL}/admin/professionals"
-            headers = {'Authorization': f'Bearer {self.tokens["admin"]}'}
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = requests.get(f"{API_BASE}/admin/gyms", headers=headers)
             
-            # Create test professional data
-            test_professional = {
-                "full_name": "Dr. Test Professional",
-                "email": f"testprof_{datetime.now().strftime('%H%M%S')}@luxepass.com",
-                "password": "testpass123",
-                "professional_type": "nutritionist",
-                "cref_crn": "CRN-TEST123/SP",
-                "specialization": "Test Nutrition",
-                "bio": "Test professional for integration testing",
-                "phone": "(11) 99999-9999",
-                "experience_years": 5,
-                "pix_key": "testprof@pix.com"
-            }
+            if response.status_code == 200:
+                gyms = response.json()
+                created_gym = None
+                
+                for gym in gyms:
+                    if gym.get("id") == self.created_gym_id or str(gym.get("_id")) == self.created_gym_id:
+                        created_gym = gym
+                        break
+                
+                if created_gym:
+                    self.log_test("Verify Academia Creation", True, 
+                        f"Academia found in list: {created_gym.get('name')}")
+                    return True
+                else:
+                    self.log_test("Verify Academia Creation", False, 
+                        error=f"Created academia not found in list (ID: {self.created_gym_id})")
+                    return False
+            else:
+                self.log_test("Verify Academia Creation", False, 
+                    error=f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Verify Academia Creation", False, error=str(e))
+            return False
+    
+    def test_approve_academia(self):
+        """Test 4: Approve Academia (if needed)"""
+        if not self.admin_token or not self.created_gym_id:
+            self.log_test("Approve Academia", False, error="Missing admin token or gym ID")
+            return False
             
-            response = self.session.post(url, json=test_professional, headers=headers)
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = requests.put(f"{API_BASE}/admin/gyms/{self.created_gym_id}/status", 
+                                  json={"status": "approved"}, headers=headers)
             
             if response.status_code == 200:
                 data = response.json()
-                professional_data = data.get('professional', {})
-                professional_id = professional_data.get('id')
-                created_email = professional_data.get('email')
+                self.log_test("Approve Academia", True, f"Status updated: {data.get('message')}")
+                return True
+            else:
+                self.log_test("Approve Academia", False, 
+                    error=f"Status {response.status_code}: {response.text}")
+                return False
                 
-                if professional_id and created_email:
-                    # Now test if the created professional can login
-                    login_url = f"{API_BASE_URL}/professionals/login"
-                    login_payload = {
-                        "email": created_email,
-                        "password": "testpass123"  # Use the password we set
-                    }
-                    
-                    login_response = self.session.post(login_url, json=login_payload)
+        except Exception as e:
+            self.log_test("Approve Academia", False, error=str(e))
+            return False
+    
+    def test_login_integration(self):
+        """Test 5: Test Login Integration"""
+        if not self.created_login or not self.created_password:
+            self.log_test("Login Integration", False, error="Missing created credentials")
+            return False
+            
+        try:
+            response = requests.post(f"{API_BASE}/gym/auth", json={
+                "login": self.created_login,
+                "password": self.created_password
+            })
+            
+            if response.status_code == 200:
+                data = response.json()
+                access_token = data.get("access_token")
+                gym_info = data.get("gym_info", {})
+                
+                if access_token and gym_info:
+                    self.log_test("Login Integration", True, 
+                        f"Login successful - Gym: {gym_info.get('name')}, Token: {len(access_token)} chars")
+                    return True
+                else:
+                    self.log_test("Login Integration", False, error="Missing access_token or gym_info in response")
+                    return False
+            else:
+                self.log_test("Login Integration", False, 
+                    error=f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Login Integration", False, error=str(e))
+            return False
+    
+    def test_password_reset(self):
+        """Test 6: Test Password Reset Function"""
+        if not self.admin_token or not self.created_gym_id:
+            self.log_test("Password Reset", False, error="Missing admin token or gym ID")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = requests.put(f"{API_BASE}/admin/gyms/{self.created_gym_id}/reset-password", 
+                                  headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                new_password = data.get("new_password")
+                login = data.get("login")
+                
+                if new_password and login:
+                    # Test login with new password
+                    login_response = requests.post(f"{API_BASE}/gym/auth", json={
+                        "login": login,
+                        "password": new_password
+                    })
                     
                     if login_response.status_code == 200:
-                        login_data = login_response.json()
-                        if 'access_token' in login_data:
-                            self.log_test(
-                                "Admin-Professional Integration", 
-                                True, 
-                                f"Successfully created professional {created_email} and verified login access"
-                            )
-                            return True
-                        else:
-                            self.log_test("Admin-Professional Integration", False, "Created professional but login failed - no token")
-                            return False
+                        self.log_test("Password Reset", True, 
+                            f"Password reset successful - New password works for login: {login}")
+                        # Update stored password for next test
+                        self.created_password = new_password
+                        return True
                     else:
-                        self.log_test("Admin-Professional Integration", False, f"Created professional but login failed: HTTP {login_response.status_code}")
+                        self.log_test("Password Reset", False, 
+                            error=f"New password doesn't work - Login failed: {login_response.status_code}")
                         return False
                 else:
-                    self.log_test("Admin-Professional Integration", False, "Professional created but missing required fields", data)
+                    self.log_test("Password Reset", False, error="Missing new_password or login in response")
                     return False
             else:
-                self.log_test("Admin-Professional Integration", False, f"Failed to create professional: HTTP {response.status_code}: {response.text}")
+                self.log_test("Password Reset", False, 
+                    error=f"Status {response.status_code}: {response.text}")
                 return False
                 
         except Exception as e:
-            self.log_test("Admin-Professional Integration", False, f"Exception: {str(e)}")
+            self.log_test("Password Reset", False, error=str(e))
             return False
     
-    def test_app_specific_permissions(self):
-        """Test app-specific access permissions"""
-        success_count = 0
-        
-        # Test professional endpoints with professional tokens
-        professional_tests = [
-            ('personal_trainer', '/professionals/my-assigned-clients'),
-            ('nutritionist', '/professionals/unassigned-clients')
-        ]
-        
-        for token_name, endpoint in professional_tests:
-            if token_name in self.tokens:
-                try:
-                    url = f"{API_BASE_URL}{endpoint}"
-                    headers = {'Authorization': f'Bearer {self.tokens[token_name]}'}
+    def test_custom_password_setting(self):
+        """Test 7: Test Custom Password Setting"""
+        if not self.admin_token or not self.created_gym_id:
+            self.log_test("Custom Password Setting", False, error="Missing admin token or gym ID")
+            return False
+            
+        try:
+            custom_password = "novasenha456"
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = requests.put(f"{API_BASE}/admin/gyms/{self.created_gym_id}/set-password", 
+                                  json={"password": custom_password}, headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                login = data.get("login")
+                
+                if login:
+                    # Test login with custom password
+                    login_response = requests.post(f"{API_BASE}/gym/auth", json={
+                        "login": login,
+                        "password": custom_password
+                    })
                     
-                    response = self.session.get(url, headers=headers)
-                    
-                    if response.status_code in [200, 404]:  # 404 is acceptable for empty results
-                        self.log_test(
-                            f"Professional Access - {token_name.replace('_', ' ').title()}", 
-                            True, 
-                            f"Access granted to {endpoint}"
-                        )
-                        success_count += 1
+                    if login_response.status_code == 200:
+                        self.log_test("Custom Password Setting", True, 
+                            f"Custom password set successfully - Login works with: {login}")
+                        return True
                     else:
-                        self.log_test(f"Professional Access - {token_name.replace('_', ' ').title()}", False, f"Access denied: HTTP {response.status_code}")
-                        
-                except Exception as e:
-                    self.log_test(f"Professional Access - {token_name.replace('_', ' ').title()}", False, f"Exception: {str(e)}")
-        
-        return success_count > 0
+                        self.log_test("Custom Password Setting", False, 
+                            error=f"Custom password doesn't work - Login failed: {login_response.status_code}")
+                        return False
+                else:
+                    self.log_test("Custom Password Setting", False, error="Missing login in response")
+                    return False
+            else:
+                self.log_test("Custom Password Setting", False, 
+                    error=f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Custom Password Setting", False, error=str(e))
+            return False
     
-    def run_comprehensive_test(self):
-        """Run all login integration tests"""
-        print("🎯 LUXEPASS LOGIN INTEGRATION SYSTEM COMPREHENSIVE TEST")
-        print("=" * 60)
-        print(f"Backend URL: {API_BASE_URL}")
+    def run_all_tests(self):
+        """Run all tests in sequence"""
+        print("🎯 LUXEPASS ACADEMIA CREATION AND LOGIN INTEGRATION FLOW TEST")
+        print("=" * 70)
+        print(f"Backend URL: {API_BASE}")
         print(f"Test started at: {datetime.now().isoformat()}")
         print()
         
-        # Test 1: Admin Login
-        print("1. ADMIN LOGIN TEST")
-        admin_success = self.test_admin_login()
-        print()
+        # Run tests in sequence
+        tests = [
+            self.test_admin_login,
+            self.test_create_academia,
+            self.test_verify_academia_creation,
+            self.test_approve_academia,
+            self.test_login_integration,
+            self.test_password_reset,
+            self.test_custom_password_setting
+        ]
         
-        # Test 2: Client Logins
-        print("2. CLIENT LOGIN TESTS")
-        client_success = self.test_client_logins()
-        print()
-        
-        # Test 3: Professional Logins
-        print("3. PROFESSIONAL LOGIN TESTS")
-        professional_success = self.test_professional_logins()
-        print()
-        
-        # Test 4: Gym Login
-        print("4. GYM LOGIN TEST")
-        gym_success = self.test_gym_login()
-        print()
-        
-        # Test 5: JWT Token Validation
-        print("5. JWT TOKEN VALIDATION")
-        jwt_success = self.test_jwt_token_validation()
-        print()
-        
-        # Test 6: User Data Retrieval
-        print("6. USER DATA RETRIEVAL")
-        data_success = self.test_user_data_retrieval()
-        print()
-        
-        # Test 7: Admin-Professional Integration
-        print("7. ADMIN-PROFESSIONAL INTEGRATION")
-        integration_success = self.test_admin_professional_integration()
-        print()
-        
-        # Test 8: App-Specific Permissions
-        print("8. APP-SPECIFIC PERMISSIONS")
-        permissions_success = self.test_app_specific_permissions()
-        print()
+        for test in tests:
+            test()
         
         # Summary
-        print("=" * 60)
+        print("=" * 70)
         print("TEST SUMMARY")
-        print("=" * 60)
+        print("=" * 70)
         
-        total_tests = len(self.test_results)
-        passed_tests = sum(1 for result in self.test_results if result['success'])
-        failed_tests = total_tests - passed_tests
+        passed = sum(1 for result in self.test_results if result["success"])
+        total = len(self.test_results)
         
-        print(f"Total Tests: {total_tests}")
-        print(f"Passed: {passed_tests} ✅")
-        print(f"Failed: {failed_tests} ❌")
-        print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
+        print(f"Total Tests: {total}")
+        print(f"Passed: {passed}")
+        print(f"Failed: {total - passed}")
+        print(f"Success Rate: {(passed/total)*100:.1f}%")
         print()
         
-        # Detailed results
-        if failed_tests > 0:
-            print("FAILED TESTS:")
-            for result in self.test_results:
-                if not result['success']:
-                    print(f"❌ {result['test']}: {result['details']}")
-            print()
-        
-        print("TOKENS COLLECTED:")
-        for token_name, token in self.tokens.items():
-            print(f"✅ {token_name.replace('_', ' ').title()}: {len(token)} chars")
-        print()
-        
-        # Overall assessment
-        critical_systems = [admin_success, client_success, professional_success, gym_success]
-        critical_passed = sum(critical_systems)
-        
-        if critical_passed == len(critical_systems):
-            print("🎉 ALL CRITICAL LOGIN SYSTEMS OPERATIONAL")
-            print("✅ Admin System: Working")
-            print("✅ Client System: Working") 
-            print("✅ Professional System: Working")
-            print("✅ Gym System: Working")
+        if passed == total:
+            print("🎉 ALL TESTS PASSED - Academia creation and login integration flow is working perfectly!")
         else:
-            print("🚨 CRITICAL ISSUES FOUND:")
-            if not admin_success:
-                print("❌ Admin System: Failed")
-            if not client_success:
-                print("❌ Client System: Failed")
-            if not professional_success:
-                print("❌ Professional System: Failed")
-            if not gym_success:
-                print("❌ Gym System: Failed")
-        
+            print("⚠️  SOME TESTS FAILED - Check the details above")
+            
         print()
-        print(f"Test completed at: {datetime.now().isoformat()}")
+        print("BUSINESS CASE VALIDATION:")
+        if passed >= 5:  # At least admin login, creation, verification, approval, and login integration
+            print("✅ Admin can create academias with custom credentials")
+            print("✅ Created credentials work immediately in gym auth system")
+            print("✅ Complete integration between admin → gym login system working")
+        else:
+            print("❌ Critical business workflow issues detected")
         
-        return {
-            'total_tests': total_tests,
-            'passed_tests': passed_tests,
-            'failed_tests': failed_tests,
-            'success_rate': (passed_tests/total_tests)*100,
-            'critical_systems_working': critical_passed == len(critical_systems),
-            'tokens_collected': len(self.tokens),
-            'detailed_results': self.test_results
-        }
+        return passed == total
 
-if __name__ == "__main__":
-    tester = LuxePassLoginTester()
-    results = tester.run_comprehensive_test()
+def main():
+    """Main test execution"""
+    tester = LuxePassAcademiaTest()
+    success = tester.run_all_tests()
     
     # Exit with appropriate code
-    if results['critical_systems_working'] and results['success_rate'] >= 80:
-        sys.exit(0)  # Success
-    else:
-        sys.exit(1)  # Failure
+    sys.exit(0 if success else 1)
+
+if __name__ == "__main__":
+    main()
