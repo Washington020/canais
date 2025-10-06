@@ -972,11 +972,25 @@ async def validate_simple_token(token_code: str, request: Request, gym_id: str):
                 "expires_at": token_doc["expires_at"]
             },
             "user": {
+                "id": str(user_doc["_id"]),
                 "full_name": user_doc["full_name"],
                 "plan_type": user_doc["plan_type"],
-                "email": user_doc["email"]
+                "email": user_doc["email"],
+                "phone": user_doc.get("phone", ""),
+                "cpf": user_doc.get("cpf", ""),
+                "date_of_birth": user_doc.get("date_of_birth", "").isoformat() if user_doc.get("date_of_birth") else "",
+                "profile_photo": user_doc.get("profile_photo", ""),
+                "address": user_doc.get("address", {}),
+                "emergency_contact": user_doc.get("emergency_contact", {}),
+                "medical_conditions": user_doc.get("medical_conditions", []),
+                "tokens_used_today": user_doc.get("tokens_used", 0),
+                "member_since": user_doc.get("created_at", datetime.now(timezone.utc)).isoformat()
             },
-            "gym_id": gym_id,
+            "gym_info": {
+                "id": gym_id,
+                "name": gym_doc.get("name", "Academia") if gym_doc else "Academia",
+                "validation_time": datetime.now(timezone.utc).isoformat()
+            },
             "validation_id": validation_record["validation_id"]
         }
         
