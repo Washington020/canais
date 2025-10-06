@@ -296,7 +296,7 @@ class LuxePassLoginTester:
             
             response = self.session.post(url, json=test_professional, headers=headers)
             
-            if response.status_code == 201:
+            if response.status_code == 200:
                 data = response.json()
                 professional_id = data.get('id')
                 created_email = data.get('email')
