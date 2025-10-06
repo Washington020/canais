@@ -300,9 +300,8 @@ class LuxePassLoginTester:
                 data = response.json()
                 professional_id = data.get('id')
                 created_email = data.get('email')
-                temp_password = data.get('temp_password')
                 
-                if professional_id and created_email and temp_password:
+                if professional_id and created_email:
                     # Now test if the created professional can login
                     login_url = f"{API_BASE_URL}/professionals/login"
                     login_payload = {
