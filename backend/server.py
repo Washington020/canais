@@ -1000,6 +1000,221 @@ async def validate_simple_token(token_code: str, request: Request, gym_id: str):
         logger.error(f"Erro na validação do token: {e}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
+@api_router.get("/gym/{gym_id}/clients-report")
+async def get_gym_clients_report(gym_id: str):
+    """Get clients report for gym - clients who used tokens at this gym"""
+    try:
+        # Get all validations for this gym
+        validations = await db.token_validations.find({
+            "gym_id": gym_id,
+            "status": "validated"
+        }).sort("validated_at", -1).to_list(100)
+        
+        clients_data = []
+        unique_clients = set()
+        
+        for validation in validations:
+            user_id = validation.get("user_id")
+            if user_id and user_id not in unique_clients:
+                unique_clients.add(user_id)
+                
+                # Get detailed user info
+                user = await db.users.find_one({"_id": ObjectId(user_id)})
+                if user:
+                    # Count total visits for this client at this gym
+                    visit_count = await db.token_validations.count_documents({
+                        "gym_id": gym_id,
+                        "user_id": user_id,
+                        "status": "validated"
+                    })
+                    
+                    clients_data.append({
+                        "id": str(user["_id"]),
+                        "full_name": user.get("full_name", ""),
+                        "email": user.get("email", ""),
+                        "phone": user.get("phone", ""),
+                        "plan_type": user.get("plan_type", "basic"),
+                        "total_visits": visit_count,
+                        "first_visit": validation.get("validated_at", datetime.now(timezone.utc)).isoformat(),
+                        "member_since": user.get("created_at", datetime.now(timezone.utc)).isoformat(),
+                        "profile_photo": user.get("profile_photo", "")
+                    })
+        
+        return {
+            "gym_id": gym_id,
+            "total_clients": len(clients_data),
+            "clients": clients_data,
+            "generated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao gerar relatório de clientes: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao gerar relatório")
+
+@api_router.get("/gym/{gym_id}/revenue-report")
+async def get_gym_revenue_report(gym_id: str):
+    """Get revenue report for gym based on check-ins"""
+    try:
+        # Get gym contract info
+        gym_contract = await db.gym_contracts.find_one({"gym_id": gym_id})
+        check_in_value = gym_contract.get("check_in_value", 0.0) if gym_contract else 0.0
+        
+        # Get current month validations
+        current_month = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_month = (current_month + timedelta(days=32)).replace(day=1)
+        
+        monthly_checkins = await db.token_validations.count_documents({
+            "gym_id": gym_id,
+            "status": "validated",
+            "validated_at": {"$gte": current_month, "$lt": next_month}
+        })
+        
+        # Get all-time validations
+        total_checkins = await db.token_validations.count_documents({
+            "gym_id": gym_id,
+            "status": "validated"
+        })
+        
+        # Calculate revenue
+        monthly_revenue = monthly_checkins * check_in_value
+        total_revenue = total_checkins * check_in_value
+        
+        # Get last 30 days activity
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        recent_checkins = await db.token_validations.count_documents({
+            "gym_id": gym_id,
+            "status": "validated",
+            "validated_at": {"$gte": thirty_days_ago}
+        })
+        
+        return {
+            "gym_id": gym_id,
+            "check_in_value": check_in_value,
+            "monthly_stats": {
+                "checkins": monthly_checkins,
+                "revenue": monthly_revenue,
+                "month": current_month.strftime("%B %Y")
+            },
+            "total_stats": {
+                "checkins": total_checkins,
+                "revenue": total_revenue
+            },
+            "last_30_days": {
+                "checkins": recent_checkins,
+                "revenue": recent_checkins * check_in_value
+            },
+            "contract_status": "active" if gym_contract else "pending",
+            "generated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao gerar relatório de receita: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao gerar relatório")
+
+@api_router.get("/gym/{gym_id}/contract")
+async def get_gym_contract(gym_id: str):
+    """Get gym contract information"""
+    try:
+        contract = await db.gym_contracts.find_one({"gym_id": gym_id})
+        
+        if not contract:
+            return {
+                "gym_id": gym_id,
+                "contract_exists": False,
+                "check_in_value": 0.0,
+                "status": "pending_setup",
+                "message": "Contrato não configurado. Configure o valor por check-in."
+            }
+        
+        return {
+            "gym_id": gym_id,
+            "contract_exists": True,
+            "check_in_value": contract.get("check_in_value", 0.0),
+            "contract_document": contract.get("contract_document", ""),
+            "signed_at": contract.get("signed_at", "").isoformat() if contract.get("signed_at") else "",
+            "status": contract.get("status", "draft"),
+            "created_at": contract.get("created_at", datetime.now(timezone.utc)).isoformat(),
+            "updated_at": contract.get("updated_at", datetime.now(timezone.utc)).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar contrato: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar contrato")
+
+@api_router.put("/gym/{gym_id}/contract/value")
+async def update_gym_contract_value(gym_id: str, check_in_value: float):
+    """Update gym contract check-in value"""
+    try:
+        if check_in_value < 0:
+            raise HTTPException(status_code=400, detail="Valor por check-in deve ser positivo")
+            
+        # Update or create contract
+        await db.gym_contracts.update_one(
+            {"gym_id": gym_id},
+            {
+                "$set": {
+                    "check_in_value": check_in_value,
+                    "updated_at": datetime.now(timezone.utc)
+                },
+                "$setOnInsert": {
+                    "gym_id": gym_id,
+                    "status": "draft",
+                    "created_at": datetime.now(timezone.utc)
+                }
+            },
+            upsert=True
+        )
+        
+        return {
+            "success": True,
+            "message": "Valor por check-in atualizado com sucesso",
+            "gym_id": gym_id,
+            "check_in_value": check_in_value
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao atualizar valor do contrato: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao atualizar contrato")
+
+@api_router.post("/gym/{gym_id}/contract/document")
+async def upload_gym_contract_document(gym_id: str, contract_document: str):
+    """Upload signed contract document (base64)"""
+    try:
+        # Update contract with document
+        result = await db.gym_contracts.update_one(
+            {"gym_id": gym_id},
+            {
+                "$set": {
+                    "contract_document": contract_document,
+                    "signed_at": datetime.now(timezone.utc),
+                    "status": "signed",
+                    "updated_at": datetime.now(timezone.utc)
+                },
+                "$setOnInsert": {
+                    "gym_id": gym_id,
+                    "created_at": datetime.now(timezone.utc),
+                    "check_in_value": 0.0
+                }
+            },
+            upsert=True
+        )
+        
+        if result.matched_count == 0 and result.upserted_id:
+            message = "Contrato criado e documento anexado com sucesso"
+        else:
+            message = "Documento do contrato atualizado com sucesso"
+        
+        return {
+            "success": True,
+            "message": message,
+            "gym_id": gym_id,
+            "signed_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao anexar documento do contrato: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao anexar documento")
+
 # Gym routes
 @api_router.get("/gyms", response_model=List[Gym])
 async def get_gyms(lat: Optional[float] = None, lng: Optional[float] = None):
