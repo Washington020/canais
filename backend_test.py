@@ -115,7 +115,7 @@ class LuxePassTester:
                         "Authorization": f"Bearer {client_token}",
                         "Content-Type": "application/json"
                     },
-                    params={
+                    json={
                         "token_type": "gym",
                         "validity_hours": 3
                     }
