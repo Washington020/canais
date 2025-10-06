@@ -37,32 +37,56 @@ class LuxePassTester:
         if details and not success:
             print(f"   Details: {details}")
     
-    def test_admin_login(self):
-        """Test 1: Admin Login"""
-        print("\n🔐 Testing Admin Login...")
+    def test_gym_authentication(self):
+        """Test 1: Gym Authentication with academia_teste/teste123"""
+        print("\n🔐 Testing Gym Authentication...")
         
         try:
-            response = self.session.post(f"{BACKEND_URL}/auth/login", json={
-                "email": "admin@luxepass.com",
-                "password": "admin123"
-            })
+            response = self.session.post(
+                f"{self.backend_url}/gym/auth",
+                json={
+                    "login": "academia_teste",
+                    "password": "teste123"
+                },
+                headers={"Content-Type": "application/json"}
+            )
             
             if response.status_code == 200:
                 data = response.json()
-                if "access_token" in data:
-                    self.admin_token = data["access_token"]
-                    self.session.headers.update({"Authorization": f"Bearer {self.admin_token}"})
-                    self.log_test("Admin Login", True, f"Token received: {self.admin_token[:20]}...")
-                    return True
-                else:
-                    self.log_test("Admin Login", False, "No access token in response")
-                    return False
+                self.gym_token = data.get("access_token")
+                self.gym_id = data.get("gym_info", {}).get("id")
+                
+                # Set authorization header for future requests
+                self.session.headers.update({
+                    "Authorization": f"Bearer {self.gym_token}"
+                })
+                
+                self.log_test(
+                    "Gym Authentication",
+                    True,
+                    f"Successfully authenticated gym: {data.get('gym_info', {}).get('name')}",
+                    {
+                        "gym_id": self.gym_id,
+                        "gym_name": data.get('gym_info', {}).get('name'),
+                        "token_received": bool(self.gym_token)
+                    }
+                )
+                return True
             else:
-                self.log_test("Admin Login", False, f"Status: {response.status_code}, Response: {response.text}")
+                self.log_test(
+                    "Gym Authentication",
+                    False,
+                    f"Authentication failed: {response.status_code}",
+                    {"response": response.text}
+                )
                 return False
                 
         except Exception as e:
-            self.log_test("Admin Login", False, f"Exception: {str(e)}")
+            self.log_test(
+                "Gym Authentication",
+                False,
+                f"Exception during authentication: {str(e)}"
+            )
             return False
     
     def test_create_personal_trainer(self):
