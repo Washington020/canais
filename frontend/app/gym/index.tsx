@@ -243,24 +243,14 @@ Check-in realizado com sucesso!`,
   };
 
   const pickDocument = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/pdf',
-        copyToCacheDirectory: true
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        // Simular upload do documento (em produção, usar upload real)
-        Alert.alert(
-          'Documento Selecionado',
-          `${result.assets[0].name} foi selecionado. Em produção, este documento seria enviado para o servidor.`,
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error) {
-      console.error('Erro ao selecionar documento:', error);
-      Alert.alert('Erro', 'Não foi possível selecionar o documento.');
-    }
+    Alert.alert(
+      'Anexar Contrato',
+      'Funcionalidade de upload de documento será implementada em breve. Por enquanto, entre em contato com o suporte para anexar o contrato assinado.',
+      [
+        { text: 'Contatar Suporte', onPress: () => Alert.alert('Suporte', 'Entre em contato: suporte@luxepass.com') },
+        { text: 'OK' }
+      ]
+    );
   };
 
   useEffect(() => {
