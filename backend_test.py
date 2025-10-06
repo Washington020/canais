@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-LuxePass Backend Testing Suite - PIX Professional Management System
-Testing enhanced professional management with PIX functionality
+LuxePass Backend Integration Test Suite
+Testing complete admin-created professional login integration system
 """
 
 import requests
 import json
 import sys
-from datetime import datetime
 import uuid
+from datetime import datetime
+import time
 
 # Configuration
 BACKEND_URL = "https://trainer-client-app-4.preview.emergentagent.com/api"
@@ -17,24 +18,20 @@ class LuxePassTester:
     def __init__(self):
         self.session = requests.Session()
         self.admin_token = None
-        self.test_results = []
         self.created_professionals = []
+        self.test_results = []
         
-    def log_test(self, test_name, success, details="", response_data=None):
-        """Log test results"""
+    def log_test(self, test_name, success, details=""):
+        """Log test result"""
         status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status} - {test_name}")
+        print(f"{status}: {test_name}")
         if details:
             print(f"   Details: {details}")
-        if response_data and not success:
-            print(f"   Response: {response_data}")
-        print()
         
         self.test_results.append({
             "test": test_name,
             "success": success,
-            "details": details,
-            "response": response_data
+            "details": details
         })
     
     def test_admin_login(self):
