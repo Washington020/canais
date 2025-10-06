@@ -298,8 +298,9 @@ class LuxePassLoginTester:
             
             if response.status_code == 200:
                 data = response.json()
-                professional_id = data.get('id')
-                created_email = data.get('email')
+                professional_data = data.get('professional', {})
+                professional_id = professional_data.get('id')
+                created_email = professional_data.get('email')
                 
                 if professional_id and created_email:
                     # Now test if the created professional can login
