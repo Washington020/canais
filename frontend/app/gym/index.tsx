@@ -286,15 +286,56 @@ Check-in realizado com sucesso!`,
             </View>
           )}
 
-          {activeTab !== 'validation' && (
+          {activeTab === 'clients' && (
             <View style={styles.tabContent}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  {activeTab === 'clients' && '👥 Clientes'}
-                  {activeTab === 'revenue' && '💰 Receita'}  
-                  {activeTab === 'contract' && '📋 Contrato'}
+                <Text style={styles.sectionTitle}>👥 Clientes Atendidos</Text>
+                <Text style={styles.sectionSubtitle}>Histórico de check-ins realizados</Text>
+              </View>
+              <View style={styles.comingSoonCard}>
+                <Ionicons name="people-outline" size={48} color="#94A3B8" />
+                <Text style={styles.comingSoonTitle}>Relatório de Clientes</Text>
+                <Text style={styles.comingSoonText}>
+                  • Lista de clientes que utilizaram a academia{'\n'}
+                  • Histórico de visitas e frequência{'\n'}
+                  • Dados completos dos usuários
                 </Text>
-                <Text style={styles.sectionSubtitle}>Em breve...</Text>
+              </View>
+            </View>
+          )}
+
+          {activeTab === 'revenue' && (
+            <View style={styles.tabContent}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>💰 Receita por Check-ins</Text>
+                <Text style={styles.sectionSubtitle}>Controle financeiro da parceria</Text>
+              </View>
+              <View style={styles.comingSoonCard}>
+                <Ionicons name="trending-up-outline" size={48} color="#94A3B8" />
+                <Text style={styles.comingSoonTitle}>Dashboard Financeiro</Text>
+                <Text style={styles.comingSoonText}>
+                  • Valor configurável por check-in{'\n'}
+                  • Relatórios mensais e totais{'\n'}
+                  • Acompanhamento de receita da parceria
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {activeTab === 'contract' && (
+            <View style={styles.tabContent}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>📋 Gestão de Contratos</Text>
+                <Text style={styles.sectionSubtitle}>Documentos e valores da parceria</Text>
+              </View>
+              <View style={styles.comingSoonCard}>
+                <Ionicons name="document-text-outline" size={48} color="#94A3B8" />
+                <Text style={styles.comingSoonTitle}>Sistema de Contratos</Text>
+                <Text style={styles.comingSoonText}>
+                  • Configuração de valores por check-in{'\n'}
+                  • Upload de contratos assinados{'\n'}
+                  • Gestão da documentação da parceria
+                </Text>
               </View>
             </View>
           )}
