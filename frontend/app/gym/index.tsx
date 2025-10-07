@@ -582,4 +582,26 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 14,
   },
+  comingSoonCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  comingSoonTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  comingSoonText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
 });
