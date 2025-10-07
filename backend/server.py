@@ -1410,7 +1410,7 @@ async def register_gym(gym_data: dict):
             "username": login,
             "password_hash": hashed_password
         },
-        "status": "pending",  # pending, analyzing, approved, rejected
+        "status": "approved",  # Auto-approve gyms created by admin
         "created_at": datetime.now(timezone.utc),
         "approved_at": None
     }
