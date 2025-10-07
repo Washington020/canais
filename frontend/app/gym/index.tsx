@@ -17,8 +17,6 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
-const API_URL = '/api';
-
 export default function GymDashboard() {
   const [activeTab, setActiveTab] = useState<'validation' | 'clients' | 'revenue' | 'contract'>('validation');
   const [tokenCode, setTokenCode] = useState('');
@@ -26,10 +24,6 @@ export default function GymDashboard() {
   const [gymInfo, setGymInfo] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [lastValidation, setLastValidation] = useState<any>(null);
-  const [clients, setClients] = useState([]);
-  const [revenueData, setRevenueData] = useState<any>(null);
-  const [contractData, setContractData] = useState<any>(null);
-  const [newCheckInValue, setNewCheckInValue] = useState('');
   const router = useRouter();
 
   const checkAuthentication = useCallback(async () => {
@@ -96,7 +90,7 @@ export default function GymDashboard() {
 
       const headers = { 'Authorization': `Bearer ${gymToken}` };
       const response = await axios.post(
-        `${API_URL}/tokens/validate/${tokenCode.trim()}?gym_id=${gymInfo.id}`,
+        `/api/tokens/validate/${tokenCode.trim()}?gym_id=${gymInfo.id}`,
         {},
         { headers }
       );
@@ -127,90 +121,9 @@ Check-in realizado com sucesso!`,
     }
   }, [tokenCode, gymInfo]);
 
-  const loadClientsReport = useCallback(async () => {
-    if (!gymInfo?.id) return;
-    
-    try {
-      const gymToken = await AsyncStorage.getItem('gymToken');
-      const headers = { 'Authorization': `Bearer ${gymToken}` };
-      
-      const response = await axios.get(`${API_URL}/gym/${gymInfo.id}/clients-report`, { headers });
-      setClients(response.data.clients || []);
-    } catch (error) {
-      console.error('Erro ao carregar relatório de clientes:', error);
-      Alert.alert('Erro', 'Não foi possível carregar o relatório de clientes');
-    }
-  }, [gymInfo]);
-
-  const loadRevenueReport = useCallback(async () => {
-    if (!gymInfo?.id) return;
-    
-    try {
-      const gymToken = await AsyncStorage.getItem('gymToken');
-      const headers = { 'Authorization': `Bearer ${gymToken}` };
-      
-      const response = await axios.get(`${API_URL}/gym/${gymInfo.id}/revenue-report`, { headers });
-      setRevenueData(response.data);
-    } catch (error) {
-      console.error('Erro ao carregar relatório de receita:', error);
-      Alert.alert('Erro', 'Não foi possível carregar o relatório de receita');
-    }
-  }, [gymInfo]);
-
-  const loadContract = useCallback(async () => {
-    if (!gymInfo?.id) return;
-    
-    try {
-      const gymToken = await AsyncStorage.getItem('gymToken');
-      const headers = { 'Authorization': `Bearer ${gymToken}` };
-      
-      const response = await axios.get(`${API_URL}/gym/${gymInfo.id}/contract`, { headers });
-      setContractData(response.data);
-      if (response.data.contract_exists) {
-        setNewCheckInValue(response.data.check_in_value.toString());
-      }
-    } catch (error) {
-      console.error('Erro ao carregar contrato:', error);
-      Alert.alert('Erro', 'Não foi possível carregar o contrato');
-    }
-  }, [gymInfo]);
-
-  const updateCheckInValue = async () => {
-    if (!newCheckInValue || parseFloat(newCheckInValue) < 0) {
-      Alert.alert('Erro', 'Digite um valor válido por check-in');
-      return;
-    }
-
-    try {
-      const gymToken = await AsyncStorage.getItem('gymToken');
-      const headers = { 'Authorization': `Bearer ${gymToken}` };
-      
-      await axios.put(
-        `${API_URL}/gym/${gymInfo.id}/contract/value?check_in_value=${parseFloat(newCheckInValue)}`,
-        {},
-        { headers }
-      );
-      
-      Alert.alert('✅ Sucesso', 'Valor por check-in atualizado com sucesso!');
-      loadContract();
-      loadRevenueReport();
-    } catch (error) {
-      console.error('Erro ao atualizar valor:', error);
-      Alert.alert('Erro', 'Não foi possível atualizar o valor.');
-    }
-  };
-
   useEffect(() => {
     checkAuthentication();
   }, [checkAuthentication]);
-
-  useEffect(() => {
-    if (isAuthenticated && gymInfo?.id) {
-      if (activeTab === 'clients') loadClientsReport();
-      if (activeTab === 'revenue') loadRevenueReport();
-      if (activeTab === 'contract') loadContract();
-    }
-  }, [activeTab, isAuthenticated, gymInfo, loadClientsReport, loadRevenueReport, loadContract]);
 
   if (!isAuthenticated) {
     return (
@@ -224,211 +137,6 @@ Check-in realizado com sucesso!`,
       </SafeAreaView>
     );
   }
-
-  const renderValidationTab = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.validationContainer}>
-        <LinearGradient colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.06)']} style={styles.formGradient}>
-          <View style={styles.formHeader}>
-            <LinearGradient colors={['#22C55E', '#16A34A']} style={styles.formHeaderIcon}>
-              <Ionicons name="qr-code" size={32} color="#FFFFFF" />
-            </LinearGradient>
-            <Text style={styles.formTitle}>Validar Token do Cliente</Text>
-            <Text style={styles.formSubtitle}>Digite o código apresentado pelo cliente</Text>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              <Ionicons name="ticket-outline" size={16} color="#22C55E" /> Código do Token
-            </Text>
-            <View style={styles.inputContainer}>
-              <LinearGradient colors={['rgba(34, 197, 94, 0.15)', 'rgba(34, 197, 94, 0.08)']} style={styles.inputGradient}>
-                <View style={styles.inputIconContainer}>
-                  <Ionicons name="ticket" size={20} color="#22C55E" />
-                </View>
-                <TextInput
-                  style={styles.textInput}
-                  value={tokenCode}
-                  onChangeText={setTokenCode}
-                  placeholder="Ex: 12345"
-                  placeholderTextColor="#64748B"
-                  autoCapitalize="characters"
-                  keyboardType="numeric"
-                  maxLength={10}
-                />
-              </LinearGradient>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.validateButton, loading && styles.validateButtonDisabled]}
-            onPress={validateToken}
-            disabled={loading}
-          >
-            <LinearGradient
-              colors={loading ? ['#64748B', '#475569'] : ['#22C55E', '#16A34A']}
-              style={styles.validateButtonGradient}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                  <Text style={styles.validateButtonText}>Validar Token</Text>
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </LinearGradient>
-      </View>
-
-      {lastValidation && (
-        <View style={styles.resultContainer}>
-          <LinearGradient colors={['rgba(34, 197, 94, 0.15)', 'rgba(34, 197, 94, 0.08)']} style={styles.resultGradient}>
-            <View style={styles.resultHeader}>
-              <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
-              <Text style={styles.resultTitle}>✅ Última Validação</Text>
-            </View>
-            
-            <View style={styles.clientDetailsCard}>
-              <View style={styles.clientInfo}>
-                <Text style={styles.clientName}>{lastValidation.user?.full_name}</Text>
-                <Text style={styles.clientDetail}>📧 {lastValidation.user?.email}</Text>
-                <Text style={styles.clientDetail}>📱 {lastValidation.user?.phone || 'Não informado'}</Text>
-                <Text style={styles.clientDetail}>🆔 CPF: {lastValidation.user?.cpf || 'Não informado'}</Text>
-                <View style={styles.planBadge}>
-                  <Text style={styles.planText}>{lastValidation.user?.plan_type}</Text>
-                </View>
-              </View>
-            </View>
-          </LinearGradient>
-        </View>
-      )}
-    </View>
-  );
-
-  const renderClientsTab = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>👥 Clientes Atendidos</Text>
-        <Text style={styles.sectionSubtitle}>Total: {clients.length} clientes únicos</Text>
-      </View>
-
-      <ScrollView style={styles.clientsList}>
-        {clients.map((client: any) => (
-          <TouchableOpacity key={client.id} style={styles.clientCard}>
-            <LinearGradient colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']} style={styles.clientCardGradient}>
-              <View style={styles.clientCardContent}>
-                <View style={styles.clientCardInfo}>
-                  <Text style={styles.clientCardName}>{client.full_name}</Text>
-                  <Text style={styles.clientCardDetail}>📧 {client.email}</Text>
-                  <Text style={styles.clientCardDetail}>🏃‍♂️ {client.total_visits} visitas</Text>
-                  <View style={styles.planBadgeSmall}>
-                    <Text style={styles.planTextSmall}>{client.plan_type}</Text>
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#94A3B8" />
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
-  );
-
-  const renderRevenueTab = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>💰 Relatório Financeiro</Text>
-        <Text style={styles.sectionSubtitle}>Receita por check-ins</Text>
-      </View>
-
-      {revenueData && (
-        <ScrollView>
-          <View style={styles.revenueCards}>
-            <LinearGradient colors={['rgba(34, 197, 94, 0.15)', 'rgba(34, 197, 94, 0.08)']} style={styles.revenueCard}>
-              <Text style={styles.revenueCardTitle}>💵 Valor por Check-in</Text>
-              <Text style={styles.revenueCardValue}>
-                {revenueData.check_in_value?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
-              </Text>
-            </LinearGradient>
-
-            <LinearGradient colors={['rgba(59, 130, 246, 0.15)', 'rgba(59, 130, 246, 0.08)']} style={styles.revenueCard}>
-              <Text style={styles.revenueCardTitle}>📅 {revenueData.monthly_stats?.month || 'Este Mês'}</Text>
-              <Text style={styles.revenueCardValue}>
-                {revenueData.monthly_stats?.revenue?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
-              </Text>
-              <Text style={styles.revenueCardSubtitle}>{revenueData.monthly_stats?.checkins || 0} check-ins</Text>
-            </LinearGradient>
-
-            <LinearGradient colors={['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0.08)']} style={styles.revenueCard}>
-              <Text style={styles.revenueCardTitle}>🏆 Total Geral</Text>
-              <Text style={styles.revenueCardValue}>
-                {revenueData.total_stats?.revenue?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
-              </Text>
-              <Text style={styles.revenueCardSubtitle}>{revenueData.total_stats?.checkins || 0} check-ins</Text>
-            </LinearGradient>
-          </View>
-        </ScrollView>
-      )}
-    </View>
-  );
-
-  const renderContractTab = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>📋 Gestão de Contrato</Text>
-        <Text style={styles.sectionSubtitle}>Configure valores e documentos</Text>
-      </View>
-
-      <ScrollView>
-        <View style={styles.contractSection}>
-          <LinearGradient colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']} style={styles.contractCard}>
-            <Text style={styles.contractCardTitle}>💰 Valor por Check-in</Text>
-            <View style={styles.valueInputContainer}>
-              <Text style={styles.valueLabel}>R$</Text>
-              <TextInput
-                style={styles.valueInput}
-                value={newCheckInValue}
-                onChangeText={setNewCheckInValue}
-                placeholder="0,00"
-                placeholderTextColor="#64748B"
-                keyboardType="numeric"
-              />
-              <TouchableOpacity style={styles.updateButton} onPress={updateCheckInValue}>
-                <LinearGradient colors={['#22C55E', '#16A34A']} style={styles.updateButtonGradient}>
-                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                  <Text style={styles.updateButtonText}>Salvar</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
-
-          <LinearGradient colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']} style={styles.contractCard}>
-            <Text style={styles.contractCardTitle}>📄 Documento do Contrato</Text>
-            <Text style={styles.contractInfo}>
-              Status: {contractData?.status === 'signed' ? '✅ Assinado' : '⏳ Pendente'}
-            </Text>
-            {contractData?.signed_at && (
-              <Text style={styles.contractInfo}>
-                Assinado em: {new Date(contractData.signed_at).toLocaleDateString('pt-BR')}
-              </Text>
-            )}
-            
-            <TouchableOpacity 
-              style={styles.documentButton} 
-              onPress={() => Alert.alert('Em Breve', 'Funcionalidade de upload será implementada em breve.')}
-            >
-              <LinearGradient colors={['#3B82F6', '#1D4ED8']} style={styles.documentButtonGradient}>
-                <Ionicons name="document-attach" size={20} color="#FFFFFF" />
-                <Text style={styles.documentButtonText}>Anexar Contrato Assinado</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </LinearGradient>
-        </View>
-      </ScrollView>
-    </View>
-  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -496,10 +204,100 @@ Check-in realizado com sucesso!`,
 
         {/* Tab Content */}
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {activeTab === 'validation' && renderValidationTab()}
-          {activeTab === 'clients' && renderClientsTab()}
-          {activeTab === 'revenue' && renderRevenueTab()}
-          {activeTab === 'contract' && renderContractTab()}
+          {activeTab === 'validation' && (
+            <View style={styles.tabContent}>
+              <View style={styles.validationContainer}>
+                <LinearGradient colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.06)']} style={styles.formGradient}>
+                  <View style={styles.formHeader}>
+                    <LinearGradient colors={['#22C55E', '#16A34A']} style={styles.formHeaderIcon}>
+                      <Ionicons name="qr-code" size={32} color="#FFFFFF" />
+                    </LinearGradient>
+                    <Text style={styles.formTitle}>Validar Token do Cliente</Text>
+                    <Text style={styles.formSubtitle}>Digite o código apresentado pelo cliente</Text>
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>
+                      <Ionicons name="ticket-outline" size={16} color="#22C55E" /> Código do Token
+                    </Text>
+                    <View style={styles.inputContainer}>
+                      <LinearGradient colors={['rgba(34, 197, 94, 0.15)', 'rgba(34, 197, 94, 0.08)']} style={styles.inputGradient}>
+                        <View style={styles.inputIconContainer}>
+                          <Ionicons name="ticket" size={20} color="#22C55E" />
+                        </View>
+                        <TextInput
+                          style={styles.textInput}
+                          value={tokenCode}
+                          onChangeText={setTokenCode}
+                          placeholder="Ex: 12345"
+                          placeholderTextColor="#64748B"
+                          autoCapitalize="characters"
+                          keyboardType="numeric"
+                          maxLength={10}
+                        />
+                      </LinearGradient>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.validateButton, loading && styles.validateButtonDisabled]}
+                    onPress={validateToken}
+                    disabled={loading}
+                  >
+                    <LinearGradient
+                      colors={loading ? ['#64748B', '#475569'] : ['#22C55E', '#16A34A']}
+                      style={styles.validateButtonGradient}
+                    >
+                      {loading ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <>
+                          <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                          <Text style={styles.validateButtonText}>Validar Token</Text>
+                        </>
+                      )}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </View>
+
+              {lastValidation && (
+                <View style={styles.resultContainer}>
+                  <LinearGradient colors={['rgba(34, 197, 94, 0.15)', 'rgba(34, 197, 94, 0.08)']} style={styles.resultGradient}>
+                    <View style={styles.resultHeader}>
+                      <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
+                      <Text style={styles.resultTitle}>✅ Última Validação</Text>
+                    </View>
+                    
+                    <View style={styles.clientDetailsCard}>
+                      <View style={styles.clientInfo}>
+                        <Text style={styles.clientName}>{lastValidation.user?.full_name}</Text>
+                        <Text style={styles.clientDetail}>📧 {lastValidation.user?.email}</Text>
+                        <Text style={styles.clientDetail}>📱 {lastValidation.user?.phone || 'Não informado'}</Text>
+                        <Text style={styles.clientDetail}>🆔 CPF: {lastValidation.user?.cpf || 'Não informado'}</Text>
+                        <View style={styles.planBadge}>
+                          <Text style={styles.planText}>{lastValidation.user?.plan_type}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </View>
+              )}
+            </View>
+          )}
+
+          {activeTab !== 'validation' && (
+            <View style={styles.tabContent}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  {activeTab === 'clients' && '👥 Clientes'}
+                  {activeTab === 'revenue' && '💰 Receita'}  
+                  {activeTab === 'contract' && '📋 Contrato'}
+                </Text>
+                <Text style={styles.sectionSubtitle}>Em breve...</Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
       </LinearGradient>
     </SafeAreaView>
@@ -742,147 +540,5 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     color: '#94A3B8',
     fontSize: 14,
-  },
-  clientsList: {
-    maxHeight: 400,
-  },
-  clientCard: {
-    marginBottom: 12,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  clientCardGradient: {
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  clientCardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  clientCardInfo: {
-    flex: 1,
-  },
-  clientCardName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  clientCardDetail: {
-    color: '#94A3B8',
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  planBadgeSmall: {
-    backgroundColor: 'rgba(34, 197, 94, 0.3)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginTop: 4,
-  },
-  planTextSmall: {
-    color: '#22C55E',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  revenueCards: {
-    gap: 16,
-  },
-  revenueCard: {
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  revenueCardTitle: {
-    color: '#E2E8F0',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  revenueCardValue: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  revenueCardSubtitle: {
-    color: '#94A3B8',
-    fontSize: 12,
-  },
-  contractSection: {
-    gap: 16,
-  },
-  contractCard: {
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  contractCardTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  valueInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  valueLabel: {
-    color: '#22C55E',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  valueInput: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  updateButton: {
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  updateButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 4,
-  },
-  updateButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  contractInfo: {
-    color: '#94A3B8',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  documentButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginTop: 12,
-  },
-  documentButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 8,
-  },
-  documentButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });
