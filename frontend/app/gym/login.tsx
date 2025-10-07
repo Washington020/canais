@@ -121,6 +121,8 @@ export default function GymLogin() {
       );
     } catch (error: any) {
       console.error('Login error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       
       let title = 'Erro de Login ❌';
       let message = 'Não foi possível realizar o login.';
@@ -128,13 +130,13 @@ export default function GymLogin() {
       if (error.response?.status === 401) {
         const detail = error.response.data?.detail || '';
         title = 'Credenciais Inválidas ❌';
-        message = 'Login ou senha incorretos. Verifique suas credenciais e tente novamente.\n\n💡 Dica: Entre em contato com o administrador para obter ou resetar suas credenciais.';
+        message = `Login ou senha incorretos. Verifique suas credenciais e tente novamente.\n\n💡 Dica: Entre em contato com o administrador para obter ou resetar suas credenciais.\n\nDetalhes técnicos: ${detail}`;
       } else if (error.response?.status === 400) {
         title = 'Dados Inválidos ❌';
         message = 'Login e senha são obrigatórios. Verifique se preencheu todos os campos.';
       } else if (error.response?.status === 403) {
         title = 'Academia Não Aprovada ❌';
-        message = 'Sua academia ainda não foi aprovada pelo administrador. Entre em contato para ativação.';
+        message = 'Sua academia ainda não foi aprovada pelo administrador. Entre em contato para ativação.\n\n💡 Status necessário: Aprovada\n💡 Contate: suporte@luxepass.com';
       } else if (error.code === 'ECONNABORTED') {
         title = 'Timeout ❌';
         message = 'A conexão demorou muito. Verifique sua internet e tente novamente.';
