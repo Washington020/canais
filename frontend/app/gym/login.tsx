@@ -114,7 +114,7 @@ export default function GymLogin() {
           {
             text: 'Acessar Sistema',
             onPress: () => {
-              router.push('/gym/validation');
+              router.push('/gym/index');
             }
           }
         ]
