@@ -597,7 +597,7 @@ export default function GymsManagement() {
                   'Content-Type': 'application/json'
                 };
                 
-                const response = await axios.put(
+                const response = await axios.post(
                   `/api/admin/gyms/${gymId}/reset-password`, 
                   {}, 
                   { headers, timeout: 10000 }
@@ -605,13 +605,24 @@ export default function GymsManagement() {
                 
                 console.log('✅ Nova senha gerada:', response.data);
 
-                if (response.data.success && response.data.new_password) {
+                if (response.data.success && response.data.password) {
                   // Mostrar as credenciais no modal
                   setGeneratedCredentials({
                     username: response.data.login || `gym_${gymName.toLowerCase().replace(/\s+/g, '_')}`,
-                    password: response.data.new_password
+                    password: response.data.password
                   });
                   setShowCredentials(true);
+                  
+                  // Mostrar alert de sucesso
+                  Alert.alert(
+                    '🔄 Senha Resetada com Sucesso!',
+                    `✅ Nova senha gerada para "${gymName}"!\n\n` +
+                    `🔑 Novas credenciais:\n` +
+                    `• Login: ${response.data.login}\n` +
+                    `• Senha: ${response.data.password}\n\n` +
+                    `📧 Informe as novas credenciais à academia.`,
+                    [{ text: 'OK' }]
+                  );
                   
                   // Recarregar a lista
                   setTimeout(async () => {
