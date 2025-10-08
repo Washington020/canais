@@ -1225,6 +1225,9 @@ export default function GymsManagement() {
               {/* Informações Financeiras */}
               <View style={styles.formSection}>
                 <Text style={styles.sectionTitle}>💰 Informações Financeiras</Text>
+                <Text style={styles.sectionDescription}>
+                  Configure os dados para pagamento da parceria
+                </Text>
                 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Chave PIX *</Text>
@@ -1232,14 +1235,15 @@ export default function GymsManagement() {
                     style={styles.input}
                     value={form.pix_key}
                     onChangeText={(text) => setForm({...form, pix_key: text})}
-                    placeholder="CPF, CNPJ, email ou telefone"
+                    placeholder="CPF, email, telefone ou chave aleatória"
                     placeholderTextColor="#64748B"
                   />
+                  <Text style={styles.inputHint}>Para recebimento dos valores da parceria</Text>
                 </View>
 
                 <View style={styles.inputRow}>
                   <View style={[styles.inputGroup, {flex: 2}]}>
-                    <Text style={styles.inputLabel}>Banco *</Text>
+                    <Text style={styles.inputLabel}>Banco (Opcional)</Text>
                     <TextInput
                       style={styles.input}
                       value={form.bank_account.bank}
@@ -1247,12 +1251,12 @@ export default function GymsManagement() {
                         ...form, 
                         bank_account: {...form.bank_account, bank: text}
                       })}
-                      placeholder="Ex: Banco do Brasil"
+                      placeholder="341 - Itaú"
                       placeholderTextColor="#64748B"
                     />
                   </View>
                   <View style={[styles.inputGroup, {flex: 1, marginLeft: 12}]}>
-                    <Text style={styles.inputLabel}>Agência *</Text>
+                    <Text style={styles.inputLabel}>Agência</Text>
                     <TextInput
                       style={styles.input}
                       value={form.bank_account.agency}
@@ -1262,14 +1266,13 @@ export default function GymsManagement() {
                       })}
                       placeholder="1234"
                       placeholderTextColor="#64748B"
-                      keyboardType="numeric"
                     />
                   </View>
                 </View>
 
                 <View style={styles.inputRow}>
                   <View style={[styles.inputGroup, {flex: 2}]}>
-                    <Text style={styles.inputLabel}>Conta *</Text>
+                    <Text style={styles.inputLabel}>Conta</Text>
                     <TextInput
                       style={styles.input}
                       value={form.bank_account.account}
@@ -1282,17 +1285,34 @@ export default function GymsManagement() {
                     />
                   </View>
                   <View style={[styles.inputGroup, {flex: 1, marginLeft: 12}]}>
-                    <Text style={styles.inputLabel}>Tipo *</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={form.bank_account.account_type}
-                      onChangeText={(text) => setForm({
-                        ...form, 
-                        bank_account: {...form.bank_account, account_type: text as 'corrente' | 'poupanca'}
-                      })}
-                      placeholder="corrente"
-                      placeholderTextColor="#64748B"
-                    />
+                    <Text style={styles.inputLabel}>Tipo</Text>
+                    <TouchableOpacity
+                      style={[styles.input, styles.pickerButton]}
+                      onPress={() => {
+                        Alert.alert(
+                          'Tipo de Conta',
+                          'Selecione o tipo de conta',
+                          [
+                            {text: 'Corrente', onPress: () => setForm({
+                              ...form, 
+                              bank_account: {...form.bank_account, account_type: 'corrente'}
+                            })},
+                            {text: 'Poupança', onPress: () => setForm({
+                              ...form, 
+                              bank_account: {...form.bank_account, account_type: 'poupanca'}
+                            })},
+                            {text: 'Cancelar', style: 'cancel'}
+                          ]
+                        );
+                      }}
+                    >
+                      <Text style={[styles.pickerButtonText, {
+                        color: form.bank_account.account_type ? '#FFFFFF' : '#64748B'
+                      }]}>
+                        {form.bank_account.account_type === 'corrente' ? 'Corrente' : 
+                         form.bank_account.account_type === 'poupanca' ? 'Poupança' : 'Tipo'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
