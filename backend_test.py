@@ -248,47 +248,118 @@ class GymRegistrationAuthTest:
             self.log_test("Password Reset Functionality", False, error=str(e))
             return False
     
-    def test_custom_password_setting(self):
-        """Test 7: Test Custom Password Setting"""
-        if not self.admin_token or not self.created_gym_id:
-            self.log_test("Custom Password Setting", False, error="Missing admin token or gym ID")
+    def test_old_password_stops_working(self):
+        """Test 5: Verify old password stops working after reset"""
+        if not self.created_login or not self.created_password or not self.reset_password:
+            self.log_test("Old Password Stops Working", False, error="Missing credentials or reset not performed")
             return False
             
         try:
-            custom_password = "novasenha456"
-            headers = {"Authorization": f"Bearer {self.admin_token}"}
-            response = requests.put(f"{API_BASE}/admin/gyms/{self.created_gym_id}/set-password", 
-                                  json={"password": custom_password}, headers=headers)
+            # Try to login with old password
+            response = requests.post(f"{API_BASE}/gym/auth", json={
+                "login": self.created_login,
+                "password": self.created_password
+            })
             
-            if response.status_code == 200:
-                data = response.json()
-                login = data.get("login")
-                
-                if login:
-                    # Test login with custom password
-                    login_response = requests.post(f"{API_BASE}/gym/auth", json={
-                        "login": login,
-                        "password": custom_password
-                    })
-                    
-                    if login_response.status_code == 200:
-                        self.log_test("Custom Password Setting", True, 
-                            f"Custom password set successfully - Login works with: {login}")
-                        return True
-                    else:
-                        self.log_test("Custom Password Setting", False, 
-                            error=f"Custom password doesn't work - Login failed: {login_response.status_code}")
-                        return False
-                else:
-                    self.log_test("Custom Password Setting", False, error="Missing login in response")
-                    return False
+            if response.status_code == 401:
+                self.log_test("Old Password Stops Working", True, 
+                    f"Old password correctly rejected with 401 Unauthorized")
+                return True
+            elif response.status_code == 200:
+                self.log_test("Old Password Stops Working", False, 
+                    error="Old password still works - password reset failed")
+                return False
             else:
-                self.log_test("Custom Password Setting", False, 
-                    error=f"Status {response.status_code}: {response.text}")
+                self.log_test("Old Password Stops Working", False, 
+                    error=f"Unexpected status {response.status_code}: {response.text}")
                 return False
                 
         except Exception as e:
-            self.log_test("Custom Password Setting", False, error=str(e))
+            self.log_test("Old Password Stops Working", False, error=str(e))
+            return False
+    
+    def test_new_password_works(self):
+        """Test 6: Verify new password works after reset"""
+        if not self.created_login or not self.reset_password:
+            self.log_test("New Password Works", False, error="Missing login or reset password")
+            return False
+            
+        try:
+            # Try to login with new password
+            response = requests.post(f"{API_BASE}/gym/auth", json={
+                "login": self.created_login,
+                "password": self.reset_password
+            })
+            
+            if response.status_code == 200:
+                data = response.json()
+                access_token = data.get("access_token")
+                gym_info = data.get("gym_info", {})
+                
+                if access_token and gym_info:
+                    self.log_test("New Password Works", True, 
+                        f"New password works correctly - Gym: {gym_info.get('name')}, Token: {len(access_token)} chars")
+                    return True
+                else:
+                    self.log_test("New Password Works", False, error="Missing access_token or gym_info in response")
+                    return False
+            else:
+                self.log_test("New Password Works", False, 
+                    error=f"New password authentication failed with status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("New Password Works", False, error=str(e))
+            return False
+    
+    def test_existing_gym_credentials(self):
+        """Test 7: Test existing gym credentials (academia_teste_demo)"""
+        try:
+            response = requests.post(f"{API_BASE}/gym/auth", json={
+                "login": "academia_teste_demo",
+                "password": "123456"
+            })
+            
+            if response.status_code == 200:
+                data = response.json()
+                access_token = data.get("access_token")
+                gym_info = data.get("gym_info", {})
+                
+                if access_token and gym_info:
+                    self.log_test("Existing Gym Credentials", True, 
+                        f"Existing gym login works - Gym: {gym_info.get('name')}, Token: {len(access_token)} chars")
+                    return True
+                else:
+                    self.log_test("Existing Gym Credentials", False, error="Missing access_token or gym_info in response")
+                    return False
+            else:
+                self.log_test("Existing Gym Credentials", False, 
+                    error=f"Existing gym login failed with status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Existing Gym Credentials", False, error=str(e))
+            return False
+    
+    def test_invalid_credentials_error_handling(self):
+        """Test 8: Test error handling for invalid credentials"""
+        try:
+            response = requests.post(f"{API_BASE}/gym/auth", json={
+                "login": "invalid_gym_login",
+                "password": "wrong_password"
+            })
+            
+            if response.status_code == 401:
+                self.log_test("Invalid Credentials Error Handling", True, 
+                    f"Invalid credentials correctly rejected with 401 Unauthorized")
+                return True
+            else:
+                self.log_test("Invalid Credentials Error Handling", False, 
+                    error=f"Expected 401 but got {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Invalid Credentials Error Handling", False, error=str(e))
             return False
     
     def run_all_tests(self):
