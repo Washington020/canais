@@ -754,6 +754,32 @@ export default function GymsManagement() {
           />
           <Text style={styles.headerTitle}>Gestão de Academias</Text>
         </View>
+        <TouchableOpacity style={styles.testButton} onPress={async () => {
+          try {
+            const token = await AsyncStorage.getItem('token');
+            const response = await axios.post(`/api/admin/gyms/create-test`, {}, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.data.success) {
+              Alert.alert(
+                '🎉 Academia de Teste Criada!',
+                `✅ Academia criada com sucesso!\n\n` +
+                `🔑 Credenciais para login:\n` +
+                `• Login: ${response.data.login}\n` +
+                `• Senha: ${response.data.password}\n\n` +
+                `🏢 Use essas credenciais no App Academia (/academia)`,
+                [{ text: 'OK' }]
+              );
+              loadGyms();
+            }
+          } catch (error: any) {
+            Alert.alert('Erro', error.response?.data?.detail || 'Erro ao criar academia de teste');
+          }
+        }}>
+          <Ionicons name="flask" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        
         <TouchableOpacity style={styles.addButton} onPress={() => setShowModal(true)}>
           <Ionicons name="add" size={24} color="#FFFFFF" />
         </TouchableOpacity>
