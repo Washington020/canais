@@ -2219,4 +2219,56 @@ const styles = StyleSheet.create({
   confirmModalButtonDisabled: {
     opacity: 0.5,
   },
+  // New styles for improved form sections
+  sectionDescription: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  inputHint: {
+    color: '#64748B',
+    fontSize: 12,
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerButtonText: {
+    fontSize: 16,
+  },
+  gymTypeContainer: {
+    marginBottom: 20,
+  },
+  gymTypeCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  gymTypeCardSelected: {
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    borderColor: '#8B5CF6',
+  },
+  gymTypeHeader: {
+    marginBottom: 8,
+  },
+  gymTypeTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  gymTypeDescription: {
+    color: '#94A3B8',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  gymTypeTextSelected: {
+    color: '#FFFFFF',
+  },
 });
