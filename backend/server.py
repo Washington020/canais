@@ -1830,8 +1830,8 @@ async def book_appointment(
 ):
     """Book an appointment slot"""
     try:
-        user_id = str(current_user["_id"])
-        plan_type = current_user.get("plan_type", "basico")
+        user_id = str(current_user.id) if hasattr(current_user, 'id') else str(current_user["_id"])
+        plan_type = getattr(current_user, 'plan_type', 'vip') if hasattr(current_user, 'plan_type') else current_user.get("plan_type", "vip")
         
         # Get the slot
         slot = await db.appointment_slots.find_one({"_id": ObjectId(slot_id)})
