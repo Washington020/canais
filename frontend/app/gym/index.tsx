@@ -1,18 +1,40 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function GymTest() {
+export default function GymIndex() {
+  const router = useRouter();
+
+  useEffect(() => {
+    checkAuthAndRedirect();
+  }, []);
+
+  const checkAuthAndRedirect = async () => {
+    try {
+      const token = await AsyncStorage.getItem('gymToken');
+      const gymInfo = await AsyncStorage.getItem('gymInfo');
+      
+      if (token && gymInfo) {
+        // Usuário autenticado, redirecionar para dashboard
+        router.replace('/gym/dashboard');
+      } else {
+        // Não autenticado, redirecionar para login
+        router.replace('/gym/login');
+      }
+    } catch (error) {
+      console.error('Erro ao verificar autenticação:', error);
+      router.replace('/gym/login');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.content}>
-        <Text style={styles.title}>🏋️ Sistema da Academia</Text>
-        <Text style={styles.subtitle}>Teste de Roteamento</Text>
-        <Text style={styles.message}>
-          Se você está vendo esta tela, o roteamento está funcionando corretamente!
-        </Text>
+        <ActivityIndicator size="large" color="#8B5CF6" />
       </View>
     </SafeAreaView>
   );
@@ -21,32 +43,11 @@ export default function GymTest() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0D17',
+    backgroundColor: '#0F172A',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: '#22C55E',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  message: {
-    color: '#94A3B8',
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
   },
 });
