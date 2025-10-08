@@ -124,20 +124,54 @@ export default function GymDashboard() {
       const token = await AsyncStorage.getItem('gymToken');
       const headers = { Authorization: `Bearer ${token}` };
       
-      const response = await axios.post(`${API_URL}/tokens/validate/${tokenCode}`, {}, { headers });
+      // Passar o gym_id como parâmetro de query
+      const response = await axios.post(
+        `${API_URL}/tokens/validate/${tokenCode}?gym_id=${gymInfo?.id}`, 
+        {}, 
+        { headers }
+      );
       
-      if (response.data.success) {
-        const client = response.data.client;
-        setClientData(client);
+      if (response.data.valid) {
+        const userData = response.data.user;
+        const tokenInfo = response.data.token_info;
         
+        // Criar objeto cliente com dados completos
+        const clientData = {
+          id: userData.id,
+          name: userData.full_name,
+          email: userData.email,
+          phone: userData.phone,
+          cpf: userData.cpf,
+          plan: userData.plan_type,
+          profile_photo: userData.profile_photo,
+          date_of_birth: userData.date_of_birth,
+          address: userData.address,
+          emergency_contact: userData.emergency_contact,
+          medical_conditions: userData.medical_conditions,
+          tokens_used_today: userData.tokens_used_today,
+          member_since: userData.member_since,
+          token_code: tokenInfo.token_code,
+          token_type: tokenInfo.token_type,
+          expires_at: tokenInfo.expires_at
+        };
+        
+        setClientData(clientData);
+        
+        // Mostrar dados completos do cliente
         Alert.alert(
-          '✅ Token Válido!',
-          `Cliente: ${client.name}\nPlano: ${client.plan}\nVálido até: ${new Date(client.valid_until).toLocaleDateString('pt-BR')}`,
+          '✅ TOKEN VÁLIDO!',
+          `👤 Cliente: ${userData.full_name}\n` +
+          `📧 Email: ${userData.email}\n` +
+          `📱 Telefone: ${userData.phone}\n` +
+          `🆔 CPF: ${userData.cpf}\n` +
+          `🏅 Plano: ${userData.plan_type}\n` +
+          `📅 Membro desde: ${new Date(userData.member_since).toLocaleDateString('pt-BR')}\n` +
+          `🎫 Tokens usados hoje: ${userData.tokens_used_today}`,
           [
-            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Ver Mais Detalhes', onPress: () => setShowClientDetails(true) },
             {
               text: 'Confirmar Check-in',
-              onPress: () => performCheckIn(client)
+              onPress: () => performCheckIn(clientData)
             }
           ]
         );
