@@ -1561,6 +1561,53 @@ async def create_test_gym():
         "login_url": "/academia"
     }
 
+@api_router.post("/admin/gyms/{gym_id}/reset-password")
+async def reset_gym_password(gym_id: str):
+    """Reset gym password and return new credentials"""
+    import random
+    import string
+    from passlib.context import CryptContext
+    
+    try:
+        # Generate new password
+        new_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        
+        # Hash the new password
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        hashed_password = pwd_context.hash(new_password)
+        
+        # Update gym password in database
+        result = await db.gyms.update_one(
+            {"_id": ObjectId(gym_id)},
+            {"$set": {
+                "login_credentials.password_hash": hashed_password,
+                "password_reset_at": datetime.now(timezone.utc)
+            }}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Academia não encontrada")
+            
+        # Get gym info for response
+        gym = await db.gyms.find_one({"_id": ObjectId(gym_id)})
+        gym_name = gym.get("name", "Academia")
+        login = gym.get("login_credentials", {}).get("username", "")
+        
+        return {
+            "success": True,
+            "gym_id": gym_id,
+            "gym_name": gym_name,
+            "login": login,
+            "password": new_password,
+            "message": f"🔄 SENHA RESETADA! Nova senha gerada para '{gym_name}'. Login: {login} / Nova Senha: {new_password}",
+            "reset_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f"Erro ao resetar senha: {str(e)}")
+
 @api_router.put("/admin/gyms/{gym_id}/status")
 async def update_gym_status(gym_id: str, status_data: dict):
     status = status_data["status"]
