@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-LuxePass Academia Creation and Login Integration Flow Test
-Testing complete flow from admin creation to gym system access
+Gym Registration and Authentication System Integration Test
+Testing complete workflow from admin gym registration to gym authentication
+Focus: Integration between admin panel and gym authentication system
 """
 
 import requests
 import json
 import sys
 import os
+import uuid
 from datetime import datetime
 
 # Get backend URL from environment
