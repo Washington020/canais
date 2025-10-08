@@ -125,23 +125,50 @@ export default function GymsManagement() {
   const loadingRef = useRef(false);
 
   const [form, setForm] = useState<GymForm>({
+    // Informações básicas
     name: '',
+    cnpj: '',
+    razao_social: '',
+    
+    // Proprietário
+    owner_name: '',
+    owner_cpf: '',
+    owner_email: '',
+    owner_phone: '',
+    
+    // Endereço
+    endereco: '',
+    numero: '',
+    bairro: '',
+    cidade: '',
+    estado: 'SP',
+    cep: '',
+    
+    // Contato
     email: '',
     phone: '',
-    address: {
-      street: '',
-      number: '',
-      city: 'São Paulo',
-      state: 'SP',
-      zip_code: ''
+    
+    // Financeiro
+    pix_key: '',
+    bank_account: {
+      bank: '',
+      agency: '',
+      account: '',
+      account_type: 'corrente'
     },
+    
+    // Tipo e valores
+    gym_type: 'simples',
+    monthly_fee: '',
+    check_in_value: '15.00',
+    
+    // Operação
     capacity: '',
     operating_hours: {
       weekdays: '06:00 - 22:00',
       saturday: '08:00 - 18:00',
       sunday: '08:00 - 16:00'
     },
-    commission_rate: '15',
     amenities: [],
     description: ''
   });
