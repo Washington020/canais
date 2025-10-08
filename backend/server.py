@@ -1753,8 +1753,8 @@ async def get_available_appointments(
 ):
     """Get available appointment slots for a specific professional type"""
     try:
-        user_id = str(current_user["_id"])
-        plan_type = current_user.get("plan_type", "basico")
+        user_id = str(current_user.id) if hasattr(current_user, 'id') else str(current_user["_id"])
+        plan_type = getattr(current_user, 'plan_type', 'vip') if hasattr(current_user, 'plan_type') else current_user.get("plan_type", "vip")
         
         # Check if user has remaining appointments for this professional type
         limits = await get_monthly_appointment_limits(user_id, plan_type)
