@@ -1458,10 +1458,10 @@ async def register_gym(gym_data: dict):
         "gym_id": str(result.inserted_id),
         "login": login,
         "password": password,
-        "gym_name": gym_data["name"],
-        "gym_email": gym_data["email"],
+        "gym_name": gym_data.get("name", "Academia Teste"),
+        "gym_email": gym_data.get("email", "teste@academia.com"),
         "status": "approved",
-        "message": f"🎉 PARCEIRO CADASTRADO COM SUCESSO! Academia '{gym_data['name']}' foi cadastrada e aprovada automaticamente. Credenciais enviadas para {gym_data['email']}.",
+        "message": f"🎉 PARCEIRO CADASTRADO COM SUCESSO! Academia '{gym_data.get('name', 'Academia Teste')}' foi cadastrada e aprovada automaticamente. Credenciais enviadas para {gym_data.get('email', 'teste@academia.com')}.",
         "login_credentials": {
             "username": login,
             "password": password
@@ -1472,6 +1472,93 @@ async def register_gym(gym_data: dict):
             "Acesse o Sistema Academia com as credenciais",
             "URL do Sistema: /academia"
         ]
+    }
+
+@api_router.post("/admin/gyms/create-test")
+async def create_test_gym():
+    """Create a test gym for demonstration purposes"""
+    import random
+    import string
+    from passlib.context import CryptContext
+    
+    # Generate test credentials
+    login = "academia_teste_demo"
+    password = "123456"
+    
+    # Hash the password
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    hashed_password = pwd_context.hash(password)
+    
+    # Create test gym data
+    gym_doc = {
+        "name": "Academia Teste Demo",
+        "cnpj": "12.345.678/0001-99",
+        "razao_social": "Academia Teste Demo LTDA",
+        "address": "Rua de Teste, 123 - Centro, São Paulo/SP",
+        "endereco_completo": {
+            "endereco": "Rua de Teste",
+            "numero": "123",
+            "complemento": "",
+            "bairro": "Centro",
+            "cidade": "São Paulo",
+            "estado": "SP",
+            "cep": "01234-567"
+        },
+        "email": "contato@academiateste.com",
+        "site": "",
+        "phone": "(11) 3333-4444",
+        "telefone_secundario": "",
+        "horario_funcionamento": "06:00 - 22:00",
+        "type": "completa",
+        "franquia": "",
+        "num_unidades": "1",
+        "responsavel": {
+            "nome": "João Silva Teste",
+            "cargo": "Gerente",
+            "email": "joao@academiateste.com",
+            "telefone": "(11) 99999-8888"
+        },
+        "modelo_negocio": "Mensal",
+        "dados_legais": {
+            "inscricao_estadual": "",
+            "alvara_funcionamento": "",
+            "documento_responsavel": ""
+        },
+        "dados_operacionais": {
+            "recursos_oferecidos": "Musculação, Cardio, Aulas em Grupo",
+            "politicas_cancelamento": "",
+            "observacoes_qualidade": ""
+        },
+        "login_credentials": {
+            "username": login,
+            "password_hash": hashed_password
+        },
+        "status": "approved",
+        "created_at": datetime.now(timezone.utc),
+        "approved_at": datetime.now(timezone.utc)
+    }
+    
+    # Check if test gym already exists
+    existing_gym = await db.gyms.find_one({"login_credentials.username": login})
+    if existing_gym:
+        # Update existing gym
+        result = await db.gyms.update_one(
+            {"_id": existing_gym["_id"]},
+            {"$set": gym_doc}
+        )
+        gym_id = str(existing_gym["_id"])
+    else:
+        # Insert new gym
+        result = await db.gyms.insert_one(gym_doc)
+        gym_id = str(result.inserted_id)
+    
+    return {
+        "success": True,
+        "gym_id": gym_id,
+        "login": login,
+        "password": password,
+        "message": f"🎉 ACADEMIA DE TESTE CRIADA! Use as credenciais: {login} / {password}",
+        "login_url": "/academia"
     }
 
 @api_router.put("/admin/gyms/{gym_id}/status")
