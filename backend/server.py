@@ -1400,8 +1400,8 @@ async def register_gym(gym_data: dict):
     
     # Prepare gym document
     gym_doc = {
-        "name": gym_data["name"],
-        "cnpj": gym_data["cnpj"],
+        "name": gym_data.get("name", ""),
+        "cnpj": gym_data.get("cnpj", ""),
         "razao_social": gym_data.get("razao_social", ""),
         "address": f"{gym_data.get('endereco', '')}, {gym_data.get('numero', '')} - {gym_data.get('bairro', '')}, {gym_data.get('cidade', '')}/{gym_data.get('estado', '')}",
         "endereco_completo": {
