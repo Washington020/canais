@@ -1055,6 +1055,42 @@ export default function GymsManagement() {
                 </View>
               </View>
 
+              {/* Access Credentials */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>🔑 Credenciais de Acesso</Text>
+                <Text style={styles.sectionDescription}>
+                  Defina login e senha personalizados ou deixe em branco para gerar automaticamente
+                </Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Login da Academia</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={customLogin}
+                    onChangeText={setCustomLogin}
+                    placeholder="Ex: academia_centro (deixe vazio para gerar automaticamente)"
+                    placeholderTextColor="#64748B"
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Senha</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={customPassword}
+                    onChangeText={setCustomPassword}
+                    placeholder="Senha personalizada (deixe vazio para gerar automaticamente)"
+                    placeholderTextColor="#64748B"
+                    secureTextEntry={false}
+                    autoCapitalize="none"
+                  />
+                  {customPassword.length > 0 && customPassword.length < 6 && (
+                    <Text style={styles.errorText}>⚠️ Senha deve ter pelo menos 6 caracteres</Text>
+                  )}
+                </View>
+              </View>
+
               {/* Description */}
               <View style={styles.formSection}>
                 <Text style={styles.sectionTitle}>📝 Descrição</Text>
