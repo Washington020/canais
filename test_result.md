@@ -294,6 +294,18 @@ backend:
           agent: "testing"
           comment: "✅ POST /api/admin/gyms/register endpoint working correctly. Successfully registered gym 'Academia Teste FitPass' with auto-generated credentials (Login: gym_academia_t_2039, Password: sm7zK4QN). Automatic credential generation system operational."
 
+  - task: "Enhanced Gym Registration System with Validation and Example Data"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/admin/(tabs)/gyms.tsx, /app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Implemented comprehensive gym registration system improvements: 1) Enhanced success feedback with 'PARCEIRO CADASTRADO' message showing credentials and next steps, 2) Comprehensive error handling with specific error messages for different HTTP status codes (400, 401, 403, 409, 422, 500), 3) Backend validation improvements with email format checking, duplicate CNPJ/email detection, and safer field access using .get() methods, 4) Example data button that pre-fills the entire form with realistic data for quick testing, 5) Backend response now includes detailed success information with login credentials, gym info, and next steps. System ready for testing."
+
   - task: "Admin Gym Status Update API"
     implemented: true
     working: true
