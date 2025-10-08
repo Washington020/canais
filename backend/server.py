@@ -1403,7 +1403,7 @@ async def register_gym(gym_data: dict):
         "name": gym_data["name"],
         "cnpj": gym_data["cnpj"],
         "razao_social": gym_data.get("razao_social", ""),
-        "address": f"{gym_data['endereco']}, {gym_data['numero']} - {gym_data['bairro']}, {gym_data['cidade']}/{gym_data['estado']}",
+        "address": f"{gym_data.get('endereco', '')}, {gym_data.get('numero', '')} - {gym_data.get('bairro', '')}, {gym_data.get('cidade', '')}/{gym_data.get('estado', '')}",
         "endereco_completo": {
             "endereco": gym_data["endereco"],
             "numero": gym_data["numero"],
