@@ -1836,6 +1836,13 @@ async def book_appointment(
         user_id = str(current_user.id) if hasattr(current_user, 'id') else str(current_user["_id"])
         plan_type = getattr(current_user, 'plan_type', 'vip') if hasattr(current_user, 'plan_type') else current_user.get("plan_type", "vip")
         
+        # Get data from request  
+        slot_id = booking_data.get("slot_id")
+        notes = booking_data.get("notes", "")
+        
+        if not slot_id:
+            raise HTTPException(400, "ID do horário é obrigatório")
+        
         # Get the slot
         slot = await db.appointment_slots.find_one({"_id": ObjectId(slot_id)})
         if not slot:
