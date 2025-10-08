@@ -1748,48 +1748,44 @@ async def create_test_professionals():
 
 @api_router.get("/clients/available-appointments")
 async def get_available_appointments(
-    professional_type: str = Query(...),
     current_user: dict = Depends(get_current_user)
 ):
-    """Get available appointment slots for a specific professional type"""
+    """Get available appointment slots for both nutritionist and personal trainer"""
     try:
         user_id = str(current_user.id) if hasattr(current_user, 'id') else str(current_user["_id"])
         plan_type = getattr(current_user, 'plan_type', 'vip') if hasattr(current_user, 'plan_type') else current_user.get("plan_type", "vip")
         
-        # Check if user has remaining appointments for this professional type
-        limits = await get_monthly_appointment_limits_new(user_id, plan_type)
-        
-        if professional_type == "nutritionist":
-            remaining = limits["remaining"]["nutritionist"]
-        elif professional_type == "personal_trainer":
-            remaining = limits["remaining"]["personal_trainer"] 
-        else:
-            raise HTTPException(400, "Tipo de profissional inválido")
-            
-        if remaining <= 0:
+        # Check if plan allows professional consultations
+        if plan_type == "basico":
             return {
                 "success": False,
-                "message": f"Você já utilizou todas as consultas de {professional_type} do seu plano este mês",
+                "message": "Seu plano não inclui consultas com profissionais. Faça upgrade para Intermediário ou VIP!",
                 "available_slots": [],
-                "limits": limits
+                "plan_type": plan_type,
+                "upgrade_required": True
             }
+        
+        # Check limits for both types
+        limits = await get_monthly_appointment_limits_new(user_id, plan_type)
         
         # Get available slots for next 30 days
         from datetime import datetime, timedelta
         start_date = datetime.now()
         end_date = start_date + timedelta(days=30)
         
-        # Get all available slots for the professional type
+        # Get all available slots for both professional types
         slots_cursor = db.appointment_slots.find({
-            "professional_type": professional_type,
+            "professional_type": {"$in": ["nutritionist", "personal_trainer"]},
             "available": True,
             "date": {
                 "$gte": start_date.strftime("%Y-%m-%d"),
                 "$lte": end_date.strftime("%Y-%m-%d")
             }
-        }).sort("date", 1).limit(50)
+        }).sort([("professional_type", 1), ("date", 1), ("time", 1)]).limit(100)
         
-        available_slots = []
+        nutritionist_slots = []
+        personal_slots = []
+        
         async for slot in slots_cursor:
             # Get professional info
             professional = await db.professionals.find_one({
@@ -1806,16 +1802,24 @@ async def get_available_appointments(
                     "professional_type": slot["professional_type"],
                     "date": slot["date"],
                     "time": slot["time"],
-                    "duration_minutes": slot.get("duration_minutes", 60)
+                    "duration_minutes": slot.get("duration_minutes", 60),
+                    "formatted_date": datetime.strptime(slot["date"], "%Y-%m-%d").strftime("%d/%m/%Y"),
+                    "formatted_datetime": f"{datetime.strptime(slot['date'], '%Y-%m-%d').strftime('%d/%m/%Y')} às {slot['time']}"
                 }
-                available_slots.append(slot_data)
+                
+                if slot["professional_type"] == "nutritionist":
+                    nutritionist_slots.append(slot_data)
+                else:
+                    personal_slots.append(slot_data)
         
         return {
             "success": True,
-            "available_slots": available_slots,
+            "nutritionist_slots": nutritionist_slots,
+            "personal_trainer_slots": personal_slots,
             "limits": limits,
-            "remaining_appointments": remaining,
-            "professional_type": professional_type
+            "plan_type": plan_type,
+            "can_book_nutritionist": limits["remaining"]["nutritionist"] > 0,
+            "can_book_personal": limits["remaining"]["personal_trainer"] > 0
         }
         
     except Exception as e:
