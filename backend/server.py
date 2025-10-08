@@ -4368,6 +4368,7 @@ async def set_professional_availability(
             "slots_created": slots_created,
             "date": date,
             "professional_type": professional_type
+        }
             "slots_created": slots_created
         }
         
