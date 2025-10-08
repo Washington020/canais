@@ -1964,6 +1964,45 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '500',
   },
+  pickerButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  gymTypeContainer: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  gymTypeCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  gymTypeCardSelected: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderColor: '#22C55E',
+  },
+  gymTypeHeader: {
+    marginBottom: 8,
+  },
+  gymTypeTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  gymTypeTextSelected: {
+    color: '#22C55E',
+  },
+  gymTypeDescription: {
+    color: '#94A3B8',
+    fontSize: 14,
+    lineHeight: 20,
+  },
   inputGroup: {
     marginBottom: 16,
   },
