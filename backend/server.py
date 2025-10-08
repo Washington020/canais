@@ -1745,10 +1745,6 @@ async def create_test_professionals():
     except Exception as e:
         logger.error(f"Erro ao criar profissionais de teste: {e}")
         raise HTTPException(500, f"Erro ao criar profissionais de teste: {str(e)}")
-        
-    except Exception as e:
-        logger.error(f"Erro ao criar token de teste: {e}")
-        raise HTTPException(500, "Erro ao criar token de teste")
 
 @api_router.post("/admin/gyms/{gym_id}/reset-password")
 async def reset_gym_password(gym_id: str):
