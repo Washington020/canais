@@ -255,7 +255,10 @@ export default function GymsManagement() {
         },
         commission_rate: parseFloat(form.commission_rate),
         amenities: form.amenities,
-        description: form.description
+        description: form.description,
+        // Adicionar credenciais personalizadas se fornecidas
+        custom_login: customLogin.trim() || undefined,
+        custom_password: customPassword.trim() || undefined
       };
 
       console.log('🚀 Cadastrando academia:', gymData);
