@@ -1746,6 +1746,170 @@ async def create_test_professionals():
         logger.error(f"Erro ao criar profissionais de teste: {e}")
         raise HTTPException(500, f"Erro ao criar profissionais de teste: {str(e)}")
 
+@api_router.get("/clients/available-appointments")
+async def get_available_appointments(
+    professional_type: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get available appointment slots for a specific professional type"""
+    try:
+        user_id = str(current_user["_id"])
+        plan_type = current_user.get("plan_type", "basico")
+        
+        # Check if user has remaining appointments for this professional type
+        limits = await get_monthly_appointment_limits(user_id, plan_type)
+        
+        if professional_type == "nutritionist":
+            remaining = limits["remaining"]["nutritionist"]
+        elif professional_type == "personal_trainer":
+            remaining = limits["remaining"]["personal_trainer"] 
+        else:
+            raise HTTPException(400, "Tipo de profissional inválido")
+            
+        if remaining <= 0:
+            return {
+                "success": False,
+                "message": f"Você já utilizou todas as consultas de {professional_type} do seu plano este mês",
+                "available_slots": [],
+                "limits": limits
+            }
+        
+        # Get available slots for next 30 days
+        from datetime import datetime, timedelta
+        start_date = datetime.now()
+        end_date = start_date + timedelta(days=30)
+        
+        # Get all available slots for the professional type
+        slots_cursor = db.appointment_slots.find({
+            "professional_type": professional_type,
+            "available": True,
+            "date": {
+                "$gte": start_date.strftime("%Y-%m-%d"),
+                "$lte": end_date.strftime("%Y-%m-%d")
+            }
+        }).sort("date", 1).limit(50)
+        
+        available_slots = []
+        async for slot in slots_cursor:
+            # Get professional info
+            professional = await db.professionals.find_one({
+                "_id": ObjectId(slot["professional_id"])
+            })
+            
+            if professional and professional.get("active", True):
+                slot_data = {
+                    "id": str(slot["_id"]),
+                    "professional_id": slot["professional_id"],
+                    "professional_name": professional["full_name"],
+                    "professional_cref": professional["cref_crn"],
+                    "professional_specialization": professional.get("specialization", ""),
+                    "professional_type": slot["professional_type"],
+                    "date": slot["date"],
+                    "time": slot["time"],
+                    "duration_minutes": slot.get("duration_minutes", 60)
+                }
+                available_slots.append(slot_data)
+        
+        return {
+            "success": True,
+            "available_slots": available_slots,
+            "limits": limits,
+            "remaining_appointments": remaining,
+            "professional_type": professional_type
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar horários disponíveis: {e}")
+        raise HTTPException(500, f"Erro ao buscar horários disponíveis: {str(e)}")
+
+@api_router.post("/clients/book-appointment")
+async def book_appointment(
+    slot_id: str = Query(...),
+    notes: str = Query(""),
+    current_user: dict = Depends(get_current_user)
+):
+    """Book an appointment slot"""
+    try:
+        user_id = str(current_user["_id"])
+        plan_type = current_user.get("plan_type", "basico")
+        
+        # Get the slot
+        slot = await db.appointment_slots.find_one({"_id": ObjectId(slot_id)})
+        if not slot:
+            raise HTTPException(404, "Horário não encontrado")
+            
+        if not slot.get("available", True):
+            raise HTTPException(400, "Horário não está mais disponível")
+        
+        # Check appointment limits
+        limits = await get_monthly_appointment_limits(user_id, plan_type)
+        professional_type = slot["professional_type"]
+        
+        if professional_type == "nutritionist":
+            remaining = limits["remaining"]["nutritionist"]
+        elif professional_type == "personal_trainer":
+            remaining = limits["remaining"]["personal_trainer"]
+        else:
+            raise HTTPException(400, "Tipo de profissional inválido")
+            
+        if remaining <= 0:
+            raise HTTPException(400, f"Você já utilizou todas as consultas de {professional_type} do seu plano este mês")
+        
+        # Get professional info
+        professional = await db.professionals.find_one({
+            "_id": ObjectId(slot["professional_id"])
+        })
+        
+        if not professional:
+            raise HTTPException(404, "Profissional não encontrado")
+        
+        # Create appointment
+        appointment_data = {
+            "client_id": user_id,
+            "client_name": current_user["full_name"],
+            "client_email": current_user["email"],
+            "client_phone": current_user.get("phone", ""),
+            "professional_id": slot["professional_id"],
+            "professional_name": professional["full_name"],
+            "professional_type": professional_type,
+            "appointment_date": slot["date"],
+            "appointment_time": slot["time"],
+            "duration_minutes": slot.get("duration_minutes", 60),
+            "status": "scheduled",
+            "notes": notes,
+            "booked_at": datetime.now(timezone.utc),
+            "can_cancel": True
+        }
+        
+        # Insert appointment
+        result = await db.appointments.insert_one(appointment_data)
+        
+        # Mark slot as unavailable
+        await db.appointment_slots.update_one(
+            {"_id": ObjectId(slot_id)},
+            {"$set": {"available": False, "booked_by": user_id}}
+        )
+        
+        return {
+            "success": True,
+            "appointment_id": str(result.inserted_id),
+            "message": f"Consulta agendada com sucesso para {slot['date']} às {slot['time']}",
+            "appointment": {
+                "id": str(result.inserted_id),
+                "professional_name": professional["full_name"],
+                "professional_type": professional_type,
+                "date": slot["date"],
+                "time": slot["time"],
+                "status": "scheduled"
+            }
+        }
+        
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        logger.error(f"Erro ao agendar consulta: {e}")
+        raise HTTPException(500, f"Erro ao agendar consulta: {str(e)}")
+
 @api_router.post("/admin/gyms/{gym_id}/reset-password")
 async def reset_gym_password(gym_id: str):
     """Reset gym password and return new credentials"""
