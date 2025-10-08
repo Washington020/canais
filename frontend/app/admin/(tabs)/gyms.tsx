@@ -1539,6 +1539,18 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '500',
   },
+  sectionDescription: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: '500',
+  },
   inputGroup: {
     marginBottom: 16,
   },
