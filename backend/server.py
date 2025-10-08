@@ -4369,8 +4369,6 @@ async def set_professional_availability(
             "date": date,
             "professional_type": professional_type
         }
-            "slots_created": slots_created
-        }
         
     except Exception as e:
         logger.error(f"Erro ao definir disponibilidade: {e}")
