@@ -1222,6 +1222,122 @@ export default function GymsManagement() {
                 </View>
               </View>
 
+              {/* Informações Financeiras */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>💰 Informações Financeiras</Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Chave PIX *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={form.pix_key}
+                    onChangeText={(text) => setForm({...form, pix_key: text})}
+                    placeholder="CPF, CNPJ, email ou telefone"
+                    placeholderTextColor="#64748B"
+                  />
+                </View>
+
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, {flex: 2}]}>
+                    <Text style={styles.inputLabel}>Banco *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.bank_account.bank}
+                      onChangeText={(text) => setForm({
+                        ...form, 
+                        bank_account: {...form.bank_account, bank: text}
+                      })}
+                      placeholder="Ex: Banco do Brasil"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, {flex: 1, marginLeft: 12}]}>
+                    <Text style={styles.inputLabel}>Agência *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.bank_account.agency}
+                      onChangeText={(text) => setForm({
+                        ...form, 
+                        bank_account: {...form.bank_account, agency: text}
+                      })}
+                      placeholder="1234"
+                      placeholderTextColor="#64748B"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, {flex: 2}]}>
+                    <Text style={styles.inputLabel}>Conta *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.bank_account.account}
+                      onChangeText={(text) => setForm({
+                        ...form, 
+                        bank_account: {...form.bank_account, account: text}
+                      })}
+                      placeholder="12345-6"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, {flex: 1, marginLeft: 12}]}>
+                    <Text style={styles.inputLabel}>Tipo *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.bank_account.account_type}
+                      onChangeText={(text) => setForm({
+                        ...form, 
+                        bank_account: {...form.bank_account, account_type: text as 'corrente' | 'poupanca'}
+                      })}
+                      placeholder="corrente"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Tipo de Academia e Valores */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>🏆 Tipo de Academia e Valores</Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Tipo de Academia *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={form.gym_type}
+                    onChangeText={(text) => setForm({...form, gym_type: text as 'simples' | 'intermediario' | 'vip'})}
+                    placeholder="simples, intermediario ou vip"
+                    placeholderTextColor="#64748B"
+                  />
+                </View>
+
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, {flex: 1}]}>
+                    <Text style={styles.inputLabel}>Mensalidade (R$) *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.monthly_fee}
+                      onChangeText={(text) => setForm({...form, monthly_fee: text})}
+                      placeholder="89.90"
+                      placeholderTextColor="#64748B"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, {flex: 1, marginLeft: 12}]}>
+                    <Text style={styles.inputLabel}>Valor Check-in (R$) *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.check_in_value}
+                      onChangeText={(text) => setForm({...form, check_in_value: text})}
+                      placeholder="15.00"
+                      placeholderTextColor="#64748B"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+              </View>
+
               {/* Operational Info */}
               <View style={styles.formSection}>
                 <Text style={styles.sectionTitle}>⚙️ Informações Operacionais</Text>
