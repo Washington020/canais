@@ -1422,10 +1422,10 @@ async def register_gym(gym_data: dict):
         "franquia": gym_data.get("franquia", ""),
         "num_unidades": gym_data.get("num_unidades", "1"),
         "responsavel": {
-            "nome": gym_data["responsavel_nome"],
+            "nome": gym_data.get("responsavel_nome", ""),
             "cargo": gym_data.get("responsavel_cargo", ""),
-            "email": gym_data["responsavel_email"],
-            "telefone": gym_data["responsavel_telefone"]
+            "email": gym_data.get("responsavel_email", ""),
+            "telefone": gym_data.get("responsavel_telefone", "")
         },
         "modelo_negocio": gym_data.get("modelo_negocio", ""),
         "dados_legais": {
