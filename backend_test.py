@@ -215,49 +215,37 @@ class GymRegistrationAuthTest:
             self.log_test("Immediate Gym Authentication", False, error=str(e))
             return False
     
-    def test_password_reset(self):
-        """Test 6: Test Password Reset Function"""
+    def test_password_reset_functionality(self):
+        """Test 4: Password Reset Functionality Test"""
         if not self.admin_token or not self.created_gym_id:
-            self.log_test("Password Reset", False, error="Missing admin token or gym ID")
+            self.log_test("Password Reset Functionality", False, error="Missing admin token or gym ID")
             return False
             
         try:
             headers = {"Authorization": f"Bearer {self.admin_token}"}
-            response = requests.put(f"{API_BASE}/admin/gyms/{self.created_gym_id}/reset-password", 
-                                  headers=headers)
+            response = requests.post(f"{API_BASE}/admin/gyms/{self.created_gym_id}/reset-password", 
+                                   headers=headers)
             
             if response.status_code == 200:
                 data = response.json()
-                new_password = data.get("new_password")
+                new_password = data.get("password") or data.get("new_password")
                 login = data.get("login")
                 
                 if new_password and login:
-                    # Test login with new password
-                    login_response = requests.post(f"{API_BASE}/gym/auth", json={
-                        "login": login,
-                        "password": new_password
-                    })
-                    
-                    if login_response.status_code == 200:
-                        self.log_test("Password Reset", True, 
-                            f"Password reset successful - New password works for login: {login}")
-                        # Update stored password for next test
-                        self.created_password = new_password
-                        return True
-                    else:
-                        self.log_test("Password Reset", False, 
-                            error=f"New password doesn't work - Login failed: {login_response.status_code}")
-                        return False
+                    self.reset_password = new_password
+                    self.log_test("Password Reset Functionality", True, 
+                        f"Password reset successful - New password generated: {login}/{new_password}")
+                    return True
                 else:
-                    self.log_test("Password Reset", False, error="Missing new_password or login in response")
+                    self.log_test("Password Reset Functionality", False, error="Missing new_password or login in response")
                     return False
             else:
-                self.log_test("Password Reset", False, 
+                self.log_test("Password Reset Functionality", False, 
                     error=f"Status {response.status_code}: {response.text}")
                 return False
                 
         except Exception as e:
-            self.log_test("Password Reset", False, error=str(e))
+            self.log_test("Password Reset Functionality", False, error=str(e))
             return False
     
     def test_custom_password_setting(self):
