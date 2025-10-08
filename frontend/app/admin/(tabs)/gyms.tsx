@@ -307,6 +307,10 @@ export default function GymsManagement() {
         description: ''
       });
 
+      // Reset custom credentials fields
+      setCustomLogin('');
+      setCustomPassword('');
+
       // Reload gyms
       await loadGyms();
 
