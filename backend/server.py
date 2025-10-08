@@ -4361,6 +4361,9 @@ async def set_professional_availability(
         return {
             "success": True,
             "message": f"{slots_created} horários disponibilizados para {date}",
+            "slots_created": slots_created,
+            "date": date,
+            "professional_type": professional_type
             "slots_created": slots_created
         }
         
