@@ -247,30 +247,70 @@ export default function GymsManagement() {
   }, [loadGyms]);
 
   const validateForm = () => {
+    // Validações básicas da academia
     if (!form.name.trim()) {
       Alert.alert('Erro', 'Nome da academia é obrigatório');
       return false;
     }
-    if (!form.email.trim() || !form.email.includes('@')) {
-      Alert.alert('Erro', 'Email válido é obrigatório');
+    if (!form.cnpj.trim()) {
+      Alert.alert('Erro', 'CNPJ é obrigatório');
       return false;
     }
-    if (!form.phone.trim()) {
-      Alert.alert('Erro', 'Telefone é obrigatório');
+    if (!form.razao_social.trim()) {
+      Alert.alert('Erro', 'Razão social é obrigatória');
       return false;
     }
-    if (!form.address.street.trim() || !form.address.number.trim()) {
+    
+    // Validações do proprietário
+    if (!form.owner_name.trim()) {
+      Alert.alert('Erro', 'Nome do proprietário é obrigatório');
+      return false;
+    }
+    if (!form.owner_cpf.trim()) {
+      Alert.alert('Erro', 'CPF do proprietário é obrigatório');
+      return false;
+    }
+    if (!form.owner_email.trim() || !form.owner_email.includes('@')) {
+      Alert.alert('Erro', 'Email válido do proprietário é obrigatório');
+      return false;
+    }
+    if (!form.owner_phone.trim()) {
+      Alert.alert('Erro', 'Telefone do proprietário é obrigatório');
+      return false;
+    }
+    
+    // Validações de endereço
+    if (!form.endereco.trim() || !form.numero.trim()) {
       Alert.alert('Erro', 'Endereço completo é obrigatório');
       return false;
     }
-    if (!form.capacity.trim() || isNaN(Number(form.capacity)) || Number(form.capacity) <= 0) {
-      Alert.alert('Erro', 'Capacidade deve ser um número válido');
+    if (!form.bairro.trim()) {
+      Alert.alert('Erro', 'Bairro é obrigatório');
       return false;
     }
-    if (!form.commission_rate.trim() || isNaN(Number(form.commission_rate)) || Number(form.commission_rate) <= 0) {
-      Alert.alert('Erro', 'Taxa de comissão deve ser um número válido');
+    if (!form.cidade.trim()) {
+      Alert.alert('Erro', 'Cidade é obrigatória');
       return false;
     }
+    if (!form.estado.trim()) {
+      Alert.alert('Erro', 'Estado é obrigatório');
+      return false;
+    }
+    if (!form.cep.trim()) {
+      Alert.alert('Erro', 'CEP é obrigatório');
+      return false;
+    }
+    
+    // Validações de contato
+    if (!form.email.trim() || !form.email.includes('@')) {
+      Alert.alert('Erro', 'Email válido da academia é obrigatório');
+      return false;
+    }
+    if (!form.phone.trim()) {
+      Alert.alert('Erro', 'Telefone da academia é obrigatório');
+      return false;
+    }
+    
     return true;
   };
 
