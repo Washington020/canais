@@ -397,6 +397,146 @@ export default function GymDashboard() {
           </View>
         </View>
       </Modal>
+
+      {/* Client Details Modal */}
+      <Modal visible={showClientDetails} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { maxHeight: '80%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Detalhes do Cliente</Text>
+              <TouchableOpacity onPress={() => setShowClientDetails(false)}>
+                <Ionicons name="close" size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+            
+            {clientData && (
+              <ScrollView style={styles.modalContent}>
+                {/* Profile Photo */}
+                {clientData.profile_photo && (
+                  <View style={styles.photoContainer}>
+                    <Image 
+                      source={{ uri: clientData.profile_photo }} 
+                      style={styles.profilePhoto}
+                      resizeMode="cover"
+                    />
+                  </View>
+                )}
+                
+                {/* Personal Info */}
+                <View style={styles.infoSection}>
+                  <Text style={styles.sectionTitle}>📋 Informações Pessoais</Text>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Nome:</Text>
+                    <Text style={styles.infoValue}>{clientData.name}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Email:</Text>
+                    <Text style={styles.infoValue}>{clientData.email}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Telefone:</Text>
+                    <Text style={styles.infoValue}>{clientData.phone || 'Não informado'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>CPF:</Text>
+                    <Text style={styles.infoValue}>{clientData.cpf || 'Não informado'}</Text>
+                  </View>
+                  {clientData.date_of_birth && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Nascimento:</Text>
+                      <Text style={styles.infoValue}>
+                        {new Date(clientData.date_of_birth).toLocaleDateString('pt-BR')}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Plan Info */}
+                <View style={styles.infoSection}>
+                  <Text style={styles.sectionTitle}>🏅 Plano e Membros</Text>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Plano:</Text>
+                    <Text style={[styles.infoValue, styles.planValue]}>{clientData.plan}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Membro desde:</Text>
+                    <Text style={styles.infoValue}>
+                      {new Date(clientData.member_since).toLocaleDateString('pt-BR')}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Tokens usados hoje:</Text>
+                    <Text style={styles.infoValue}>{clientData.tokens_used_today}</Text>
+                  </View>
+                </View>
+
+                {/* Token Info */}
+                <View style={styles.infoSection}>
+                  <Text style={styles.sectionTitle}>🎫 Informações do Token</Text>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Código:</Text>
+                    <Text style={styles.infoValue}>{clientData.token_code}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Tipo:</Text>
+                    <Text style={styles.infoValue}>{clientData.token_type}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Expira em:</Text>
+                    <Text style={styles.infoValue}>
+                      {new Date(clientData.expires_at).toLocaleDateString('pt-BR')}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Address */}
+                {clientData.address && Object.keys(clientData.address).length > 0 && (
+                  <View style={styles.infoSection}>
+                    <Text style={styles.sectionTitle}>📍 Endereço</Text>
+                    <Text style={styles.addressText}>
+                      {`${clientData.address.street || ''}, ${clientData.address.number || ''}\n${clientData.address.city || ''} - ${clientData.address.state || ''}\nCEP: ${clientData.address.zip || ''}`}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Emergency Contact */}
+                {clientData.emergency_contact && Object.keys(clientData.emergency_contact).length > 0 && (
+                  <View style={styles.infoSection}>
+                    <Text style={styles.sectionTitle}>🚨 Contato de Emergência</Text>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Nome:</Text>
+                      <Text style={styles.infoValue}>{clientData.emergency_contact.name || 'Não informado'}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Telefone:</Text>
+                      <Text style={styles.infoValue}>{clientData.emergency_contact.phone || 'Não informado'}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Medical Conditions */}
+                {clientData.medical_conditions && clientData.medical_conditions.length > 0 && (
+                  <View style={styles.infoSection}>
+                    <Text style={styles.sectionTitle}>🏥 Condições Médicas</Text>
+                    {clientData.medical_conditions.map((condition: string, index: number) => (
+                      <Text key={index} style={styles.medicalCondition}>• {condition}</Text>
+                    ))}
+                  </View>
+                )}
+
+                {/* Actions */}
+                <TouchableOpacity 
+                  style={styles.checkInButton}
+                  onPress={() => performCheckIn(clientData)}
+                >
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                  <Text style={styles.checkInButtonText}>Confirmar Check-in</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
