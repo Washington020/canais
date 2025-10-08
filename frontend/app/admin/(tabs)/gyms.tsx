@@ -1153,6 +1153,8 @@ export default function GymsManagement() {
               onPress={() => {
                 setShowCredentials(false);
                 setShowModal(false);
+                setCustomLogin('');
+                setCustomPassword('');
                 setGeneratedCredentials(null);
               }}
             >
