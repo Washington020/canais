@@ -107,6 +107,8 @@ export default function GymLogin() {
       await AsyncStorage.setItem('gymToken', access_token);
       await AsyncStorage.setItem('gymInfo', JSON.stringify(gym_info));
       
+      console.log('✅ Login bem-sucedido, redirecionando para dashboard...');
+      
       // Redirecionar automaticamente para o dashboard
       router.replace('/gym/dashboard');
     } catch (error: any) {
