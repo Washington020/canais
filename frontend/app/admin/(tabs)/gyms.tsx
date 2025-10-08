@@ -1083,6 +1083,81 @@ export default function GymsManagement() {
             </View>
 
             <ScrollView style={styles.modalContent}>
+              {/* Botão para Dados de Exemplo */}
+              <View style={styles.exampleDataSection}>
+                <TouchableOpacity 
+                  style={styles.exampleDataButton}
+                  onPress={() => {
+                    const exampleData: GymForm = {
+                      // Informações básicas
+                      name: 'Academia Exemplo Fitness',
+                      cnpj: '12.345.678/0001-90',
+                      razao_social: 'Academia Exemplo Fitness LTDA',
+                      
+                      // Proprietário
+                      owner_name: 'João Silva Santos',
+                      owner_cpf: '123.456.789-00',
+                      owner_email: 'joao.silva@email.com',
+                      owner_phone: '(11) 99999-8888',
+                      
+                      // Endereço
+                      endereco: 'Rua das Flores',
+                      numero: '123',
+                      bairro: 'Centro',
+                      cidade: 'São Paulo',
+                      estado: 'SP',
+                      cep: '01234-567',
+                      
+                      // Contato
+                      email: 'contato@academiaexemplo.com',
+                      phone: '(11) 3333-4444',
+                      
+                      // Financeiro
+                      pix_key: 'academiaexemplo@pix.com.br',
+                      bank_account: {
+                        bank: '341 - Itaú',
+                        agency: '1234',
+                        account: '12345-6',
+                        account_type: 'corrente'
+                      },
+                      
+                      // Tipo e valores
+                      gym_type: 'intermediario',
+                      monthly_fee: '89.90',
+                      check_in_value: '15.00',
+                      
+                      // Operação
+                      capacity: '150',
+                      operating_hours: {
+                        weekdays: '06:00 - 22:00',
+                        saturday: '08:00 - 18:00',
+                        sunday: '08:00 - 16:00'
+                      },
+                      amenities: ['Estacionamento', 'Vestiário', 'Chuveiro', 'WiFi', 'Personal Trainer'],
+                      description: 'Academia completa com equipamentos modernos, ambiente climatizado e profissionais qualificados. Oferecemos aulas de musculação, funcional e pilates.'
+                    };
+                    
+                    setForm(exampleData);
+                    setCustomLogin('academia_exemplo_teste');
+                    setCustomPassword('123456');
+                    
+                    Alert.alert(
+                      '📝 Dados de Exemplo Carregados!',
+                      'Formulário preenchido com dados de exemplo.\n\n' +
+                      '🔑 Credenciais definidas:\n' +
+                      '• Login: academia_exemplo_teste\n' +
+                      '• Senha: 123456\n\n' +
+                      'Você pode editar qualquer campo antes de salvar.',
+                      [{ text: 'OK' }]
+                    );
+                  }}
+                >
+                  <Text style={styles.exampleDataButtonText}>
+                    📝 Carregar Dados de Exemplo
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
               {/* Informações Básicas da Academia */}
               <View style={styles.formSection}>
                 <Text style={styles.sectionTitle}>🏢 Dados da Academia</Text>
