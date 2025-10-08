@@ -1634,6 +1634,10 @@ async def create_test_token():
                 "plan": "vip"
             }
         }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar token de teste: {e}")
+        raise HTTPException(500, "Erro ao criar token de teste")
 
 @api_router.post("/admin/create-test-professionals")
 async def create_test_professionals():
