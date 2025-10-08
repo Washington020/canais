@@ -379,6 +379,31 @@ export default function GymDashboard() {
               <Text style={styles.actionSubtitle}>Estatísticas detalhadas</Text>
             </LinearGradient>
           </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={async () => {
+              Alert.alert(
+                '🧪 Token de Teste',
+                'Use o código TEST123 para testar a validação.',
+                [
+                  { text: 'OK', onPress: () => {
+                    setTokenCode('TEST123');
+                    setShowTokenModal(true);
+                  }}
+                ]
+              );
+            }}
+          >
+            <LinearGradient
+              colors={['#F59E0B', '#D97706']}
+              style={styles.actionGradient}
+            >
+              <Ionicons name="flask" size={32} color="#FFFFFF" />
+              <Text style={styles.actionTitle}>Token de Teste</Text>
+              <Text style={styles.actionSubtitle}>Usar TEST123</Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
         {/* Recent Activity */}
