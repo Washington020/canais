@@ -130,14 +130,8 @@ export default function GymDashboard() {
       console.log('🏢 Gym ID:', gymInfo?.id);
       console.log('🔑 Auth token:', token ? 'Presente' : 'Ausente');
       
-      // Verificar se gym_id está disponível
-      if (!gymInfo?.id) {
-        Alert.alert('Erro', 'ID da academia não encontrado. Faça login novamente.');
-        return;
-      }
-      
-      // Passar o gym_id como parâmetro de query
-      const url = `${API_URL}/tokens/validate/${tokenCode}?gym_id=${gymInfo.id}`;
+      // Chamar endpoint sem gym_id (será usado o padrão no backend)
+      const url = `${API_URL}/tokens/validate/${tokenCode}`;
       console.log('📡 URL da requisição:', url);
       
       const response = await axios.post(url, {}, { headers });
