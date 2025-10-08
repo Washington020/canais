@@ -963,27 +963,185 @@ export default function GymsManagement() {
             </View>
 
             <ScrollView style={styles.modalContent}>
-              {/* Basic Info */}
+              {/* Informações Básicas da Academia */}
               <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>📍 Informações Básicas</Text>
+                <Text style={styles.sectionTitle}>🏢 Dados da Academia</Text>
                 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Nome da Academia *</Text>
                   <TextInput
                     style={styles.input}
                     value={form.name}
-                    onChangeText={(text) => setForm(prev => ({...prev, name: text}))}
-                    placeholder="Ex: SmartFit Vila Madalena"
+                    onChangeText={(text) => setForm({...form, name: text, razao_social: text + ' LTDA'})}
+                    placeholder="Ex: Academia Forte e Saúde"
                     placeholderTextColor="#64748B"
                   />
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Email *</Text>
+                  <Text style={styles.inputLabel}>CNPJ *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={form.cnpj}
+                    onChangeText={(text) => setForm({...form, cnpj: text})}
+                    placeholder="12.345.678/0001-90"
+                    placeholderTextColor="#64748B"
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Razão Social *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={form.razao_social}
+                    onChangeText={(text) => setForm({...form, razao_social: text})}
+                    placeholder="Academia Forte e Saúde LTDA"
+                    placeholderTextColor="#64748B"
+                  />
+                </View>
+              </View>
+
+              {/* Informações do Proprietário */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>👤 Dados do Proprietário</Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Nome do Proprietário *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={form.owner_name}
+                    onChangeText={(text) => setForm({...form, owner_name: text})}
+                    placeholder="João Silva"
+                    placeholderTextColor="#64748B"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>CPF do Proprietário *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={form.owner_cpf}
+                    onChangeText={(text) => setForm({...form, owner_cpf: text})}
+                    placeholder="123.456.789-00"
+                    placeholderTextColor="#64748B"
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Email do Proprietário *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={form.owner_email}
+                    onChangeText={(text) => setForm({...form, owner_email: text})}
+                    placeholder="joao@email.com"
+                    placeholderTextColor="#64748B"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Telefone do Proprietário *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={form.owner_phone}
+                    onChangeText={(text) => setForm({...form, owner_phone: text})}
+                    placeholder="(11) 99999-9999"
+                    placeholderTextColor="#64748B"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+              </View>
+
+              {/* Endereço Completo */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>📍 Endereço da Academia</Text>
+                
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, {flex: 3}]}>
+                    <Text style={styles.inputLabel}>Rua/Avenida *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.endereco}
+                      onChangeText={(text) => setForm({...form, endereco: text})}
+                      placeholder="Rua das Flores"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, {flex: 1, marginLeft: 12}]}>
+                    <Text style={styles.inputLabel}>Número *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.numero}
+                      onChangeText={(text) => setForm({...form, numero: text})}
+                      placeholder="123"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, {flex: 2}]}>
+                    <Text style={styles.inputLabel}>Bairro *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.bairro}
+                      onChangeText={(text) => setForm({...form, bairro: text})}
+                      placeholder="Centro"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, {flex: 2, marginLeft: 12}]}>
+                    <Text style={styles.inputLabel}>Cidade *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.cidade}
+                      onChangeText={(text) => setForm({...form, cidade: text})}
+                      placeholder="São Paulo"
+                      placeholderTextColor="#64748B"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, {flex: 1}]}>
+                    <Text style={styles.inputLabel}>Estado *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.estado}
+                      onChangeText={(text) => setForm({...form, estado: text.toUpperCase()})}
+                      placeholder="SP"
+                      placeholderTextColor="#64748B"
+                      maxLength={2}
+                      autoCapitalize="characters"
+                    />
+                  </View>
+                  <View style={[styles.inputGroup, {flex: 2, marginLeft: 12}]}>
+                    <Text style={styles.inputLabel}>CEP *</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={form.cep}
+                      onChangeText={(text) => setForm({...form, cep: text})}
+                      placeholder="01234-567"
+                      placeholderTextColor="#64748B"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Contato da Academia */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>📞 Contato da Academia</Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>E-mail de Contato *</Text>
                   <TextInput
                     style={styles.input}
                     value={form.email}
-                    onChangeText={(text) => setForm(prev => ({...prev, email: text.toLowerCase()}))}
+                    onChangeText={(text) => setForm({...form, email: text})}
                     placeholder="contato@academia.com"
                     placeholderTextColor="#64748B"
                     keyboardType="email-address"
@@ -992,81 +1150,15 @@ export default function GymsManagement() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Telefone *</Text>
+                  <Text style={styles.inputLabel}>Telefone Principal *</Text>
                   <TextInput
                     style={styles.input}
                     value={form.phone}
-                    onChangeText={(text) => setForm(prev => ({...prev, phone: text}))}
-                    placeholder="(11) 99999-9999"
+                    onChangeText={(text) => setForm({...form, phone: text})}
+                    placeholder="(11) 3333-4444"
                     placeholderTextColor="#64748B"
                     keyboardType="phone-pad"
                   />
-                </View>
-              </View>
-
-              {/* Address */}
-              <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>🏠 Endereço</Text>
-                
-                <View style={styles.inputRow}>
-                  <View style={[styles.inputGroup, { flex: 2, marginRight: 8 }]}>
-                    <Text style={styles.inputLabel}>Rua *</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={form.address.street}
-                      onChangeText={(text) => setForm(prev => ({
-                        ...prev,
-                        address: {...prev.address, street: text}
-                      }))}
-                      placeholder="Rua das Flores"
-                      placeholderTextColor="#64748B"
-                    />
-                  </View>
-
-                  <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                    <Text style={styles.inputLabel}>Número *</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={form.address.number}
-                      onChangeText={(text) => setForm(prev => ({
-                        ...prev,
-                        address: {...prev.address, number: text}
-                      }))}
-                      placeholder="123"
-                      placeholderTextColor="#64748B"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.inputRow}>
-                  <View style={[styles.inputGroup, { flex: 2, marginRight: 8 }]}>
-                    <Text style={styles.inputLabel}>Cidade</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={form.address.city}
-                      onChangeText={(text) => setForm(prev => ({
-                        ...prev,
-                        address: {...prev.address, city: text}
-                      }))}
-                      placeholder="São Paulo"
-                      placeholderTextColor="#64748B"
-                    />
-                  </View>
-
-                  <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                    <Text style={styles.inputLabel}>CEP</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={form.address.zip_code}
-                      onChangeText={(text) => setForm(prev => ({
-                        ...prev,
-                        address: {...prev.address, zip_code: text}
-                      }))}
-                      placeholder="01234-567"
-                      placeholderTextColor="#64748B"
-                      keyboardType="numeric"
-                    />
-                  </View>
                 </View>
               </View>
 
