@@ -1910,6 +1910,65 @@ async def book_appointment(
         logger.error(f"Erro ao agendar consulta: {e}")
         raise HTTPException(500, f"Erro ao agendar consulta: {str(e)}")
 
+async def get_monthly_appointment_limits(user_id: str, plan_type: str):
+    """Get monthly appointment limits and usage for a user"""
+    try:
+        # Define limits based on plan
+        plan_limits = {
+            "basico": {"nutritionist": 0, "personal_trainer": 0},
+            "intermediario": {"nutritionist": 1, "personal_trainer": 1},
+            "premium": {"nutritionist": 2, "personal_trainer": 2}, 
+            "vip": {"nutritionist": 2, "personal_trainer": 2}
+        }
+        
+        limits = plan_limits.get(plan_type, {"nutritionist": 0, "personal_trainer": 0})
+        
+        # Get current month usage
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Count appointments this month
+        nutritionist_count = await db.appointments.count_documents({
+            "client_id": user_id,
+            "professional_type": "nutritionist",
+            "booked_at": {"$gte": start_of_month},
+            "status": {"$ne": "cancelled"}
+        })
+        
+        personal_count = await db.appointments.count_documents({
+            "client_id": user_id,  
+            "professional_type": "personal_trainer",
+            "booked_at": {"$gte": start_of_month},
+            "status": {"$ne": "cancelled"}
+        })
+        
+        usage = {
+            "nutritionist": nutritionist_count,
+            "personal_trainer": personal_count
+        }
+        
+        remaining = {
+            "nutritionist": max(0, limits["nutritionist"] - usage["nutritionist"]),
+            "personal_trainer": max(0, limits["personal_trainer"] - usage["personal_trainer"])
+        }
+        
+        return {
+            "plan_type": plan_type,
+            "limits": limits,
+            "usage": usage,
+            "remaining": remaining
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao calcular limites de consulta: {e}")
+        return {
+            "plan_type": plan_type,
+            "limits": {"nutritionist": 0, "personal_trainer": 0},
+            "usage": {"nutritionist": 0, "personal_trainer": 0},
+            "remaining": {"nutritionist": 0, "personal_trainer": 0}
+        }
+
 @api_router.post("/admin/gyms/{gym_id}/reset-password")
 async def reset_gym_password(gym_id: str):
     """Reset gym password and return new credentials"""
