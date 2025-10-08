@@ -63,6 +63,7 @@ export default function GymDashboard() {
   // Estados dos modais
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showClientDetails, setShowClientDetails] = useState(false);
   const [tokenValidating, setTokenValidating] = useState(false);
 
   useEffect(() => {
