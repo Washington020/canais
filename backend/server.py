@@ -1418,7 +1418,7 @@ async def register_gym(gym_data: dict):
         "phone": gym_data["telefone_principal"],
         "telefone_secundario": gym_data.get("telefone_secundario", ""),
         "horario_funcionamento": gym_data.get("horario_funcionamento", ""),
-        "type": gym_data["tipo_academia"],
+        "type": gym_data.get("tipo_academia", "completa"),
         "franquia": gym_data.get("franquia", ""),
         "num_unidades": gym_data.get("num_unidades", "1"),
         "responsavel": {
