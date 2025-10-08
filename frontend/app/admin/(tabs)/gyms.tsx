@@ -2497,4 +2497,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  testButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F59E0B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
 });
