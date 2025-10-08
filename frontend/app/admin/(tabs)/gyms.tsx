@@ -2445,4 +2445,21 @@ const styles = StyleSheet.create({
   gymTypeTextSelected: {
     color: '#FFFFFF',
   },
+  exampleDataSection: {
+    marginBottom: 20,
+    paddingHorizontal: 16,
+  },
+  exampleDataButton: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  exampleDataButtonText: {
+    color: '#22C55E',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
