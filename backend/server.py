@@ -1828,8 +1828,7 @@ async def get_available_appointments(
 
 @api_router.post("/clients/book-appointment")
 async def book_appointment(
-    slot_id: str = Query(...),
-    notes: str = Query(""),
+    booking_data: dict,
     current_user: dict = Depends(get_current_user)
 ):
     """Book an appointment slot"""
