@@ -58,23 +58,50 @@ interface Gym {
 }
 
 interface GymForm {
+  // Informações básicas da academia
   name: string;
+  cnpj: string;
+  razao_social: string;
+  
+  // Informações do proprietário
+  owner_name: string;
+  owner_cpf: string;
+  owner_email: string;
+  owner_phone: string;
+  
+  // Endereço completo
+  endereco: string;
+  numero: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  cep: string;
+  
+  // Contato da academia
   email: string;
   phone: string;
-  address: {
-    street: string;
-    number: string;
-    city: string;
-    state: string;
-    zip_code: string;
+  
+  // Informações financeiras
+  pix_key: string;
+  bank_account: {
+    bank: string;
+    agency: string;
+    account: string;
+    account_type: 'corrente' | 'poupanca';
   };
+  
+  // Tipo de academia e valores
+  gym_type: 'simples' | 'intermediario' | 'vip';
+  monthly_fee: string;
+  check_in_value: string;
+  
+  // Operação
   capacity: string;
   operating_hours: {
     weekdays: string;
     saturday: string;
     sunday: string;
   };
-  commission_rate: string;
   amenities: string[];
   description: string;
 }
