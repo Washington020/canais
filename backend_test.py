@@ -615,7 +615,8 @@ class ProfessionalSystemTester:
 
 if __name__ == "__main__":
     tester = ProfessionalSystemTester()
-    results = tester.run_all_tests()
+    tester.run_all_tests()
     
-    # Exit with appropriate code
-    sys.exit(0 if results['failed_tests'] == 0 else 1)
+    # Exit with appropriate code based on test results
+    failed_tests = len([t for t in tester.test_results if not t['success']])
+    sys.exit(0 if failed_tests == 0 else 1)
