@@ -878,7 +878,7 @@ async def generate_token(
     }
 
 @api_router.post("/tokens/validate/{token_code}")
-async def validate_simple_token(token_code: str, request: Request, gym_id: str = None):
+async def validate_simple_token(token_code: str, request: Request, gym_id: str = Query(...)):
     """Valida token simples"""
     try:
         # Find token in database
