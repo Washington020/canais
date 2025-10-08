@@ -107,18 +107,8 @@ export default function GymLogin() {
       await AsyncStorage.setItem('gymToken', access_token);
       await AsyncStorage.setItem('gymInfo', JSON.stringify(gym_info));
       
-      Alert.alert(
-        '✅ LOGIN REALIZADO COM SUCESSO!',
-        `🎯 Bem-vindo ao sistema ${gym_info.name}!\n\n🏋️ Você agora pode validar tokens de clientes e gerenciar check-ins.\n\n✅ Sistema pronto para uso!`,
-        [
-          {
-            text: 'Acessar Sistema',
-            onPress: () => {
-              router.push('/gym/dashboard');
-            }
-          }
-        ]
-      );
+      // Redirecionar automaticamente para o dashboard
+      router.replace('/gym/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
       console.error('Error response:', error.response?.data);
