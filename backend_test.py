@@ -69,35 +69,35 @@ class GymRegistrationAuthTest:
             self.log_test("Admin Login", False, error=str(e))
             return False
     
-    def test_create_academia(self):
-        """Test 2: Create New Academia via Admin"""
+    def test_gym_registration_integration(self):
+        """Test 2: Gym Registration Integration Test - Create gym via admin panel"""
         if not self.admin_token:
-            self.log_test("Create Academia", False, error="No admin token available")
+            self.log_test("Gym Registration Integration", False, error="No admin token available")
             return False
             
         try:
-            academia_data = {
-                "name": "Academia Teste Admin",
-                "cnpj": "12.345.678/0001-90",
-                "razao_social": "Academia Teste Admin LTDA",
+            # Generate unique gym data to avoid conflicts
+            unique_id = str(uuid.uuid4())[:8]
+            gym_data = {
+                "name": f"Academia Teste Integração {unique_id}",
+                "cnpj": f"12.345.678/0001-{unique_id[:2]}",
+                "razao_social": f"Academia Teste Integração {unique_id} LTDA",
                 "endereco": "Rua das Academias",
                 "numero": "456",
                 "bairro": "Centro",
                 "cidade": "São Paulo",
                 "estado": "SP",
                 "cep": "01234-567",
-                "email": "contato@academiateste.com.br",
+                "email": f"contato{unique_id}@academiateste.com.br",
                 "telefone_principal": "(11) 3333-5555",
                 "tipo_academia": "Completa",
                 "responsavel_nome": "Maria Silva",
-                "responsavel_email": "maria@academiateste.com.br",
-                "responsavel_telefone": "(11) 99999-4444",
-                "custom_login": "academia_admin_teste",
-                "custom_password": "admintest123"
+                "responsavel_email": f"maria{unique_id}@academiateste.com.br",
+                "responsavel_telefone": "(11) 99999-4444"
             }
             
             headers = {"Authorization": f"Bearer {self.admin_token}"}
-            response = requests.post(f"{API_BASE}/admin/gyms/register", json=academia_data, headers=headers)
+            response = requests.post(f"{API_BASE}/admin/gyms/register", json=gym_data, headers=headers)
             
             if response.status_code == 200:
                 data = response.json()
@@ -105,16 +105,21 @@ class GymRegistrationAuthTest:
                 self.created_login = data.get("login")
                 self.created_password = data.get("password")
                 
-                self.log_test("Create Academia", True, 
-                    f"Academia created - ID: {self.created_gym_id}, Login: {self.created_login}")
-                return True
+                if self.created_gym_id and self.created_login and self.created_password:
+                    self.log_test("Gym Registration Integration", True, 
+                        f"Gym registered successfully - ID: {self.created_gym_id}, Login: {self.created_login}, Password: {self.created_password}")
+                    return True
+                else:
+                    self.log_test("Gym Registration Integration", False, 
+                        error="Missing required fields in response (gym_id, login, password)")
+                    return False
             else:
-                self.log_test("Create Academia", False, 
+                self.log_test("Gym Registration Integration", False, 
                     error=f"Status {response.status_code}: {response.text}")
                 return False
                 
         except Exception as e:
-            self.log_test("Create Academia", False, error=str(e))
+            self.log_test("Gym Registration Integration", False, error=str(e))
             return False
     
     def test_verify_academia_creation(self):
