@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
 """
-Gym Registration and Authentication System Integration Test
-Testing complete workflow from admin gym registration to gym authentication
-Focus: Integration between admin panel and gym authentication system
+Professional System Backend Testing Suite
+Tests the complete professional system functionality including:
+1. Professional Login System
+2. Client Assignment System  
+3. Schedule System
+4. Create Plans System
+5. Integration Testing
 """
 
 import requests
 import json
 import sys
 import os
+from datetime import datetime, timedelta
 import uuid
-from datetime import datetime
 
-# Get backend URL from environment
+# Backend URL from environment
 BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://trainer-portal-11.preview.emergentagent.com')
 API_BASE = f"{BACKEND_URL}/api"
 
-class GymRegistrationAuthTest:
+class ProfessionalSystemTester:
     def __init__(self):
         self.admin_token = None
         self.created_gym_id = None
