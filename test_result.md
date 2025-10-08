@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Implement monthly appointment limits and cancellation features in the client scheduling interface. Integrate monthly consultation limits into client scheduling (Básico=0, Intermediário=1, VIP=2 consultas/mês for both nutritionist and personal). Also implement upgrade tabs for basic clients (Workout/Nutrition) showing upgrade options and plan information."
+user_problem_statement: "Criar um sistema de login e cadastro de academia melhorado com feedback específico. Quando salvar uma academia cadastrada, deve informar 'PARCEIRO CADASTRADO' com sucesso. Quando ocorrer algum erro, deve mostrar exatamente qual erro aconteceu com mensagens detalhadas e específicas."
 
 backend:
   - task: "Professional Client Assignment System Fix"
