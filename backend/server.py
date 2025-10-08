@@ -1757,7 +1757,7 @@ async def get_available_appointments(
         plan_type = getattr(current_user, 'plan_type', 'vip') if hasattr(current_user, 'plan_type') else current_user.get("plan_type", "vip")
         
         # Check if user has remaining appointments for this professional type
-        limits = await get_monthly_appointment_limits(user_id, plan_type)
+        limits = await get_monthly_appointment_limits_new(user_id, plan_type)
         
         if professional_type == "nutritionist":
             remaining = limits["remaining"]["nutritionist"]
@@ -1842,7 +1842,7 @@ async def book_appointment(
             raise HTTPException(400, "Horário não está mais disponível")
         
         # Check appointment limits
-        limits = await get_monthly_appointment_limits(user_id, plan_type)
+        limits = await get_monthly_appointment_limits_new(user_id, plan_type)
         professional_type = slot["professional_type"]
         
         if professional_type == "nutritionist":
