@@ -182,10 +182,10 @@ class GymRegistrationAuthTest:
             self.log_test("Approve Academia", False, error=str(e))
             return False
     
-    def test_login_integration(self):
-        """Test 5: Test Login Integration"""
+    def test_immediate_gym_authentication(self):
+        """Test 3: Verify generated credentials work immediately with gym auth"""
         if not self.created_login or not self.created_password:
-            self.log_test("Login Integration", False, error="Missing created credentials")
+            self.log_test("Immediate Gym Authentication", False, error="Missing created credentials")
             return False
             
         try:
@@ -200,19 +200,19 @@ class GymRegistrationAuthTest:
                 gym_info = data.get("gym_info", {})
                 
                 if access_token and gym_info:
-                    self.log_test("Login Integration", True, 
-                        f"Login successful - Gym: {gym_info.get('name')}, Token: {len(access_token)} chars")
+                    self.log_test("Immediate Gym Authentication", True, 
+                        f"Generated credentials work immediately - Gym: {gym_info.get('name')}, Token: {len(access_token)} chars")
                     return True
                 else:
-                    self.log_test("Login Integration", False, error="Missing access_token or gym_info in response")
+                    self.log_test("Immediate Gym Authentication", False, error="Missing access_token or gym_info in response")
                     return False
             else:
-                self.log_test("Login Integration", False, 
+                self.log_test("Immediate Gym Authentication", False, 
                     error=f"Status {response.status_code}: {response.text}")
                 return False
                 
         except Exception as e:
-            self.log_test("Login Integration", False, error=str(e))
+            self.log_test("Immediate Gym Authentication", False, error=str(e))
             return False
     
     def test_password_reset(self):
