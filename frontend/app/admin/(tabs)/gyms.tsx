@@ -470,8 +470,54 @@ export default function GymsManagement() {
 
     } catch (error: any) {
       console.error('❌ Erro ao cadastrar academia:', error);
-      const errorMessage = error.response?.data?.detail || 'Erro ao cadastrar academia';
-      Alert.alert('Erro', errorMessage);
+      
+      let errorTitle = 'Erro no Cadastro';
+      let errorMessage = 'Não foi possível cadastrar a academia.';
+      
+      if (error.response) {
+        const status = error.response.status;
+        const detail = error.response.data?.detail || '';
+        
+        switch (status) {
+          case 400:
+            errorTitle = 'Dados Inválidos ❌';
+            errorMessage = `Verifique os dados informados:\n\n${detail}\n\nCampos obrigatórios:\n• Nome da academia\n• CNPJ\n• Email válido\n• Endereço completo`;
+            break;
+          case 401:
+            errorTitle = 'Não Autorizado ❌';
+            errorMessage = 'Sua sessão expirou. Faça login novamente no sistema de administração.';
+            break;
+          case 403:
+            errorTitle = 'Sem Permissão ❌';
+            errorMessage = 'Você não tem permissão para cadastrar academias. Verifique se você é um administrador.';
+            break;
+          case 409:
+            errorTitle = 'Academia já Existe ❌';
+            errorMessage = `Uma academia com este CNPJ ou email já está cadastrada:\n\n${detail}\n\nVerifique os dados e tente novamente.`;
+            break;
+          case 422:
+            errorTitle = 'Dados Inválidos ❌';
+            errorMessage = `Erro de validação nos dados fornecidos:\n\n${detail}\n\nVerifique:\n• CNPJ válido\n• Email com formato correto\n• CEP válido\n• Telefones válidos`;
+            break;
+          case 500:
+            errorTitle = 'Erro do Servidor ❌';
+            errorMessage = `Erro interno do servidor. Tente novamente em alguns minutos.\n\nSe o problema persistir, contate o suporte técnico.\n\nCódigo: ${status}`;
+            break;
+          default:
+            errorTitle = 'Erro Desconhecido ❌';
+            errorMessage = `Erro inesperado (${status}): ${detail || error.message}`;
+        }
+      } else if (error.code === 'ECONNABORTED') {
+        errorTitle = 'Timeout ❌';
+        errorMessage = 'A operação demorou muito para completar. Verifique sua conexão com a internet e tente novamente.';
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorTitle = 'Erro de Conexão ❌';
+        errorMessage = 'Não foi possível conectar ao servidor. Verifique sua conexão com a internet.';
+      } else {
+        errorMessage = error.message || 'Erro desconhecido ao cadastrar academia.';
+      }
+      
+      Alert.alert(errorTitle, errorMessage);
     } finally {
       setModalLoading(false);
     }
