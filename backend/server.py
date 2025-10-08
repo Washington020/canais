@@ -1634,6 +1634,113 @@ async def create_test_token():
                 "plan": "vip"
             }
         }
+
+@api_router.post("/admin/create-test-professionals")
+async def create_test_professionals():
+    """Create test professionals for development"""
+    try:
+        from passlib.context import CryptContext
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        
+        # Create test nutritionist
+        nutritionist_password = "nutri123"
+        nutritionist_hashed = pwd_context.hash(nutritionist_password)
+        
+        nutritionist_data = {
+            "full_name": "Dra. Marina Santos Nutrição",
+            "email": "nutri.teste@luxepass.com",
+            "password_hash": nutritionist_hashed,
+            "professional_type": "nutritionist",
+            "cref_crn": "CRN3 12345",
+            "specialization": "Nutrição Esportiva e Clínica",
+            "phone": "(11) 99999-1234",
+            "bio": "Nutricionista especializada em emagrecimento e performance esportiva",
+            "experience_years": 8,
+            "consultation_fee": 150.0,
+            "active": True,
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        # Create test personal trainer
+        personal_password = "personal123"
+        personal_hashed = pwd_context.hash(personal_password)
+        
+        personal_data = {
+            "full_name": "Prof. Carlos Silva Personal",
+            "email": "personal.teste@luxepass.com",
+            "password_hash": personal_hashed,
+            "professional_type": "personal_trainer",
+            "cref_crn": "CREF 098765",
+            "specialization": "Treinamento Funcional e Musculação",
+            "phone": "(11) 99999-5678",
+            "bio": "Personal trainer especializado em treinos personalizados e reabilitação",
+            "experience_years": 10,
+            "consultation_fee": 120.0,
+            "active": True,
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        # Check if professionals already exist
+        existing_nutritionist = await db.professionals.find_one({"email": "nutri.teste@luxepass.com"})
+        existing_personal = await db.professionals.find_one({"email": "personal.teste@luxepass.com"})
+        
+        results = []
+        
+        if not existing_nutritionist:
+            result_nutri = await db.professionals.insert_one(nutritionist_data)
+            results.append({
+                "type": "nutritionist",
+                "id": str(result_nutri.inserted_id),
+                "email": "nutri.teste@luxepass.com",
+                "password": nutritionist_password
+            })
+        else:
+            results.append({
+                "type": "nutritionist",
+                "id": str(existing_nutritionist["_id"]),
+                "email": "nutri.teste@luxepass.com",
+                "password": nutritionist_password,
+                "status": "already_exists"
+            })
+            
+        if not existing_personal:
+            result_personal = await db.professionals.insert_one(personal_data)
+            results.append({
+                "type": "personal_trainer",
+                "id": str(result_personal.inserted_id),
+                "email": "personal.teste@luxepass.com",
+                "password": personal_password
+            })
+        else:
+            results.append({
+                "type": "personal_trainer",
+                "id": str(existing_personal["_id"]),
+                "email": "personal.teste@luxepass.com",
+                "password": personal_password,
+                "status": "already_exists"
+            })
+        
+        return {
+            "success": True,
+            "message": "Profissionais de teste criados/atualizados com sucesso!",
+            "professionals": results,
+            "instructions": {
+                "nutritionist": {
+                    "login": "nutri.teste@luxepass.com",
+                    "password": nutritionist_password,
+                    "url": "/professional/nutritionist/login"
+                },
+                "personal_trainer": {
+                    "login": "personal.teste@luxepass.com", 
+                    "password": personal_password,
+                    "url": "/professional/personal/login"
+                }
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar profissionais de teste: {e}")
+        raise HTTPException(500, f"Erro ao criar profissionais de teste: {str(e)}")
         
     except Exception as e:
         logger.error(f"Erro ao criar token de teste: {e}")
