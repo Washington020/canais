@@ -1381,46 +1381,62 @@ export default function GymsManagement() {
                 </View>
               </View>
 
-              {/* Operational Info */}
+              {/* Operação da Academia */}
               <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>⚙️ Informações Operacionais</Text>
+                <Text style={styles.sectionTitle}>⚙️ Operação da Academia</Text>
                 
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Capacidade Máxima</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={form.capacity}
+                    onChangeText={(text) => setForm({...form, capacity: text})}
+                    placeholder="200"
+                    placeholderTextColor="#64748B"
+                    keyboardType="numeric"
+                  />
+                  <Text style={styles.inputHint}>Número máximo de pessoas simultâneas</Text>
+                </View>
+
                 <View style={styles.inputRow}>
-                  <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                    <Text style={styles.inputLabel}>Capacidade *</Text>
+                  <View style={[styles.inputGroup, {flex: 1}]}>
+                    <Text style={styles.inputLabel}>Seg-Sex</Text>
                     <TextInput
                       style={styles.input}
-                      value={form.capacity}
-                      onChangeText={(text) => setForm(prev => ({...prev, capacity: text}))}
-                      placeholder="100"
+                      value={form.operating_hours.weekdays}
+                      onChangeText={(text) => setForm({
+                        ...form, 
+                        operating_hours: {...form.operating_hours, weekdays: text}
+                      })}
+                      placeholder="06:00 - 22:00"
                       placeholderTextColor="#64748B"
-                      keyboardType="numeric"
                     />
                   </View>
-
-                  <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                    <Text style={styles.inputLabel}>Comissão (%) *</Text>
+                  <View style={[styles.inputGroup, {flex: 1, marginLeft: 12}]}>
+                    <Text style={styles.inputLabel}>Sábado</Text>
                     <TextInput
                       style={styles.input}
-                      value={form.commission_rate}
-                      onChangeText={(text) => setForm(prev => ({...prev, commission_rate: text}))}
-                      placeholder="15"
+                      value={form.operating_hours.saturday}
+                      onChangeText={(text) => setForm({
+                        ...form, 
+                        operating_hours: {...form.operating_hours, saturday: text}
+                      })}
+                      placeholder="08:00 - 18:00"
                       placeholderTextColor="#64748B"
-                      keyboardType="numeric"
                     />
                   </View>
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Horário Seg-Sex</Text>
+                  <Text style={styles.inputLabel}>Domingo</Text>
                   <TextInput
                     style={styles.input}
-                    value={form.operating_hours.weekdays}
-                    onChangeText={(text) => setForm(prev => ({
-                      ...prev,
-                      operating_hours: {...prev.operating_hours, weekdays: text}
-                    }))}
-                    placeholder="06:00 - 22:00"
+                    value={form.operating_hours.sunday}
+                    onChangeText={(text) => setForm({
+                      ...form, 
+                      operating_hours: {...form.operating_hours, sunday: text}
+                    })}
+                    placeholder="08:00 - 16:00"
                     placeholderTextColor="#64748B"
                   />
                 </View>
