@@ -189,9 +189,50 @@ export default function GymDashboard() {
         );
       }
     } catch (error: any) {
-      console.error('Erro na validação:', error);
-      const errorMessage = error.response?.data?.detail || 'Token inválido ou expirado';
-      Alert.alert('❌ Token Inválido', errorMessage);
+      console.error('❌ Erro na validação:', error);
+      console.error('📋 Resposta do erro:', error.response?.data);
+      console.error('🔢 Status do erro:', error.response?.status);
+      
+      let errorTitle = '❌ Token Inválido';
+      let errorMessage = 'Token inválido ou expirado';
+      
+      if (error.response) {
+        const status = error.response.status;
+        const detail = error.response.data?.detail || '';
+        
+        switch (status) {
+          case 404:
+            errorTitle = '🔍 Token Não Encontrado';
+            errorMessage = 'Token não encontrado no sistema. Verifique se o código está correto.';
+            break;
+          case 400:
+            errorTitle = '⏰ Token Expirado';
+            errorMessage = 'Este token já foi usado ou expirou. Solicite um novo token.';
+            break;
+          case 422:
+            errorTitle = '🚫 Dados Inválidos';
+            errorMessage = `Erro de validação: ${detail}`;
+            break;
+          case 401:
+            errorTitle = '🔐 Não Autorizado';
+            errorMessage = 'Sua sessão expirou. Faça login novamente na academia.';
+            break;
+          case 500:
+            errorTitle = '🔧 Erro do Servidor';
+            errorMessage = 'Erro interno do servidor. Tente novamente em alguns instantes.';
+            break;
+          default:
+            errorMessage = detail || error.message || 'Erro desconhecido na validação';
+        }
+      } else if (error.code === 'ECONNABORTED') {
+        errorTitle = '⏱️ Timeout';
+        errorMessage = 'A validação demorou muito. Verifique sua conexão.';
+      } else if (!error.response) {
+        errorTitle = '📡 Erro de Conexão';
+        errorMessage = 'Não foi possível conectar ao servidor. Verifique sua internet.';
+      }
+      
+      Alert.alert(errorTitle, errorMessage);
     } finally {
       setTokenValidating(false);
     }
