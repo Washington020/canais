@@ -1345,6 +1345,32 @@ async def get_admin_gyms():
 async def register_gym(gym_data: dict):
     import random
     import string
+    import re
+    
+    # Validações básicas
+    if not gym_data.get("name", "").strip():
+        raise HTTPException(status_code=400, detail="Nome da academia é obrigatório")
+    
+    if not gym_data.get("cnpj", "").strip():
+        raise HTTPException(status_code=400, detail="CNPJ é obrigatório")
+    
+    if not gym_data.get("email", "").strip():
+        raise HTTPException(status_code=400, detail="Email é obrigatório")
+        
+    # Validação de email
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, gym_data["email"]):
+        raise HTTPException(status_code=400, detail="Email inválido")
+        
+    # Validar se CNPJ já existe
+    existing_gym = await db.gyms.find_one({"cnpj": gym_data["cnpj"]})
+    if existing_gym:
+        raise HTTPException(status_code=409, detail=f"Academia com CNPJ {gym_data['cnpj']} já cadastrada")
+        
+    # Validar se email já existe
+    existing_email = await db.gyms.find_one({"email": gym_data["email"]})
+    if existing_email:
+        raise HTTPException(status_code=409, detail=f"Academia com email {gym_data['email']} já cadastrada")
     
     # Use custom password if provided, otherwise generate one
     custom_password = gym_data.get("custom_password", "").strip()
@@ -1360,6 +1386,12 @@ async def register_gym(gym_data: dict):
         # Generate automatic credentials (fallback)
         login = f"gym_{gym_data['name'].lower().replace(' ', '_')[:10]}_{random.randint(1000, 9999)}"
         password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    
+    # Verificar se o login já existe
+    existing_login = await db.gyms.find_one({"login_credentials.username": login})
+    if existing_login:
+        # Gerar novo login único
+        login = f"gym_{gym_data['name'].lower().replace(' ', '_')[:10]}_{random.randint(1000, 9999)}"
     
     # Hash the password
     from passlib.context import CryptContext
