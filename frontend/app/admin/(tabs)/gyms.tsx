@@ -1527,6 +1527,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 16,
   },
+  sectionDescription: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
   inputGroup: {
     marginBottom: 16,
   },
