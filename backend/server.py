@@ -1561,6 +1561,81 @@ async def create_test_gym():
         "login_url": "/academia"
     }
 
+@api_router.post("/admin/create-test-token")
+async def create_test_token():
+    """Create a test token for gym validation testing"""
+    try:
+        # Check if test user exists, if not create one
+        test_user = await db.users.find_one({"email": "cliente.teste@luxepass.com"})
+        
+        if not test_user:
+            # Create test user
+            test_user_data = {
+                "full_name": "Cliente Teste LuxePass",
+                "email": "cliente.teste@luxepass.com",
+                "phone": "(11) 99999-9999",
+                "cpf": "123.456.789-00",
+                "date_of_birth": datetime(1990, 1, 1, tzinfo=timezone.utc),
+                "plan_type": "vip",
+                "profile_photo": "https://via.placeholder.com/100",
+                "address": {
+                    "street": "Rua Teste",
+                    "number": "123",
+                    "city": "São Paulo",
+                    "state": "SP",
+                    "zip": "01234-567"
+                },
+                "emergency_contact": {
+                    "name": "Emergência Teste",
+                    "phone": "(11) 88888-8888"
+                },
+                "medical_conditions": ["Nenhuma condição especial"],
+                "tokens_used": 0,
+                "created_at": datetime.now(timezone.utc),
+                "password_hash": "$2b$12$dummy.hash.for.test.user.only"
+            }
+            
+            result = await db.users.insert_one(test_user_data)
+            test_user_id = str(result.inserted_id)
+        else:
+            test_user_id = str(test_user["_id"])
+        
+        # Create test token
+        token_data = {
+            "token_id": str(uuid.uuid4()),
+            "token_code": "TEST123",
+            "user_id": test_user_id,
+            "token_type": "academia",
+            "created_at": datetime.now(timezone.utc),
+            "expires_at": datetime.now(timezone.utc) + timedelta(days=30),
+            "status": "active",
+            "created_by_checkin": False,
+            "usage_count": 0,
+            "max_usage": 3
+        }
+        
+        # Delete existing test token if exists
+        await db.tokens.delete_many({"token_code": "TEST123"})
+        
+        # Insert new test token
+        await db.tokens.insert_one(token_data)
+        
+        return {
+            "success": True,
+            "token_code": "TEST123",
+            "user_id": test_user_id,
+            "message": "🎫 Token de teste criado! Use o código 'TEST123' para validar na academia.",
+            "test_user": {
+                "name": "Cliente Teste LuxePass",
+                "email": "cliente.teste@luxepass.com",
+                "plan": "vip"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar token de teste: {e}")
+        raise HTTPException(500, "Erro ao criar token de teste")
+
 @api_router.post("/admin/gyms/{gym_id}/reset-password")
 async def reset_gym_password(gym_id: str):
     """Reset gym password and return new credentials"""
