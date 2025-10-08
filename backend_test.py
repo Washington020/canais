@@ -22,12 +22,17 @@ API_BASE = f"{BACKEND_URL}/api"
 
 class ProfessionalSystemTester:
     def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        })
+        self.nutritionist_token = None
+        self.personal_trainer_token = None
+        self.client_token = None
         self.admin_token = None
-        self.created_gym_id = None
-        self.created_login = None
-        self.created_password = None
-        self.reset_password = None
         self.test_results = []
+        self.test_client_id = None
         
     def log_test(self, test_name, success, details="", error=""):
         """Log test results"""
