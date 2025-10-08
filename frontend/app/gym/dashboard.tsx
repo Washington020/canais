@@ -125,12 +125,23 @@ export default function GymDashboard() {
       const token = await AsyncStorage.getItem('gymToken');
       const headers = { Authorization: `Bearer ${token}` };
       
+      console.log('🔍 Validando token:', tokenCode);
+      console.log('🏢 Gym ID:', gymInfo?.id);
+      console.log('🔑 Auth token:', token ? 'Presente' : 'Ausente');
+      
+      // Verificar se gym_id está disponível
+      if (!gymInfo?.id) {
+        Alert.alert('Erro', 'ID da academia não encontrado. Faça login novamente.');
+        return;
+      }
+      
       // Passar o gym_id como parâmetro de query
-      const response = await axios.post(
-        `${API_URL}/tokens/validate/${tokenCode}?gym_id=${gymInfo?.id}`, 
-        {}, 
-        { headers }
-      );
+      const url = `${API_URL}/tokens/validate/${tokenCode}?gym_id=${gymInfo.id}`;
+      console.log('📡 URL da requisição:', url);
+      
+      const response = await axios.post(url, {}, { headers });
+      
+      console.log('✅ Resposta da API:', response.data);
       
       if (response.data.valid) {
         const userData = response.data.user;
