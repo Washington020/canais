@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Criar um sistema de login e cadastro de academia melhorado com feedback específico. Quando salvar uma academia cadastrada, deve informar 'PARCEIRO CADASTRADO' com sucesso. Quando ocorrer algum erro, deve mostrar exatamente qual erro aconteceu com mensagens detalhadas e específicas."
+user_problem_statement: "Corrigir os apps do nutricionista e personal trainer para funcionarem de forma real: sistema de agendamento funcional, criação de treinos/dietas, atribuição de clientes (sair da lista geral para 'meus clientes'), integração com limites de planos do cliente. Manter configurações existentes e interação entre apps."
 
 backend:
   - task: "Professional Client Assignment System Fix"
