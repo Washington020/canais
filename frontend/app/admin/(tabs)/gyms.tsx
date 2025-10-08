@@ -388,14 +388,28 @@ export default function GymsManagement() {
       
       console.log('✅ Academia cadastrada:', response.data);
 
-      // Mostrar credenciais geradas
-      if (response.data.login_credentials) {
-        setGeneratedCredentials({
-          username: response.data.login_credentials.username,
-          password: response.data.login_credentials.password
-        });
-        setShowCredentials(true);
-      }
+      // Mostrar mensagem de sucesso com parceiro cadastrado
+      Alert.alert(
+        '🎉 PARCEIRO CADASTRADO COM SUCESSO!',
+        `✅ A academia "${form.name}" foi cadastrada e aprovada automaticamente!\n\n` +
+        `🔑 Credenciais geradas:\n` +
+        `• Login: ${response.data.login}\n` +
+        `• Senha: ${response.data.password}\n\n` +
+        `📧 Email de notificação enviado para: ${form.email}\n\n` +
+        `🏢 Academia pronta para validar tokens!`,
+        [
+          {
+            text: 'Ver Credenciais',
+            onPress: () => {
+              setGeneratedCredentials({
+                username: response.data.login,
+                password: response.data.password
+              });
+              setShowCredentials(true);
+            }
+          }
+        ]
+      );
 
       // Reset form
       setForm({
