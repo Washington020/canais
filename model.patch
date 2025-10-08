@@ -1157,7 +1157,7 @@ index b975e09..e69de29 100644
 ---------+from datetime import datetime, timezone
 ---------+
 ---------+# Configuration
----------+BACKEND_URL = "https://trainer-client-app-4.preview.emergentagent.com/api"
+---------+BACKEND_URL = "https://trainer-portal-11.preview.emergentagent.com/api"
 ---------+
 ---------+def create_test_gym():
 ---------+    """Create test gym with academia_teste/teste123 credentials"""
@@ -1251,7 +1251,7 @@ index b975e09..e69de29 100644
 ---------+import json
 ---------+
 ---------+# Configuration
----------+BACKEND_URL = "https://trainer-client-app-4.preview.emergentagent.com/api"
+---------+BACKEND_URL = "https://trainer-portal-11.preview.emergentagent.com/api"
 ---------+
 ---------+def fix_gym_password():
 ---------+    """Fix gym password using admin endpoint"""

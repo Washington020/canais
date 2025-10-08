@@ -1,11 +1,15 @@
 <analysis>
-The trajectory outlines the iterative development of the LuxePass application, focusing on bug fixes and feature enhancements across Client, Admin, and Professional interfaces. Initially, the AI engineer addressed core professional management features, including client visibility and assignment flows, ensuring robust backend handling and frontend display. A major phase then focused on building a comprehensive, integrated scheduling system for both clients and professionals. Throughout these implementations, significant effort was dedicated to debugging null safety issues in frontend data rendering and correcting backend logic. The pricing for plans was adjusted, and a previously undefined intermediario plan was integrated. Most recently, critical login issues with the Gym system were resolved, and initial steps for implementing client upgrade paths for Workout and Nutrition tabs were taken, with the next focus being to integrate monthly appointment limits into the client scheduling interface.
+The AI engineer has focused on robustifying the LuxePass application across client, admin, and professional interfaces. Key efforts included resolving backend and frontend issues for appointment scheduling, ensuring null safety, and implementing client upgrade paths. A major part of the work involved enhancing the Admin panel for professional and gym management, specifically adding PIX information, appointment history, password reset functionality, and fixing intricate login integration problems between Admin-created credentials and corresponding apps. The gym system dashboard underwent multiple iterations to fix Unmatched Route errors, data payload mismatches during registration, and to expand the registration form to be more comprehensive for partners, including gym types for plan-based access. The trajectory ends with the AI engineer actively working on the detailed gym registration form.
 </analysis>
 
 <product_requirements>
-The LuxePass app provides a premium mobile experience across Client, Admin, and Gym interfaces, secured by JWT, with token, client registration, gym management, and financial features. Initially, the focus was on fixing gym login failures, inconsistent API URLs, frontend navigation, and ensuring Tokens and Financial admin tabs worked, prioritizing payment systems (Stripe/Pagar.me), push notifications, and UX.
-
-Later requirements included: for clients, daily supplementation logs, nutrition plans, functional Generate Workout, Visited Gyms, check-in with maps/location/notifications, and professional guidance (messaging, scheduling with availability); for admin, dedicated Nutritionist/Personal Trainer tabs (manage clients, schedules, plans), gym activation/deactivation, and a real-time Dashboard. A robust professional login, test premium client, interactive interfaces for plan creation, patient flagging, and accessible professional navigation were critical. Recent emphasis includes a comprehensive scheduling system with professional profiles, seamless client assignment and visibility, client check-in at nearest gym with token usage (1/day), Google Maps integration, upgrade paths for basic clients (Workout/Nutrition tabs showing plan info, full price, next month validity), interlinked professional/client schedules with 1-2 monthly consultations (depending on plan), a cancel appointment feature (re-scheduling next day), a Ver Planos button in financial section showing current plan and plan change data (requiring admin authorization), and real plan values.
+The LuxePass app aims to provide a premium mobile experience with Client, Admin, and Gym interfaces, secured by JWT. Initial requirements focused on fixing critical issues like gym login failures, API inconsistencies, and frontend navigation, while prioritizing payment systems, notifications, and UX.
+Later, the scope expanded to include:
+-   **Client Features:** Daily supplementation logs, nutrition plans, workout generation, gym check-ins with location/notifications, professional guidance (messaging, scheduling with availability).
+-   **Admin Features:** Dedicated Nutritionist/Personal Trainer tabs (manage clients, schedules, plans), gym activation/deactivation, real-time Dashboard. Robust professional login, test premium client, interactive plan creation, patient flagging, professional navigation.
+-   **Integrated Scheduling:** Comprehensive system with professional profiles, seamless client assignment, 1-2 monthly consultations based on plan (Basic: gym tokens only; Intermediário: 1 Nutri, 1 Personal; Avançado/VIP: 2 Nutri, 2 Personal), appointment cancellation.
+-   **Client Upgrade Paths:** Workout and Nutrition tabs showing plan info, full price, next month validity.
+-   **Gym System Enhancements:** Client full name, documents, photo on token validation; client check-in history; revenue reports for gyms (configurable value per check-in); contract management with upload/view options; plan-based access for clients to specific gym types.
 </product_requirements>
 
 <key_technical_concepts>
@@ -13,53 +17,41 @@ Later requirements included: for clients, daily supplementation logs, nutrition 
 -   **Backend Development:** FastAPI (Python), MongoDB, , .
 -   **Authentication:** JWT.
 -   **Payments:** Stripe, Pagar.me.
--   **Notifications:** Expo Notifications.
 -   **UI/UX:** , , , custom components, null-safe rendering.
 </key_technical_concepts>
 
 <code_architecture>
-The project is a full-stack application with an Expo frontend, FastAPI backend, and MongoDB database.
+The project uses a full-stack architecture with an Expo frontend, FastAPI backend, and MongoDB database.
 
 **Directory Structure:**
 
 
 
 **Key Files and Changes:**
-
-*   ****: Main FastAPI application.
-    *   **Summary**: Extended with endpoints for professional client management (, , ), appointment scheduling (, ), and plan creation (). Database connection fixed, and , ,  functions were added and invoked on startup to create initial test data. Crucially, the Gym login endpoint () was fixed by correcting the password field name from  to  during authentication and test data creation. Also updated  to include an intermediario plan and change the basic plan's price.
-*   ****: Pydantic models.
-    *   **Summary**: Expanded with detailed , , and  models to support the comprehensive scheduling system.  model was refined.
-*   ****: Client scheduling tab.
-    *   **Summary**: Initially created to display available professional times. Later rewritten to use native React Native components instead of  and updated for null safety in data rendering. It is currently being updated to integrate monthly consultation limits and cancellation features.
-*   ****: Client financial tab.
-    *   **Summary**: Extensively modified to fix  and  errors due to  being undefined. Implemented robust null safety checks (, ) and introduced an  helper function to guarantee data arrays are always valid, even in case of API errors.
-*   ** (NEW)**: Client workouts tab.
-    *   **Summary**: Created as part of the upgrade path for basic clients, intended to display upgrade information.
-*   ** (NEW)**: Client nutrition tab.
-    *   **Summary**: Created as part of the upgrade path for basic clients, intended to display upgrade information.
-*   ****: Gym login screen.
-    *   **Summary**: No direct code changes were observed in this file during the Gym login fix, the issue was backend-related. However, the backend now supports a test gym login with  / .
-*   ****: Nutritionist login.
-    *   **Summary**: Pre-filled credentials updated to  /  and accompanying example text.
-*   ****: Personal Trainer login.
-    *   **Summary**: Pre-filled credentials updated to  / .
-*   ****: Nutritionist tabs layout.
-    *   **Summary**: Includes a logout button and defines tabs including  and .
-*   ****: Personal Trainer tabs layout.
-    *   **Summary**: Initially missing the  tab, which was added to correctly render the professional's schedule interface. Includes a logout button.
-*   ****: Nutritionist new clients.
-    *   **Summary**: Logic for claiming clients () was corrected to correctly assign and move clients.
-*   ****: Personal Trainer new clients.
-    *   **Summary**: Similar client assignment logic as for nutritionists, correcting endpoint usage.
-*   ****: Nutritionist 'Create Diet' screen.
-    *   **Summary**: The  object definition was missing/corrupted and was fully re-added to fix a runtime error. Later modified to load and display only *assigned clients* for plan creation.
-*   ****: Personal Trainer 'Create Workout' screen.
-    *   **Summary**: Modified to load and display only *assigned clients* for plan creation.
-*   ****: Nutritionist schedule screen.
-    *   **Summary**: Rewritten to use native React Native components instead of . Fixed multiple null safety errors related to  and  data, implementing  and  patterns.
-*   ****: Personal Trainer schedule screen.
-    *   **Summary**: Rewritten to use native React Native components. Fixed multiple null safety errors related to  and  data, implementing  and  patterns.
+-   ****: Main FastAPI application.
+    -   Extended with endpoints for professional client management, appointment scheduling, and plan creation. Test data functions (, , ) were added and invoked on startup. Gym login endpoint () fixed (password field name).  updated for intermediario plan. Updated to support 'premium' plan in  and  and fixed date format in . Added  endpoint. Enhanced  to return full client data. Added new gym endpoints (, , ). Modified  to auto-approve gyms and accept /, also addressed  by adapting payload.
+-   ****: Pydantic models.
+    -   Expanded with , , ,  models. Added  to  and  models.
+-   ****: Client scheduling tab.
+    -   Rewritten using native components, updated for null safety, and modified to integrate monthly consultation limits and cancellation features based on plan type.
+-   ** (NEW)**: Client workouts tab.
+    -   Created as part of the upgrade path for basic clients, intended to display upgrade information.
+-   ** (NEW)**: Client nutrition tab.
+    -   Created as part of the upgrade path for basic clients, intended to display upgrade information.
+-   ****: Admin Personal Trainer management.
+    -   Modified to use correct  for API calls, added PIX field to form, display professional login info, and show appointment history. Implemented password reset button, removed monetary values from display. Updated to use backend's  endpoint.
+-   ****: Admin Nutritionist management.
+    -   Applied similar changes as  for PIX, login info, appointment history, password reset, and monetary value removal.
+-   ****: Admin Gym management.
+    -   Corrected API endpoints (e.g., from  to ). Added Credenciais de Acesso section in the form for custom login/password. Updated data payload for registration to match backend's expected ,  format. Expanded form with fields for owner, financial info, and gym type (Simple, Intermediário, VIP).
+-   ****: Gym login screen.
+    -   Corrected post-login redirection from  to .
+-   ****: Gym token validation screen.
+    -   Renamed to  to avoid conflicts.
+-   ****: Gym dashboard.
+    -   Initially created for comprehensive gym management dashboard. Experienced multiple Unmatched Route and white screen errors due to  import and file corruption/incompleteness. Replaced with simpler functional versions multiple times, eventually restored with core dashboard features (Validation, Clients, Revenue, Contract tabs). Currently being updated for a robust partner registration form.
+-   ****: Gym app layout.
+    -   Initially forced redirection to . Corrected to redirect to . Simplified by removing  route to avoid conflicts and ensure correct routing.
 </code_architecture>
 
 <pending_tasks>
@@ -72,19 +64,20 @@ The project is a full-stack application with an Expo frontend, FastAPI backend, 
 -   Update Financial tab Ver Planos to show current plan and plan change data.
 -   Implement admin authorization for plan changes.
 -   Finalize the upgrade path for Basic clients in Workout and Nutrition tabs, including pricing and plan change logic.
+-   Add styles for the newly added elements in the gym registration form.
 </pending_tasks>
 
 <current_work>
-Immediately before this summary, the AI engineer was working through a large set of user requests. The most recently completed task was fixing the Gym system login, which was successfully resolved by correcting a field name in the backend's authentication logic ().
+Immediately before this summary, the AI engineer was working on enhancing the gym registration form within the admin panel (). The user reported that the form was too weak and that registrations were not saving, implying incomplete data or incorrect structure.
 
-Following this, the AI engineer began implementing the **upgrade tabs for basic clients**.
-1.  **Workouts Tab:** A new file  was created.
-2.  **Nutritionist Guidance Tab:** A new file  was created.
-These files are the initial structures for basic clients to see upgrade options for Premium/VIP plans. The next phase for these tabs involves configuring them with plan information and handling the upgrade process, including backend endpoints to support these changes.
+The AI engineer addressed a  (Chat Message 416) by adjusting the frontend's data payload to match the backend's expected format for gym registration, which previously led to a 500 Internal Server Error. After confirming this particular backend error was resolved (Chat Message 436), the focus shifted to the robustness of the form itself.
 
-The AI engineer is currently focused on **integrating the scheduling system** further. It has already updated backend endpoints to control monthly consultation limits and is in the process of updating the client-side scheduling interface () to reflect these new limits and handle appointment cancellations, which is the immediate task.
+The current work involves:
+1.  **Expanding the  interface and initial  state** in  to include new fields like , , , , , ,  (Simple, Intermediário, VIP),  (Chat Messages 438-440).
+2.  **Updating the visual representation of the form** in  to include organized sections for Informações do Proprietário, Informações Financeiras, and Tipo de Academia with radio button options for gym types (Chat Messages 441-444).
+3.  The final action recorded in the trajectory is **adding the necessary CSS styles** for these newly added form elements (Chat Message 445). This indicates the form's structure and data handling are being overhauled to meet the comprehensive partner registration requirements.
 </current_work>
 
 <optional_next_step>
-Update the client scheduling interface () to integrate monthly consultation limits and cancellation features.
+Add the remaining necessary CSS styles for the new elements in the gym registration form in .
 </optional_next_step>
