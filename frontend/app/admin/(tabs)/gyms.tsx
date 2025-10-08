@@ -331,25 +331,45 @@ export default function GymsManagement() {
       }
 
       const gymData = {
-        // Campos obrigatórios no formato que o backend espera
+        // Informações básicas da academia
         name: form.name,
-        cnpj: "12.345.678/0001-90", // CNPJ padrão para academias de teste
-        razao_social: form.name + " LTDA",
-        endereco: form.address.street,
-        numero: form.address.number,
-        bairro: "Centro", // Bairro padrão
-        cidade: form.address.city,
-        estado: form.address.state,
-        cep: form.address.zip_code,
+        cnpj: form.cnpj,
+        razao_social: form.razao_social,
+        
+        // Informações do proprietário
+        responsavel_nome: form.owner_name,
+        responsavel_cpf: form.owner_cpf,
+        responsavel_email: form.owner_email,
+        responsavel_telefone: form.owner_phone,
+        
+        // Endereço completo
+        endereco: form.endereco,
+        numero: form.numero,
+        bairro: form.bairro,
+        cidade: form.cidade,
+        estado: form.estado,
+        cep: form.cep,
+        
+        // Contato da academia
         email: form.email,
         telefone_principal: form.phone,
-        tipo_academia: "Completa",
-        responsavel_nome: "Responsável",
-        responsavel_email: form.email,
-        responsavel_telefone: form.phone,
-        // Campos opcionais
+        
+        // Informações financeiras
+        pix_key: form.pix_key,
+        bank_account: form.bank_account,
+        
+        // Tipo de academia e valores
+        gym_type: form.gym_type,
+        monthly_fee: form.monthly_fee,
+        check_in_value: form.check_in_value,
+        
+        // Operação
+        capacity: form.capacity,
+        operating_hours: form.operating_hours,
+        amenities: form.amenities,
         description: form.description,
-        // Adicionar credenciais personalizadas se fornecidas
+        
+        // Credenciais personalizadas se fornecidas
         custom_login: customLogin.trim() || undefined,
         custom_password: customPassword.trim() || undefined
       };
