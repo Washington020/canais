@@ -1910,7 +1910,7 @@ async def book_appointment(
         logger.error(f"Erro ao agendar consulta: {e}")
         raise HTTPException(500, f"Erro ao agendar consulta: {str(e)}")
 
-async def get_monthly_appointment_limits(user_id: str, plan_type: str):
+async def get_monthly_appointment_limits_new(user_id: str, plan_type: str):
     """Get monthly appointment limits and usage for a user"""
     try:
         # Define limits based on plan
