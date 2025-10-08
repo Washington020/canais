@@ -10,6 +10,7 @@ export default function GymLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
+      <Stack.Screen name="dashboard" />
     </Stack>
   );
 }
