@@ -4307,7 +4307,7 @@ async def get_user_scheduled_notifications(current_user: User = Depends(get_curr
 # Professional Availability Management
 @api_router.post("/professionals/availability")
 async def set_professional_availability(
-    availability: AvailabilitySlot,
+    availability_data: dict,
     current_professional: dict = Depends(get_current_professional)
 ):
     """Professional sets their available dates and times"""
@@ -4315,19 +4315,32 @@ async def set_professional_availability(
         professional_id = str(current_professional["_id"])
         professional_type = current_professional["professional_type"]
         
-        # Generate time slots for the day (8h-19h, 1h intervals)
+        # Get data from request
+        date = availability_data.get("date")
+        start_time = availability_data.get("start_time", "08:00")
+        end_time = availability_data.get("end_time", "19:00")
+        break_times = availability_data.get("break_times", ["12:00", "13:00"])
+        slot_duration = availability_data.get("slot_duration", 60)
+        
+        if not date:
+            raise HTTPException(400, "Data é obrigatória")
+        
+        # Generate time slots for the day
         slots_created = 0
-        for hour in range(8, 19):  # 8h to 18h (last slot)
+        start_hour = int(start_time.split(":")[0])
+        end_hour = int(end_time.split(":")[0])
+        
+        for hour in range(start_hour, end_hour):  
             time_str = f"{hour:02d}:00"
             
             # Skip lunch break if specified
-            if time_str in availability.break_times:
+            if time_str in break_times:
                 continue
                 
             # Check if slot already exists
             existing_slot = await db.appointment_slots.find_one({
                 "professional_id": professional_id,
-                "date": availability.date,
+                "date": date,
                 "time": time_str
             })
             
@@ -4335,10 +4348,10 @@ async def set_professional_availability(
                 slot_data = {
                     "professional_id": professional_id,
                     "professional_type": professional_type,
-                    "date": availability.date,
+                    "date": date,
                     "time": time_str,
                     "available": True,
-                    "duration_minutes": availability.slot_duration,
+                    "duration_minutes": slot_duration,
                     "created_at": datetime.now(timezone.utc)
                 }
                 
@@ -4347,7 +4360,7 @@ async def set_professional_availability(
         
         return {
             "success": True,
-            "message": f"{slots_created} horários disponibilizados para {availability.date}",
+            "message": f"{slots_created} horários disponibilizados para {date}",
             "slots_created": slots_created
         }
         
