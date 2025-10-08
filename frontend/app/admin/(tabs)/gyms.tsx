@@ -1533,6 +1533,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 20,
   },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: '500',
+  },
   inputGroup: {
     marginBottom: 16,
   },
