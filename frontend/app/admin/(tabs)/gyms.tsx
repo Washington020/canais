@@ -1319,22 +1319,45 @@ export default function GymsManagement() {
 
               {/* Tipo de Academia e Valores */}
               <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>🏆 Tipo de Academia e Valores</Text>
-                
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Tipo de Academia *</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={form.gym_type}
-                    onChangeText={(text) => setForm({...form, gym_type: text as 'simples' | 'intermediario' | 'vip'})}
-                    placeholder="simples, intermediario ou vip"
-                    placeholderTextColor="#64748B"
-                  />
+                <Text style={styles.sectionTitle}>🏆 Tipo de Academia</Text>
+                <Text style={styles.sectionDescription}>
+                  Define que clientes podem acessar esta academia
+                </Text>
+
+                <View style={styles.gymTypeContainer}>
+                  {(['simples', 'intermediario', 'vip'] as const).map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.gymTypeCard,
+                        form.gym_type === type && styles.gymTypeCardSelected
+                      ]}
+                      onPress={() => setForm({...form, gym_type: type})}
+                    >
+                      <View style={styles.gymTypeHeader}>
+                        <Text style={[
+                          styles.gymTypeTitle,
+                          form.gym_type === type && styles.gymTypeTextSelected
+                        ]}>
+                          {type === 'simples' ? '🥉 Simples' : 
+                           type === 'intermediario' ? '🥈 Intermediário' : '🥇 VIP'}
+                        </Text>
+                      </View>
+                      <Text style={[
+                        styles.gymTypeDescription,
+                        form.gym_type === type && styles.gymTypeTextSelected
+                      ]}>
+                        {type === 'simples' ? 'Clientes Basic podem acessar' : 
+                         type === 'intermediario' ? 'Clientes Basic + Intermediário' : 
+                         'Todos os clientes podem acessar'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
 
                 <View style={styles.inputRow}>
                   <View style={[styles.inputGroup, {flex: 1}]}>
-                    <Text style={styles.inputLabel}>Mensalidade (R$) *</Text>
+                    <Text style={styles.inputLabel}>Mensalidade (R$)</Text>
                     <TextInput
                       style={styles.input}
                       value={form.monthly_fee}
@@ -1345,7 +1368,7 @@ export default function GymsManagement() {
                     />
                   </View>
                   <View style={[styles.inputGroup, {flex: 1, marginLeft: 12}]}>
-                    <Text style={styles.inputLabel}>Valor Check-in (R$) *</Text>
+                    <Text style={styles.inputLabel}>Valor por Check-in (R$)</Text>
                     <TextInput
                       style={styles.input}
                       value={form.check_in_value}
