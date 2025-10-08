@@ -421,7 +421,7 @@ class GymRegistrationAuthTest:
 
 def main():
     """Main test execution"""
-    tester = LuxePassAcademiaTest()
+    tester = GymRegistrationAuthTest()
     success = tester.run_all_tests()
     
     # Exit with appropriate code
