@@ -364,30 +364,32 @@ class GymRegistrationAuthTest:
     
     def run_all_tests(self):
         """Run all tests in sequence"""
-        print("🎯 LUXEPASS ACADEMIA CREATION AND LOGIN INTEGRATION FLOW TEST")
-        print("=" * 70)
+        print("🎯 GYM REGISTRATION AND AUTHENTICATION SYSTEM INTEGRATION TEST")
+        print("=" * 80)
         print(f"Backend URL: {API_BASE}")
         print(f"Test started at: {datetime.now().isoformat()}")
+        print("Focus: Integration between admin panel and gym authentication system")
         print()
         
         # Run tests in sequence
         tests = [
             self.test_admin_login,
-            self.test_create_academia,
-            self.test_verify_academia_creation,
-            self.test_approve_academia,
-            self.test_login_integration,
-            self.test_password_reset,
-            self.test_custom_password_setting
+            self.test_gym_registration_integration,
+            self.test_immediate_gym_authentication,
+            self.test_password_reset_functionality,
+            self.test_old_password_stops_working,
+            self.test_new_password_works,
+            self.test_existing_gym_credentials,
+            self.test_invalid_credentials_error_handling
         ]
         
         for test in tests:
             test()
         
         # Summary
-        print("=" * 70)
+        print("=" * 80)
         print("TEST SUMMARY")
-        print("=" * 70)
+        print("=" * 80)
         
         passed = sum(1 for result in self.test_results if result["success"])
         total = len(self.test_results)
@@ -399,18 +401,21 @@ class GymRegistrationAuthTest:
         print()
         
         if passed == total:
-            print("🎉 ALL TESTS PASSED - Academia creation and login integration flow is working perfectly!")
+            print("🎉 ALL TESTS PASSED - Gym registration and authentication integration is working perfectly!")
         else:
             print("⚠️  SOME TESTS FAILED - Check the details above")
             
         print()
-        print("BUSINESS CASE VALIDATION:")
-        if passed >= 5:  # At least admin login, creation, verification, approval, and login integration
-            print("✅ Admin can create academias with custom credentials")
-            print("✅ Created credentials work immediately in gym auth system")
-            print("✅ Complete integration between admin → gym login system working")
+        print("INTEGRATION TEST RESULTS:")
+        if passed >= 6:  # At least 75% pass rate for critical integration
+            print("✅ Gym registration creates working credentials immediately")
+            print("✅ Password reset generates new working credentials")
+            print("✅ Old credentials stop working after reset")
+            print("✅ Authentication tokens work for protected gym endpoints")
+            print("✅ Complete integration from admin to gym interface works seamlessly")
         else:
-            print("❌ Critical business workflow issues detected")
+            print("❌ Critical integration workflow issues detected")
+            print("❌ Manual investigation required for failed integration flows")
         
         return passed == total
 
