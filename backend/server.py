@@ -1458,7 +1458,20 @@ async def register_gym(gym_data: dict):
         "gym_id": str(result.inserted_id),
         "login": login,
         "password": password,
-        "message": f"Academia cadastrada com sucesso! Credenciais enviadas para {gym_data['email']}"
+        "gym_name": gym_data["name"],
+        "gym_email": gym_data["email"],
+        "status": "approved",
+        "message": f"🎉 PARCEIRO CADASTRADO COM SUCESSO! Academia '{gym_data['name']}' foi cadastrada e aprovada automaticamente. Credenciais enviadas para {gym_data['email']}.",
+        "login_credentials": {
+            "username": login,
+            "password": password
+        },
+        "next_steps": [
+            "Credenciais foram enviadas por email",
+            "Academia já pode validar tokens de clientes",
+            "Acesse o Sistema Academia com as credenciais",
+            "URL do Sistema: /academia"
+        ]
     }
 
 @api_router.put("/admin/gyms/{gym_id}/status")
