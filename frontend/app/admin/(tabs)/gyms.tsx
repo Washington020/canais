@@ -237,24 +237,23 @@ export default function GymsManagement() {
       }
 
       const gymData = {
+        // Campos obrigatórios no formato que o backend espera
         name: form.name,
+        cnpj: "12.345.678/0001-90", // CNPJ padrão para academias de teste
+        razao_social: form.name + " LTDA",
+        endereco: form.address.street,
+        numero: form.address.number,
+        bairro: "Centro", // Bairro padrão
+        cidade: form.address.city,
+        estado: form.address.state,
+        cep: form.address.zip_code,
         email: form.email,
-        phone: form.phone,
-        address: {
-          street: form.address.street,
-          number: form.address.number,
-          city: form.address.city,
-          state: form.address.state,
-          zip_code: form.address.zip_code
-        },
-        capacity: parseInt(form.capacity),
-        operating_hours: {
-          'seg-sex': form.operating_hours.weekdays,
-          'sab': form.operating_hours.saturday,
-          'dom': form.operating_hours.sunday
-        },
-        commission_rate: parseFloat(form.commission_rate),
-        amenities: form.amenities,
+        telefone_principal: form.phone,
+        tipo_academia: "Completa",
+        responsavel_nome: "Responsável",
+        responsavel_email: form.email,
+        responsavel_telefone: form.phone,
+        // Campos opcionais
         description: form.description,
         // Adicionar credenciais personalizadas se fornecidas
         custom_login: customLogin.trim() || undefined,
