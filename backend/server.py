@@ -939,7 +939,10 @@ async def validate_simple_token(token_code: str, request: Request, gym_id: str =
             logger.error(f"Usuário não encontrado para token: {token_doc['user_id']}")
             raise HTTPException(status_code=500, detail="Dados do usuário não encontrados")
 
-        # Get gym info for validation record
+        # Use default gym_id if not provided or get gym info
+        if not gym_id:
+            gym_id = "68e5bb68b0214a00f95f9d15"  # Default test gym
+            
         gym_doc = await db.gyms.find_one({"_id": ObjectId(gym_id)})
         
         # Create validation record for admin tracking
