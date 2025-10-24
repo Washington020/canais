@@ -1884,11 +1884,15 @@ async def book_appointment(
             raise HTTPException(404, "Profissional não encontrado")
         
         # Create appointment
+        client_name = getattr(current_user, 'full_name', '') if hasattr(current_user, 'full_name') else current_user.get("full_name", "")
+        client_email = getattr(current_user, 'email', '') if hasattr(current_user, 'email') else current_user.get("email", "")
+        client_phone = getattr(current_user, 'phone', '') if hasattr(current_user, 'phone') else current_user.get("phone", "")
+        
         appointment_data = {
             "client_id": user_id,
-            "client_name": getattr(current_user, 'full_name', '') if hasattr(current_user, 'full_name') else current_user["full_name"],
-            "client_email": getattr(current_user, 'email', '') if hasattr(current_user, 'email') else current_user["email"],
-            "client_phone": getattr(current_user, 'phone', '') if hasattr(current_user, 'phone') else current_user.get("phone", ""),
+            "client_name": client_name,
+            "client_email": client_email,
+            "client_phone": client_phone,
             "professional_id": slot["professional_id"],
             "professional_name": professional["full_name"],
             "professional_type": professional_type,
