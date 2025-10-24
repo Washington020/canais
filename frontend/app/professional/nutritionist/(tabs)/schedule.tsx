@@ -162,6 +162,14 @@ export default function NutritionistSchedule() {
       );
       setAvailabilityModal(false);
       
+      // Adicionar a data à lista de datas disponíveis para mostrar visualmente
+      setAvailableDates(prev => {
+        if (!prev.includes(date)) {
+          return [...prev, date];
+        }
+        return prev;
+      });
+      
       // Recarregar os compromissos para mostrar os novos horários
       loadAppointments();
     } catch (error: any) {
