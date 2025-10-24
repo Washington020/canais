@@ -51,6 +51,7 @@ export default function NutritionistSchedule() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('🚀 [NUTRI] Agenda carregando...');
     loadAppointments();
     loadStats();
   }, []);
