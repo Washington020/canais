@@ -383,6 +383,7 @@ export default function NutritionistSchedule() {
                       ]
                     );
                   }}
+                  activeOpacity={0.7}
                 >
                   <Text style={[
                     styles.dateText,
