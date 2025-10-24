@@ -1755,6 +1755,10 @@ async def get_available_appointments(
         user_id = str(current_user.id) if hasattr(current_user, 'id') else str(current_user["_id"])
         plan_type = getattr(current_user, 'plan_type', 'vip') if hasattr(current_user, 'plan_type') else current_user.get("plan_type", "vip")
         
+        # Para admin, simular plano VIP para testes
+        if current_user.get("type") == "admin":
+            plan_type = "vip"
+        
         # Check if plan allows professional consultations
         if plan_type == "basico":
             return {
@@ -1835,6 +1839,10 @@ async def book_appointment(
     try:
         user_id = str(current_user.id) if hasattr(current_user, 'id') else str(current_user["_id"])
         plan_type = getattr(current_user, 'plan_type', 'vip') if hasattr(current_user, 'plan_type') else current_user.get("plan_type", "vip")
+        
+        # Para admin, simular plano VIP para testes
+        if current_user.get("type") == "admin":
+            plan_type = "vip"
         
         # Get data from request  
         slot_id = booking_data.get("slot_id")
