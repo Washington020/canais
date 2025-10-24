@@ -339,11 +339,45 @@ export default function NutritionistSchedule() {
                   ]}
                   onPress={() => {
                     if (dateInfo.appointments.length > 0) {
+                      // Mostrar consultas agendadas
                       Alert.alert(
-                        `Consultas - ${dateInfo.date}`,
+                        `📅 Consultas - ${new Date(dateInfo.date).toLocaleDateString('pt-BR')}`,
                         dateInfo.appointments.map(apt => 
-                          `${apt.appointment_time}h - ${apt.client_name}`
-                        ).join('\n')
+                          `🕒 ${apt.appointment_time}h - ${apt.client_name}`
+                        ).join('\n'),
+                        [
+                          { text: 'Fechar', style: 'cancel' },
+                          {
+                            text: '+ Disponibilizar Mais Horários',
+                            onPress: () => {
+                              Alert.alert(
+                                '🗓️ Disponibilizar Horários',
+                                `Deseja disponibilizar mais horários para ${new Date(dateInfo.date).toLocaleDateString('pt-BR')}?`,
+                                [
+                                  { text: 'Cancelar', style: 'cancel' },
+                                  { text: 'Confirmar', onPress: () => setAvailability(dateInfo.date) }
+                                ]
+                              );
+                            }
+                          }
+                        ]
+                      );
+                    } else if (!dateInfo.isPast) {
+                      // Data vazia - disponibilizar horários
+                      Alert.alert(
+                        '🗓️ Disponibilizar Horários',
+                        `Deseja disponibilizar horários para ${new Date(dateInfo.date).toLocaleDateString('pt-BR')}?\n\n⏰ Horários: 8h às 19h (pausa 12h-13h)\n⏱️ Duração: 60 minutos cada consulta`,
+                        [
+                          { text: 'Cancelar', style: 'cancel' },
+                          { text: 'Confirmar', onPress: () => setAvailability(dateInfo.date) }
+                        ]
+                      );
+                    } else {
+                      // Data passada
+                      Alert.alert(
+                        '⚠️ Data Passada',
+                        'Não é possível disponibilizar horários para datas passadas.',
+                        [{ text: 'OK' }]
                       );
                     }
                   }}
