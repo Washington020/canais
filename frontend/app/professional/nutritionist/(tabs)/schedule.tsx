@@ -182,6 +182,21 @@ export default function NutritionistSchedule() {
     }
   };
 
+  const checkAvailableSlots = async (date: string) => {
+    try {
+      const token = await AsyncStorage.getItem('professionalToken');
+      if (!token) return 0;
+      
+      const response = await axios.get(`${API_URL}/professionals/availability/${date}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      return response.data.available_slots || 0;
+    } catch (error) {
+      return 0;
+    }
+  };
+
   const generateCalendarDates = () => {
     const dates = [];
     const today = new Date();
