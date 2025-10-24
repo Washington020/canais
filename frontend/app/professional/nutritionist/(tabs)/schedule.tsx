@@ -361,30 +361,15 @@ export default function NutritionistSchedule() {
                     styles.dateCell,
                     dateInfo.isToday && styles.todayCell,
                     dateInfo.appointments.length > 0 && styles.appointmentCell,
-                    availableDates.includes(dateInfo.date) && styles.availableCell
+                    availableDates.includes(dateInfo.date) && styles.availableCell,
+                    { zIndex: 1 }  // Garantir que está na frente
                   ]}
                   onPress={() => {
-                    console.log('🔍 [NUTRI] Clique na data:', dateInfo.date);
-                    console.log('🔍 [NUTRI] Tem consultas:', dateInfo.appointments.length > 0);
-                    console.log('🔍 [NUTRI] É passada:', dateInfo.isPast);
-                    
-                    // Teste simples primeiro
-                    Alert.alert(
-                      '📅 Data Clicada!',
-                      `Data: ${new Date(dateInfo.date).toLocaleDateString('pt-BR')}\nConsultas: ${dateInfo.appointments.length}\nPassada: ${dateInfo.isPast ? 'Sim' : 'Não'}`,
-                      [
-                        { text: 'Fechar', style: 'cancel' },
-                        {
-                          text: 'Disponibilizar Horários',
-                          onPress: () => {
-                            console.log('🔍 [NUTRI] Iniciando disponibilização para:', dateInfo.date);
-                            setAvailability(dateInfo.date);
-                          }
-                        }
-                      ]
-                    );
+                    console.log('🚨 CLIQUE DETECTADO!!! Data:', dateInfo.date);
+                    Alert.alert('🚨 CLIQUE FUNCIONOU!', `Data clicada: ${dateInfo.day}`);
                   }}
                   activeOpacity={0.7}
+                  disabled={false}
                 >
                   <Text style={[
                     styles.dateText,
