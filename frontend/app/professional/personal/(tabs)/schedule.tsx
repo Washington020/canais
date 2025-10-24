@@ -339,15 +339,27 @@ export default function PersonalTrainerSchedule() {
                     dateInfo.appointments.length > 0 && styles.appointmentCell
                   ]}
                   onPress={() => {
-                    if (dateInfo.appointments.length > 0) {
-                      Alert.alert(
-                        `Treinos - ${dateInfo.date}`,
-                        dateInfo.appointments.map(apt => 
-                          `${apt.appointment_time}h - ${apt.client_name}`
-                        ).join('\n')
-                      );
-                    }
+                    console.log('🔍 [PERSONAL] Clique na data:', dateInfo.date);
+                    console.log('🔍 [PERSONAL] Tem consultas:', dateInfo.appointments.length > 0);
+                    console.log('🔍 [PERSONAL] É passada:', dateInfo.isPast);
+                    
+                    // Teste simples primeiro
+                    Alert.alert(
+                      '📅 Data Clicada! (PERSONAL)',
+                      `Data: ${new Date(dateInfo.date).toLocaleDateString('pt-BR')}\nConsultas: ${dateInfo.appointments.length}\nPassada: ${dateInfo.isPast ? 'Sim' : 'Não'}`,
+                      [
+                        { text: 'Fechar', style: 'cancel' },
+                        {
+                          text: 'Disponibilizar Horários',
+                          onPress: () => {
+                            console.log('🔍 [PERSONAL] Iniciando disponibilização para:', dateInfo.date);
+                            setAvailability(dateInfo.date);
+                          }
+                        }
+                      ]
+                    );
                   }}
+                  activeOpacity={0.7}
                 >
                   <Text style={[
                     styles.dateText,
