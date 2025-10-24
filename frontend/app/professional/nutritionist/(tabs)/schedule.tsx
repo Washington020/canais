@@ -362,7 +362,13 @@ export default function NutritionistSchedule() {
                     dateInfo.isToday && styles.todayCell,
                     dateInfo.appointments.length > 0 && styles.appointmentCell,
                     availableDates.includes(dateInfo.date) && styles.availableCell,
-                    { zIndex: 1 }  // Garantir que está na frente
+                    { 
+                      zIndex: 1,
+                      elevation: 1,
+                      backgroundColor: '#1E293B',  // Background explícito
+                      minHeight: 40,
+                      minWidth: 40
+                    }
                   ]}
                   onPress={() => {
                     console.log('🚨 CLIQUE DETECTADO!!! Data:', dateInfo.date);
@@ -370,6 +376,8 @@ export default function NutritionistSchedule() {
                   }}
                   activeOpacity={0.7}
                   disabled={false}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  pointerEvents="auto"
                 >
                   <Text style={[
                     styles.dateText,
