@@ -351,7 +351,8 @@ export default function NutritionistSchedule() {
                   style={[
                     styles.dateCell,
                     dateInfo.isToday && styles.todayCell,
-                    dateInfo.appointments.length > 0 && styles.appointmentCell
+                    dateInfo.appointments.length > 0 && styles.appointmentCell,
+                    availableDates.includes(dateInfo.date) && styles.availableCell
                   ]}
                   onPress={() => {
                     if (dateInfo.appointments.length > 0) {
