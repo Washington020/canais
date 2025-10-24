@@ -47,6 +47,7 @@ export default function NutritionistSchedule() {
   const [availabilityModal, setAvailabilityModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
   const router = useRouter();
 
   useEffect(() => {
