@@ -651,6 +651,11 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: '#3B82F6',
   },
+  availableCell: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderColor: '#22C55E',
+    borderWidth: 1,
+  },
   todaySection: {
     paddingHorizontal: 24,
     marginBottom: 20,
