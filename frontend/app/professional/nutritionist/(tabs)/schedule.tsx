@@ -363,48 +363,25 @@ export default function NutritionistSchedule() {
                     availableDates.includes(dateInfo.date) && styles.availableCell
                   ]}
                   onPress={() => {
-                    if (dateInfo.appointments.length > 0) {
-                      // Mostrar consultas agendadas
-                      Alert.alert(
-                        `📅 Consultas - ${new Date(dateInfo.date).toLocaleDateString('pt-BR')}`,
-                        dateInfo.appointments.map(apt => 
-                          `🕒 ${apt.appointment_time}h - ${apt.client_name}`
-                        ).join('\n'),
-                        [
-                          { text: 'Fechar', style: 'cancel' },
-                          {
-                            text: '+ Disponibilizar Mais Horários',
-                            onPress: () => {
-                              Alert.alert(
-                                '🗓️ Disponibilizar Horários',
-                                `Deseja disponibilizar mais horários para ${new Date(dateInfo.date).toLocaleDateString('pt-BR')}?`,
-                                [
-                                  { text: 'Cancelar', style: 'cancel' },
-                                  { text: 'Confirmar', onPress: () => setAvailability(dateInfo.date) }
-                                ]
-                              );
-                            }
+                    console.log('🔍 [NUTRI] Clique na data:', dateInfo.date);
+                    console.log('🔍 [NUTRI] Tem consultas:', dateInfo.appointments.length > 0);
+                    console.log('🔍 [NUTRI] É passada:', dateInfo.isPast);
+                    
+                    // Teste simples primeiro
+                    Alert.alert(
+                      '📅 Data Clicada!',
+                      `Data: ${new Date(dateInfo.date).toLocaleDateString('pt-BR')}\nConsultas: ${dateInfo.appointments.length}\nPassada: ${dateInfo.isPast ? 'Sim' : 'Não'}`,
+                      [
+                        { text: 'Fechar', style: 'cancel' },
+                        {
+                          text: 'Disponibilizar Horários',
+                          onPress: () => {
+                            console.log('🔍 [NUTRI] Iniciando disponibilização para:', dateInfo.date);
+                            setAvailability(dateInfo.date);
                           }
-                        ]
-                      );
-                    } else if (!dateInfo.isPast) {
-                      // Data vazia - disponibilizar horários
-                      Alert.alert(
-                        '🗓️ Disponibilizar Horários',
-                        `Deseja disponibilizar horários para ${new Date(dateInfo.date).toLocaleDateString('pt-BR')}?\n\n⏰ Horários: 8h às 19h (pausa 12h-13h)\n⏱️ Duração: 60 minutos cada consulta`,
-                        [
-                          { text: 'Cancelar', style: 'cancel' },
-                          { text: 'Confirmar', onPress: () => setAvailability(dateInfo.date) }
-                        ]
-                      );
-                    } else {
-                      // Data passada
-                      Alert.alert(
-                        '⚠️ Data Passada',
-                        'Não é possível disponibilizar horários para datas passadas.',
-                        [{ text: 'OK' }]
-                      );
-                    }
+                        }
+                      ]
+                    );
                   }}
                 >
                   <Text style={[
