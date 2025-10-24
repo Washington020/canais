@@ -125,15 +125,21 @@ export default function PersonalTrainerSchedule() {
 
   const setAvailability = async (date: string) => {
     try {
+      console.log('🔍 [PERSONAL] Iniciando disponibilização para data:', date);
+      
       const token = await AsyncStorage.getItem('professionalToken');
       const headers = { Authorization: `Bearer ${token}` };
+      
+      console.log('🔑 [PERSONAL] Token profissional:', token ? 'Presente' : 'Ausente');
       
       const professionalData = await AsyncStorage.getItem('professional');
       const professional = JSON.parse(professionalData || '{}');
       
+      console.log('👤 [PERSONAL] Dados profissional:', professional);
+      
       const availabilityData = {
         professional_id: professional.id,
-        professional_type: "personal",
+        professional_type: "personal_trainer",  // Corrigido para "personal_trainer"
         date: date,
         start_time: "08:00",
         end_time: "19:00",
@@ -141,13 +147,38 @@ export default function PersonalTrainerSchedule() {
         slot_duration: 60
       };
       
-      await axios.post(`${API_URL}/professionals/availability`, availabilityData, { headers });
+      console.log('📋 [PERSONAL] Dados de disponibilidade:', availabilityData);
+      console.log('🌐 [PERSONAL] URL da API:', `${API_URL}/professionals/availability`);
       
-      Alert.alert('Sucesso', `Horários disponibilizados para ${new Date(date).toLocaleDateString('pt-BR')}`);
+      const response = await axios.post(`${API_URL}/professionals/availability`, availabilityData, { headers });
+      
+      console.log('✅ [PERSONAL] Resposta da API:', response.data);
+      
+      Alert.alert(
+        '✅ Horários Disponibilizados!',
+        `${response.data.slots_created} horários foram disponibilizados para ${new Date(date).toLocaleDateString('pt-BR')}.\n\nOs clientes já podem ver esses horários no app!`,
+        [{ text: 'OK' }]
+      );
       setAvailabilityModal(false);
+      
+      // Recarregar os compromissos para mostrar os novos horários
+      loadAppointments();
     } catch (error: any) {
-      console.error('Error setting availability:', error);
-      Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível definir disponibilidade');
+      console.error('❌ [PERSONAL] Erro ao definir disponibilidade:', error);
+      console.error('📋 [PERSONAL] Resposta do erro:', error.response?.data);
+      console.error('🔢 [PERSONAL] Status do erro:', error.response?.status);
+      
+      let errorMessage = 'Não foi possível definir disponibilidade';
+      
+      if (error.response?.status === 401) {
+        errorMessage = 'Sua sessão expirou. Faça login novamente.';
+      } else if (error.response?.status === 422) {
+        errorMessage = `Dados inválidos: ${error.response?.data?.detail || 'Verifique os dados enviados'}`;
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+      
+      Alert.alert('❌ Erro', errorMessage);
     }
   };
 
