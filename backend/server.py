@@ -133,16 +133,6 @@ PAYMENT_PLANS = {
             "📈 Acompanhamento semanal personalizado",
             "🎯 Fidelidade de 12 meses com benefícios VIP"
         ]
-    },
-    "vip": {
-        "id": "vip",
-        "name": "Plano VIP",
-        "price": 99.90,
-        "currency": "BRL", 
-        "duration_days": 30,
-        "features": ["Tokens ilimitados", "Acesso premium", "Suporte 24/7", "Personal trainer virtual", "Nutricionista virtual"],
-        "token_limit": -1,  # -1 = unlimited
-        "description": "Para quem quer o melhor"
     }
 }
 
