@@ -4125,10 +4125,16 @@ async def create_pagarme_checkout_session(
             "status": order_result["status"],
             "payment_method": request.payment_method,
             "plan_name": plan["name"],
-            "amount": plan["price"],
+            "monthly_price": plan["monthly_price"],
+            "activation_fee": plan["activation_fee"],
+            "total_amount": total_amount,
             "currency": plan["currency"],
+            "fidelity_months": plan["fidelity_months"],
             "charges": order_result.get("charges", []),
-            "checkouts": order_result.get("checkouts", [])
+            "checkouts": order_result.get("checkouts", []),
+            "payment_url": order_result.get("checkouts", [{}])[0].get("payment_url") if order_result.get("checkouts") else None,
+            "qr_code": order_result.get("charges", [{}])[0].get("last_transaction", {}).get("qr_code") if order_result.get("charges") else None,
+            "boleto_url": order_result.get("charges", [{}])[0].get("last_transaction", {}).get("url") if order_result.get("charges") else None
         }
         
     except Exception as e:
