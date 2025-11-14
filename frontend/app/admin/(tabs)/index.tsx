@@ -149,7 +149,7 @@ export default function AdminDashboard() {
           {/* Clientes Card */}
           <View style={[styles.statCard, { backgroundColor: '#22C55E20', borderColor: '#22C55E40' }]}>
             <View style={styles.statIconContainer}>
-              <Ionicons name="people" size={32} color="#22C55E" />
+              <Ionicons name="people" size={24} color="#22C55E" />
             </View>
             <Text style={styles.statValue}>{stats?.total_clients || 0}</Text>
             <Text style={styles.statLabel}>Total de Clientes</Text>
@@ -158,7 +158,7 @@ export default function AdminDashboard() {
           {/* Pendentes Card */}
           <View style={[styles.statCard, { backgroundColor: '#F59E0B20', borderColor: '#F59E0B40' }]}>
             <View style={styles.statIconContainer}>
-              <Ionicons name="time" size={32} color="#F59E0B" />
+              <Ionicons name="time" size={24} color="#F59E0B" />
             </View>
             <Text style={styles.statValue}>{stats?.pending_approval || 0}</Text>
             <Text style={styles.statLabel}>Aguardando Aprovação</Text>
@@ -167,7 +167,7 @@ export default function AdminDashboard() {
           {/* Academias Card */}
           <View style={[styles.statCard, { backgroundColor: '#3B82F620', borderColor: '#3B82F640' }]}>
             <View style={styles.statIconContainer}>
-              <Ionicons name="fitness" size={32} color="#3B82F6" />
+              <Ionicons name="fitness" size={24} color="#3B82F6" />
             </View>
             <Text style={styles.statValue}>{stats?.total_gyms || 0}</Text>
             <Text style={styles.statLabel}>Academias</Text>
@@ -176,7 +176,7 @@ export default function AdminDashboard() {
           {/* Nutricionistas Card */}
           <View style={[styles.statCard, { backgroundColor: '#10B98120', borderColor: '#10B98140' }]}>
             <View style={styles.statIconContainer}>
-              <Ionicons name="restaurant" size={32} color="#10B981" />
+              <Ionicons name="restaurant" size={24} color="#10B981" />
             </View>
             <Text style={styles.statValue}>{stats?.total_nutritionists || 0}</Text>
             <Text style={styles.statLabel}>Nutricionistas</Text>
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
           {/* Personal Trainers Card */}
           <View style={[styles.statCard, { backgroundColor: '#8B5CF620', borderColor: '#8B5CF640' }]}>
             <View style={styles.statIconContainer}>
-              <Ionicons name="barbell" size={32} color="#8B5CF6" />
+              <Ionicons name="barbell" size={24} color="#8B5CF6" />
             </View>
             <Text style={styles.statValue}>{stats?.total_personal_trainers || 0}</Text>
             <Text style={styles.statLabel}>Personal Trainers</Text>
@@ -194,7 +194,7 @@ export default function AdminDashboard() {
           {/* Pagamentos Pendentes Card */}
           <View style={[styles.statCard, { backgroundColor: '#EF444420', borderColor: '#EF444440' }]}>
             <View style={styles.statIconContainer}>
-              <Ionicons name="cash" size={32} color="#EF4444" />
+              <Ionicons name="cash" size={24} color="#EF4444" />
             </View>
             <Text style={styles.statValue}>R$ {(stats?.pending_payments || 0).toFixed(2).replace('.', ',')}</Text>
             <Text style={styles.statLabel}>Pagamentos Pendentes</Text>
