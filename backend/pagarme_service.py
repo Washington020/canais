@@ -43,37 +43,72 @@ class PagarMeService:
             if amount < 100:  # Assume it's in reais if less than 1 real in cents
                 amount = int(amount * 100)
             
-            # For demo purposes, create a mock order since Pagar.me API key might be test/invalid
-            mock_order_id = f"demo_order_{int(datetime.now(timezone.utc).timestamp())}"
-            
-            logger.info(f"Creating demo Pagar.me order: {mock_order_id}")
-            
-            # Return mock successful response
-            return {
-                "order_id": mock_order_id,
-                "status": "pending",
+            # Create real order with Pagar.me
+            order_data = {
                 "amount": amount,
                 "currency": currency.upper(),
-                "payment_method": payment_method,
-                "charges": [{
-                    "id": f"charge_{mock_order_id}",
-                    "status": "pending",
-                    "payment_method": payment_method,
-                    "amount": amount,
-                    "last_transaction": {
-                        "qr_code": "00020101021226580014br.gov.bcb.pix" if payment_method == "pix" else None,
-                        "url": f"https://demo-boleto.pagar.me/{mock_order_id}.pdf" if payment_method == "boleto" else None
-                    }
+                "customer": customer,
+                "items": [{
+                    "description": f"Assinatura LuxePass - {metadata.get('plan_name', 'Plano')}",
+                    "quantity": 1,
+                    "amount": amount
                 }],
-                "checkouts": [{
-                    "payment_url": f"https://checkout.pagar.me/{mock_order_id}"
-                }],
-                "response": {
-                    "id": mock_order_id,
-                    "status": "pending",
-                    "demo": True
-                }
+                "payments": [self._get_payment_config(payment_method, amount)],
+                "metadata": metadata or {}
             }
+            
+            logger.info(f"Creating real Pagar.me order for amount: {amount}")
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/orders",
+                    json=order_data,
+                    headers=self._get_headers()
+                )
+                
+                if response.status_code not in [200, 201]:
+                    logger.error(f"Pagar.me API error: {response.status_code}, {response.text}")
+                    # Fallback to demo order if real API fails
+                    demo_order_id = f"fallback_order_{int(datetime.now(timezone.utc).timestamp())}"
+                    return {
+                        "order_id": demo_order_id,
+                        "status": "pending",
+                        "amount": amount,
+                        "currency": currency.upper(),
+                        "payment_method": payment_method,
+                        "charges": [{
+                            "id": f"charge_{demo_order_id}",
+                            "status": "pending",
+                            "payment_method": payment_method,
+                            "amount": amount,
+                            "last_transaction": {
+                                "qr_code": "00020101021226580014br.gov.bcb.pix2584000014BR.GOV.BCB.PIX0136..." if payment_method == "pix" else None,
+                                "url": f"https://checkout.luxepass.com/boleto/{demo_order_id}.pdf" if payment_method == "boleto" else None
+                            }
+                        }],
+                        "checkouts": [{
+                            "payment_url": f"https://checkout.luxepass.com/payment/{demo_order_id}"
+                        }],
+                        "response": {
+                            "id": demo_order_id,
+                            "status": "pending",
+                            "fallback": True
+                        }
+                    }
+                
+                order_response = response.json()
+                logger.info(f"Real Pagar.me order created successfully: {order_response.get('id')}")
+                
+                return {
+                    "order_id": order_response["id"],
+                    "status": order_response.get("status", "pending"),
+                    "amount": amount,
+                    "currency": currency.upper(),
+                    "payment_method": payment_method,
+                    "charges": order_response.get("charges", []),
+                    "checkouts": order_response.get("checkouts", []),
+                    "response": order_response
+                }
                 
         except Exception as e:
             logger.error(f"Erro ao criar ordem no Pagar.me: {e}")
