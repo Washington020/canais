@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, List, Any
 
 # Configuration
-BACKEND_URL = "https://wellness-hub-270.preview.emergentagent.com/api"
+BACKEND_URL = "https://gymvideos.preview.emergentagent.com/api"
 
 class TestResult:
     def __init__(self):

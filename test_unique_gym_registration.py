@@ -9,7 +9,7 @@ import random
 from datetime import datetime
 
 # Get backend URL from environment
-BACKEND_URL = "https://wellness-hub-270.preview.emergentagent.com/api"
+BACKEND_URL = "https://gymvideos.preview.emergentagent.com/api"
 
 def test_unique_gym_registration():
     """Test successful gym registration with unique CNPJ"""

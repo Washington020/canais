@@ -8,7 +8,7 @@ import json
 from datetime import datetime, timezone
 
 # Configuration
-BACKEND_URL = "https://wellness-hub-270.preview.emergentagent.com/api"
+BACKEND_URL = "https://gymvideos.preview.emergentagent.com/api"
 
 def create_test_gym():
     """Create test gym with academia_teste/teste123 credentials"""
