@@ -349,6 +349,34 @@ export default function ProfileScreen() {
             Sua foto de perfil fica salva no dispositivo e será mantida até você decidir trocá-la ou removê-la.
           </Text>
         </View>
+
+        {/* Logout Button */}
+        <View style={styles.logoutContainer}>
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={() => {
+              Alert.alert(
+                'Sair do App',
+                'Tem certeza que deseja sair da sua conta?',
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  {
+                    text: 'Sair',
+                    style: 'destructive',
+                    onPress: async () => {
+                      await AsyncStorage.removeItem('token');
+                      await AsyncStorage.removeItem('userType');
+                      router.replace('/client/auth');
+                    }
+                  }
+                ]
+              );
+            }}
+          >
+            <Ionicons name="log-out" size={20} color="#EF4444" />
+            <Text style={styles.logoutButtonText}>Sair do App</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
