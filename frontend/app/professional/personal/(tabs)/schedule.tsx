@@ -505,7 +505,7 @@ export default function PersonalTrainerSchedule() {
         <AgoraVideoCall
           visible={showVideoCall}
           channelName={videoChannelName}
-          userName={user?.full_name || 'Nutricionista'}
+          userName={user?.full_name || 'Personal Trainer'}
           onClose={() => {
             setShowVideoCall(false);
             setVideoChannelName('');
