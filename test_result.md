@@ -619,6 +619,18 @@ frontend:
           agent: "main"
           comment: "Nutrition tab already properly implemented with upgrade functionality for basic users and nutrition plan display for premium users. Includes nutritional tips for basic users, plan comparison cards, and upgrade flow with proper pricing display."
 
+  - task: "Unified Client Login and Plan Selection"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/client/auth.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Implemented unified client authentication screen that combines login and plan selection in one fluid interface. Created /app/frontend/app/client/auth.tsx with dual functionality: login form for existing users and plan selection view for new users. Fixed endpoint to use /api/integration/plans instead of incorrect endpoint. Added loading state protection to prevent infinite loops. Created index.tsx to handle initial routing based on authentication state. Updated _layout.tsx to include all necessary routes. Backend endpoint /api/integration/plans confirmed working and returning all plan data correctly. Ready for testing to verify the complete flow works as expected."
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"
