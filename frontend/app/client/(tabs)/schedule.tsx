@@ -596,6 +596,23 @@ export default function ClientSchedule() {
           </View>
         </View>
       </Modal>
+
+      {/* Video Call Modal */}
+      {showVideoCall && videoChannelName && (
+        <AgoraVideoCall
+          visible={showVideoCall}
+          channelName={videoChannelName}
+          userName={user?.full_name || 'Cliente'}
+          onClose={() => {
+            setShowVideoCall(false);
+            setVideoChannelName('');
+            setCurrentAppointmentId('');
+          }}
+          onCallEnded={() => {
+            loadMyAppointments();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
