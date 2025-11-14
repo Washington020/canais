@@ -3812,6 +3812,10 @@ async def get_integration_plans():
     plans = []
     
     for plan_id, plan_data in PAYMENT_PLANS.items():
+        # Skip plans with old format (use only new format)
+        if "monthly_price" not in plan_data:
+            continue
+            
         plan_info = {
             "type": plan_data["id"],
             "name": plan_data["name"],
