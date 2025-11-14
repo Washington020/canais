@@ -205,8 +205,8 @@ export default function AdminDashboard() {
         {pendingClients.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="alert-circle" size={24} color="#F59E0B" />
-              <Text style={styles.sectionTitle}>Clientes Aguardando Aprovação</Text>
+              <Ionicons name="alert-circle" size={20} color="#F59E0B" />
+              <Text style={styles.sectionTitle}>Clientes Pendentes</Text>
             </View>
 
             {pendingClients.map((client) => (
