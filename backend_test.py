@@ -1,24 +1,17 @@
 #!/usr/bin/env python3
 """
-Professional System Backend Testing Suite
-Tests the complete professional system functionality including:
-1. Professional Login System
-2. Client Assignment System  
-3. Schedule System
-4. Create Plans System
-5. Integration Testing
+Backend API Testing Suite for LuxePass
+Testing the GET /api/integration/plans endpoint as requested in review.
 """
 
 import requests
 import json
 import sys
-import os
-from datetime import datetime, timedelta
-import uuid
+from datetime import datetime
+from typing import Dict, List, Any
 
-# Backend URL from environment
-BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://wellness-hub-270.preview.emergentagent.com')
-API_BASE = f"{BACKEND_URL}/api"
+# Configuration
+BACKEND_URL = "https://wellness-hub-270.preview.emergentagent.com/api"
 
 class ProfessionalSystemTester:
     def __init__(self):
