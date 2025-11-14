@@ -69,6 +69,7 @@ export default function PlansScreen() {
     switch (planType) {
       case 'basico': return 'fitness-outline';
       case 'intermediario': return 'nutrition-outline';
+      case 'vip': return 'diamond-outline';
       case 'avancado': return 'trophy-outline';
       default: return 'star-outline';
     }
@@ -78,7 +79,8 @@ export default function PlansScreen() {
     switch (planType) {
       case 'basico': return '#22C55E';
       case 'intermediario': return '#8B5CF6';
-      case 'avancado': return '#F59E0B';
+      case 'vip': return '#F59E0B';
+      case 'avancado': return '#EF4444';
       default: return '#6B7280';
     }
   };
