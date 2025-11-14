@@ -175,27 +175,65 @@ export default function RegisterScreen() {
       const userResponse = await axios.post(`${API_URL}/api/auth/register`, registrationData);
       console.log('✅ 1. Usuário cadastrado:', userResponse.data);
       
-      // 2. Processar pagamento (simulado por enquanto)
-      console.log('🚀 2. Processando pagamento...');
+      // 2. Fazer login para obter token
+      const loginResponse = await axios.post(`${API_URL}/api/auth/login`, {
+        email: formData.email,
+        password: formData.password
+      });
+      const token = loginResponse.data.access_token;
+      console.log('✅ 2. Login realizado, token obtido');
       
-      // Simular pagamento bem-sucedido
-      const paymentMethod = paymentData.payment_method === 'pix' ? 'PIX' : 'Cartão de Crédito';
+      // 3. Processar pagamento
+      const paymentRequestData: any = {
+        plan_id: selectedPlan.type,
+        payment_method: paymentData.payment_method === 'pix' ? 'pix' : 'credit_card',
+        origin_url: window.location.origin
+      };
       
-      // Mostrar mensagem de sucesso com informação sobre liberação
-      Alert.alert(
-        '✅ Cadastro Realizado com Sucesso!',
-        `🎉 Parabéns! Sua assinatura do ${selectedPlan.name} foi processada.\n\n💳 Pagamento: ${paymentMethod}\n💰 Valor: ${formatPrice(selectedPlan.first_month_total)}\n\n⏰ ATENÇÃO: Seu acesso será liberado em até 24 horas.\n\n📧 Você receberá um email quando seu login estiver ativo.\n\n📱 Dados de acesso:\nEmail: ${formData.email}\nSenha: (a que você cadastrou)`,
-        [
-          { 
-            text: 'Entendi', 
-            onPress: () => {
-              // Redirecionar para tela de login
-              router.replace('/client/login');
-            }
-          }
-        ],
-        { cancelable: false }
+      // Se for cartão de crédito, adicionar dados do cartão
+      if (paymentData.payment_method === 'cartao_credito') {
+        paymentRequestData.card_data = {
+          number: paymentData.card_number.replace(/\s/g, ''),
+          holder_name: paymentData.card_name,
+          exp_month: paymentData.card_expiry.split('/')[0],
+          exp_year: '20' + paymentData.card_expiry.split('/')[1],
+          cvv: paymentData.card_cvv
+        };
+      }
+      
+      console.log('🚀 3. Processando pagamento:', {
+        ...paymentRequestData,
+        card_data: paymentRequestData.card_data ? '***' : undefined
+      });
+      
+      const paymentResponse = await axios.post(
+        `${API_URL}/api/payments/pagarme/checkout/session`,
+        paymentRequestData,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      console.log('✅ 3. Pagamento processado:', paymentResponse.data);
+      
+      const payment = paymentResponse.data;
+      
+      // Se for PIX, mostrar QR Code
+      if (paymentData.payment_method === 'pix' && payment.qr_code) {
+        showPixQRCode(payment);
+      } 
+      // Se for cartão, mostrar sucesso
+      else if (paymentData.payment_method === 'cartao_credito') {
+        Alert.alert(
+          '✅ Pagamento Processado!',
+          `🎉 Parabéns! Sua assinatura do ${selectedPlan.name} foi confirmada.\n\n💳 Pagamento: Cartão de Crédito\n💰 Valor: ${formatPrice(selectedPlan.first_month_total)}\n\n⏰ ATENÇÃO: Seu acesso será liberado em até 24 horas.\n\n📧 Você receberá um email quando seu login estiver ativo.\n\n📱 Dados de acesso:\nEmail: ${formData.email}\nSenha: (a que você cadastrou)`,
+          [
+            { 
+              text: 'Entendi', 
+              onPress: () => router.replace('/client/login')
+            }
+          ],
+          { cancelable: false }
+        );
+      }
 
     } catch (error: any) {
       console.error('❌ Erro no processo:', error);
@@ -206,6 +244,27 @@ export default function RegisterScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const showPixQRCode = (payment: any) => {
+    Alert.alert(
+      '📱 Pagamento PIX',
+      `Escaneie o QR Code abaixo para pagar:\n\n💰 Valor: ${formatPrice(payment.amount || selectedPlan?.first_month_total)}\n⏰ Válido por: 30 minutos\n\n${payment.qr_code_text || payment.qr_code || ''}\n\n⏰ APÓS O PAGAMENTO: Seu acesso será liberado em até 24 horas.\n\n📧 Você receberá um email de confirmação.`,
+      [
+        {
+          text: 'Copiar Código PIX',
+          onPress: () => {
+            // Copiar código PIX
+            Alert.alert('✅ Código Copiado!', 'Cole no seu app bancário para pagar.');
+          }
+        },
+        {
+          text: 'Entendi',
+          onPress: () => router.replace('/client/login')
+        }
+      ],
+      { cancelable: false }
+    );
   };
   
   const formatPrice = (price: number) => {
