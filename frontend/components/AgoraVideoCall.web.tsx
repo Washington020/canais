@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -10,22 +10,84 @@ interface AgoraVideoCallProps {
   onCallEnded?: () => void;
 }
 
-// Web version - Simplified UI for testing
+// Web version with WebRTC support
 export default function AgoraVideoCall({ visible, channelName, userName, onClose, onCallEnded }: AgoraVideoCallProps) {
   const [isConnected, setIsConnected] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [error, setError] = useState<string>('');
+  
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (visible) {
+      // Cleanup on unmount or when modal closes
+      return () => {
+        if (localStream) {
+          localStream.getTracks().forEach(track => track.stop());
+        }
+      };
+    }
+  }, [visible, localStream]);
 
   if (!visible) return null;
 
-  const handleConnect = () => {
-    setIsConnected(true);
-    // In a real implementation, this would connect to Agora Web SDK
-    console.log(`🎥 Conectando ao canal: ${channelName} como ${userName}`);
+  const handleConnect = async () => {
+    try {
+      setError('');
+      console.log(`🎥 Conectando ao canal: ${channelName} como ${userName}`);
+      
+      // Request camera and microphone permissions
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      
+      setLocalStream(stream);
+      
+      // Display local video
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play();
+      }
+      
+      setIsConnected(true);
+      console.log('✅ Câmera e microfone conectados!');
+      
+    } catch (err: any) {
+      console.error('❌ Erro ao acessar câmera/microfone:', err);
+      setError(`Erro: ${err.message || 'Não foi possível acessar câmera/microfone'}`);
+    }
   };
 
   const handleDisconnect = () => {
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      setLocalStream(null);
+    }
     setIsConnected(false);
     if (onCallEnded) onCallEnded();
     onClose();
+  };
+  
+  const toggleMute = () => {
+    if (localStream) {
+      localStream.getAudioTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setIsMuted(!isMuted);
+    }
+  };
+  
+  const toggleVideo = () => {
+    if (localStream) {
+      localStream.getVideoTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setIsVideoOff(!isVideoOff);
+    }
   };
 
   return (
