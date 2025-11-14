@@ -633,6 +633,24 @@ frontend:
         - working: true
           agent: "testing"
           comment: "✅ GET /api/integration/plans ENDPOINT TESTING COMPLETED (2025-11-14): Successfully tested the GET /api/integration/plans endpoint as specifically requested in review. PERFECT RESULTS: 100% pass rate (12/12 tests) with complete validation coverage. COMPREHENSIVE TEST RESULTS: ✅ Endpoint Connectivity - Status 200 OK, response time 0.11s ✅, ✅ Response Format - Valid JSON array with 3 plans returned ✅, ✅ Plan Count - Found expected 3 plans (basico, intermediario, vip) ✅, ✅ Plan Structure - All required fields present: type, name, description, features, monthly_price, activation_fee, first_month_total, fidelity_months, marketing_benefits, nutritionist_consultations, personal_consultations ✅, ✅ Specific Plan Validation - All 3 expected plans found with correct pricing: Plano Básico (R$ 99.90), Plano Intermediário (R$ 159.90), Plano VIP (R$ 349.90) ✅, ✅ Price Validation - All price calculations correct (first_month_total = monthly_price + activation_fee) ✅, ✅ Features Validation - All plans have valid features arrays and marketing benefits ✅, ✅ Consultation Fields - Valid nutritionist_consultations and personal_consultations fields ✅, ✅ Frontend Compatibility - Response format matches frontend expectations perfectly ✅. VERIFIED DATA STRUCTURE: Each plan contains all required fields for frontend integration, pricing is accurate according to PAYMENT_PLANS configuration, consultation limits properly set (Básico: 0/0, Intermediário: 1/1, VIP: 2/2). CONCLUSION: The GET /api/integration/plans endpoint is fully operational and ready for production use. Frontend can successfully load and display all plan data as designed."
+        - working: true
+          agent: "main"
+          comment: "✅ FRONTEND VERIFICATION COMPLETED (2025-11-14): Verified the complete client auth flow is working perfectly. Testing results: 1) Auth screen loads correctly with login form ✅, 2) 'Ser Luxe' button shows all 3 plans with correct pricing and features ✅, 3) 'Escolher plano' button redirects correctly to /client/register?plan=basico ✅, 4) Registration screen displays selected plan correctly ✅. The reported 'loading error' is NOT occurring - the flow is working end-to-end. Servers restarted and all routes functioning correctly."
+
+  - task: "Client Schedule Plan Access Fix (VIP/Premium)"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/client/(tabs)/schedule.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "user"
+          comment: "User reported that a test user with VIP or Premium plan was being denied access to the consultation scheduling page. The app was showing the upgrade banner instead of allowing access."
+        - working: true
+          agent: "main"
+          comment: "✅ PLAN ACCESS FIX APPLIED (2025-11-14): Fixed the plan validation logic in schedule.tsx line 314. ISSUE: Code was blocking access for users with 'premium' plan type. SOLUTION: Changed validation from checking if plan is 'basic' to a case-insensitive check for 'basico' or 'basic', which correctly allows access for 'premium', 'vip', and 'intermediario' plans. The logic now blocks only basic tier users and grants access to all premium-tier plans. Ready for manual testing on mobile device via Expo Go."
 
 metadata:
   created_by: "testing_agent"
