@@ -1,83 +1,97 @@
 <analysis>
-The AI engineer has focused on robustifying the LuxePass application across client, admin, and professional interfaces. Key efforts included resolving backend and frontend issues for appointment scheduling, ensuring null safety, and implementing client upgrade paths. A major part of the work involved enhancing the Admin panel for professional and gym management, specifically adding PIX information, appointment history, password reset functionality, and fixing intricate login integration problems between Admin-created credentials and corresponding apps. The gym system dashboard underwent multiple iterations to fix Unmatched Route errors, data payload mismatches during registration, and to expand the registration form to be more comprehensive for partners, including gym types for plan-based access. The trajectory ends with the AI engineer actively working on the detailed gym registration form.
+The trajectory reveals a development process characterized by rapid, iterative fixes in response to user feedback. The AI engineer has worked across the entire full-stack application (Client, Admin, Gym, Professional interfaces) to address a wide range of issues.
+
+Initial work focused on stabilizing core functionalities like gym registration and login, which suffered from backend  exceptions and frontend payload mismatches. The engineer resolved these by making backend models more robust (using  for dictionary access) and aligning frontend data structures.
+
+A significant portion of the effort was dedicated to the professional (Nutritionist/Personal Trainer) apps, specifically the appointment scheduling system. The user repeatedly reported that the calendar was not interactive. The engineer attempted multiple fixes, including backend endpoint adjustments, adding console logs, and modifying component styles (), but the core issue of the calendar not responding to clicks persisted.
+
+Another major workstream involved client-side plan purchasing and payment integration with Pagar.me. The engineer updated plan prices in the backend, created API endpoints to serve this data, and refactored the client registration and plan selection screens. However, this introduced a Maximum call stack size exceeded error on the plans page, which the engineer was attempting to resolve by creating a new unified login/plan selection screen () right before the trajectory ended.
+
+The overall pattern is one of reacting to bugs and user requests, leading to a broad but sometimes shallow implementation, with several core user flows remaining incomplete or buggy despite multiple attempts at a fix.
 </analysis>
 
 <product_requirements>
-The LuxePass app aims to provide a premium mobile experience with Client, Admin, and Gym interfaces, secured by JWT. Initial requirements focused on fixing critical issues like gym login failures, API inconsistencies, and frontend navigation, while prioritizing payment systems, notifications, and UX.
-Later, the scope expanded to include:
--   **Client Features:** Daily supplementation logs, nutrition plans, workout generation, gym check-ins with location/notifications, professional guidance (messaging, scheduling with availability).
--   **Admin Features:** Dedicated Nutritionist/Personal Trainer tabs (manage clients, schedules, plans), gym activation/deactivation, real-time Dashboard. Robust professional login, test premium client, interactive plan creation, patient flagging, professional navigation.
--   **Integrated Scheduling:** Comprehensive system with professional profiles, seamless client assignment, 1-2 monthly consultations based on plan (Basic: gym tokens only; Intermediário: 1 Nutri, 1 Personal; Avançado/VIP: 2 Nutri, 2 Personal), appointment cancellation.
--   **Client Upgrade Paths:** Workout and Nutrition tabs showing plan info, full price, next month validity.
--   **Gym System Enhancements:** Client full name, documents, photo on token validation; client check-in history; revenue reports for gyms (configurable value per check-in); contract management with upload/view options; plan-based access for clients to specific gym types.
+The project is a comprehensive fitness and wellness platform, LuxePass, with distinct interfaces for Clients, Gyms, Professionals (Nutritionists, Personal Trainers), and a central Admin panel.
+
+**Core User Requirements:**
+1.  **Client App:** Users must be able to register, select a subscription plan (Básico, Intermediário, VIP) with varying prices and activation fees, and pay via PIX (QR Code) or credit card. Once subscribed, they can schedule appointments with professionals (based on plan limits), view workout/nutrition plans, and use tokens for gym check-ins.
+2.  **Gym App:** Gym partners need to log in to a dedicated portal to validate client tokens. Upon validation, the gym must see the client's full details (name, photo, documents). The system should also support check-in history and revenue reports.
+3.  **Professional App (Nutritionist/Personal Trainer):** Professionals must be able to log in, manage their assigned clients, set their availability on a calendar, create workout/diet plans, and view their schedule of booked appointments. The calendar interface must be interactive, allowing them to easily open and view dates.
+4.  **Admin Panel:** Administrators require tools to manage gyms (registration, credential management, password reset), professionals (creation, password reset), and view application-wide data.
+
+The overarching goal is a seamless, real-world operational application where all interfaces are interconnected and function reliably.
 </product_requirements>
 
 <key_technical_concepts>
--   **Mobile Development:** Expo (Expo Router for file-based routing), React Native, TypeScript, .
--   **Backend Development:** FastAPI (Python), MongoDB, , .
--   **Authentication:** JWT.
--   **Payments:** Stripe, Pagar.me.
--   **UI/UX:** , , , custom components, null-safe rendering.
+- **Full-Stack:** FastAPI (Python) backend, Expo (React Native, TypeScript) frontend, MongoDB database.
+- **Authentication:** JSON Web Tokens (JWT) for securing APIs across different user roles (Client, Admin, Gym, Professional).
+- **Mobile Development:** Expo Router for file-based navigation, React Native core components,  for client-side token storage.
+- **Backend Architecture:** Pydantic models for data validation, separation of services, and API routing with .
+- **Payment Integration:** Pagar.me for processing credit card and PIX payments.
 </key_technical_concepts>
 
 <code_architecture>
-The project uses a full-stack architecture with an Expo frontend, FastAPI backend, and MongoDB database.
+The application follows a monorepo structure containing the  (Expo app) and  (FastAPI app).
 
 **Directory Structure:**
 
 
+**Key Files & Modifications:**
 
-**Key Files and Changes:**
--   ****: Main FastAPI application.
-    -   Extended with endpoints for professional client management, appointment scheduling, and plan creation. Test data functions (, , ) were added and invoked on startup. Gym login endpoint () fixed (password field name).  updated for intermediario plan. Updated to support 'premium' plan in  and  and fixed date format in . Added  endpoint. Enhanced  to return full client data. Added new gym endpoints (, , ). Modified  to auto-approve gyms and accept /, also addressed  by adapting payload.
--   ****: Pydantic models.
-    -   Expanded with , , ,  models. Added  to  and  models.
--   ****: Client scheduling tab.
-    -   Rewritten using native components, updated for null safety, and modified to integrate monthly consultation limits and cancellation features based on plan type.
--   ** (NEW)**: Client workouts tab.
-    -   Created as part of the upgrade path for basic clients, intended to display upgrade information.
--   ** (NEW)**: Client nutrition tab.
-    -   Created as part of the upgrade path for basic clients, intended to display upgrade information.
--   ****: Admin Personal Trainer management.
-    -   Modified to use correct  for API calls, added PIX field to form, display professional login info, and show appointment history. Implemented password reset button, removed monetary values from display. Updated to use backend's  endpoint.
--   ****: Admin Nutritionist management.
-    -   Applied similar changes as  for PIX, login info, appointment history, password reset, and monetary value removal.
--   ****: Admin Gym management.
-    -   Corrected API endpoints (e.g., from  to ). Added Credenciais de Acesso section in the form for custom login/password. Updated data payload for registration to match backend's expected ,  format. Expanded form with fields for owner, financial info, and gym type (Simple, Intermediário, VIP).
--   ****: Gym login screen.
-    -   Corrected post-login redirection from  to .
--   ****: Gym token validation screen.
-    -   Renamed to  to avoid conflicts.
--   ****: Gym dashboard.
-    -   Initially created for comprehensive gym management dashboard. Experienced multiple Unmatched Route and white screen errors due to  import and file corruption/incompleteness. Replaced with simpler functional versions multiple times, eventually restored with core dashboard features (Validation, Clients, Revenue, Contract tabs). Currently being updated for a robust partner registration form.
--   ****: Gym app layout.
-    -   Initially forced redirection to . Corrected to redirect to . Simplified by removing  route to avoid conflicts and ensure correct routing.
+-   ****:
+    -   **Importance:** The core of the backend, defining all API endpoints for every user role.
+    -   **Changes:** Heavily modified to add, fix, and refine endpoints. Key changes include: fixing gym registration by using  to prevent ; creating a  endpoint; adding password reset endpoints for professionals and gyms; making  an optional query parameter in  to fix  errors; and updating plan prices and payment logic to integrate with Pagar.me.
+
+-   ****:
+    -   **Importance:** Contains business logic, particularly for user registration and plan definitions.
+    -   **Changes:** This file was a source of a major bug. It contained a stale, hardcoded configuration for payment plans. It was updated to reflect the new pricing structure (e.g., , ), which was critical for fixing incorrect payment amounts during registration.
+
+-   ****:
+    -   **Importance:** The UI for admin to manage and register new gyms.
+    -   **Changes:** Updated multiple times to fix registration failures by aligning the form data payload with backend expectations. A Criar Academia de Teste button was added to facilitate testing. Password reset functionality was also wired up here.
+
+-   ****:
+    -   **Importance:** The entry point for gym partners.
+    -   **Changes:** Corrected to automatically redirect to the gym dashboard () after a successful login, instead of showing an  and waiting for user interaction, which caused the UI to appear stuck.
+
+-   ****:
+    -   **Importance:** The main interface for gyms to validate client tokens.
+    -   **Changes:** The  function was corrected to properly pass the  to the backend. A modal to display validated client details was added. A Gerar Token de Teste button was implemented to simplify the testing of the validation flow.
+
+-   ****:
+    -   **Importance:** The critical scheduling interface for professionals. A major source of user frustration.
+    -   **Changes:** Multiple attempts were made to fix the non-interactive calendar.  statements were added for debugging. The  handler for calendar dates was simplified.  and other style properties were added to  to force click handling. Despite these efforts, the user reported the issue was not resolved.
+
+-   ****:
+    -   **Importance:** Displays subscription plans to clients.
+    -   **Changes:** Updated to fetch plans from the new  endpoint and display updated pricing and loyalty program information. This file is the source of the current Maximum call stack size exceeded error, likely due to an infinite re-render loop in its  or  functions.
+
+-   ****:
+    -   **Importance:** The multi-step client registration and payment form.
+    -   **Changes:** The form submission logic () was significantly refactored to stop calling a deprecated endpoint and instead integrate with the Pagar.me payment flow via . This was done to enable real PIX and credit card processing.
 </code_architecture>
 
 <pending_tasks>
--   Implement real integrations for Google Maps.
--   Finalize Check-in functionality (map view, location, notification permissions, client acceptance by gym).
--   Implement direct messaging in the client app for Nutritionist/Personal guidance.
--   Ensure all client/admin tabs have a functional back button where appropriate.
--   Implement professional profile tab showing provider data and client count.
--   Implement cancel appointment tab for clients (re-enable booking next day).
--   Update Financial tab Ver Planos to show current plan and plan change data.
--   Implement admin authorization for plan changes.
--   Finalize the upgrade path for Basic clients in Workout and Nutrition tabs, including pricing and plan change logic.
--   Add styles for the newly added elements in the gym registration form.
+-   Fix the Maximum call stack size exceeded error on the client's plan selection screen ().
+-   Fully implement the unified login/plan selection screen () as requested by the user.
+-   Resolve the non-interactive calendar issue in the professional apps (), where clicking on dates does not trigger any action.
+-   Implement the client-side QR code display for PIX payments.
+-   Ensure the credit card payment flow is fully functional.
 </pending_tasks>
 
 <current_work>
-Immediately before this summary, the AI engineer was working on enhancing the gym registration form within the admin panel (). The user reported that the form was too weak and that registrations were not saving, implying incomplete data or incorrect structure.
+The AI engineer was in the process of a major refactor to address two critical user requests simultaneously:
+1.  **Fix a Maximum call stack size exceeded error** that was crashing the plan selection screen (). The backend endpoint () was confirmed to be working, pointing to an infinite re-render loop in the frontend code.
+2.  **Unify the client login and plan selection UIs** into a single, cohesive interface, as explicitly requested by the user.
 
-The AI engineer addressed a  (Chat Message 416) by adjusting the frontend's data payload to match the backend's expected format for gym registration, which previously led to a 500 Internal Server Error. After confirming this particular backend error was resolved (Chat Message 436), the focus shifted to the robustness of the form itself.
+To achieve this, the engineer started by creating a new, combined component:
+-   **File Created:** 
 
-The current work involves:
-1.  **Expanding the  interface and initial  state** in  to include new fields like , , , , , ,  (Simple, Intermediário, VIP),  (Chat Messages 438-440).
-2.  **Updating the visual representation of the form** in  to include organized sections for Informações do Proprietário, Informações Financeiras, and Tipo de Academia with radio button options for gym types (Chat Messages 441-444).
-3.  The final action recorded in the trajectory is **adding the necessary CSS styles** for these newly added form elements (Chat Message 445). This indicates the form's structure and data handling are being overhauled to meet the comprehensive partner registration requirements.
+This new file is intended to house both the login form and the plan selection view. The last action in the trajectory was an attempt to make this new screen the primary entry point for the client section of the app. This failed because the engineer tried to modify a non-existent file ().
+
+The immediate task is therefore to correctly wire this new  screen into the Expo Router navigation, likely by modifying a layout file () or a different entry-point file, and then populate it with the combined login and plan selection functionality to resolve the critical stack overflow bug.
 </current_work>
 
 <optional_next_step>
-Add the remaining necessary CSS styles for the new elements in the gym registration form in .
+Check the client app's routing structure () to find the correct entry point, and then modify it to redirect to the new, unified  screen.
 </optional_next_step>
