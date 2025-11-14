@@ -428,7 +428,7 @@ export default function PersonalTrainerSchedule() {
                       }}
                     >
                       <Ionicons name="videocam" size={16} color="#FFFFFF" />
-                      <Text style={styles.videoButtonText}>Entrar em Treino</Text>
+                      <Text style={styles.videoButtonText}>Entrar em Consulta</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
