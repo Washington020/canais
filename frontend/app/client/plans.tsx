@@ -26,6 +26,10 @@ interface PlanDetails {
   monthly_price: number;
   activation_fee: number;
   first_month_total: number;
+  fidelity_months: number;
+  marketing_benefits: string[];
+  nutritionist_consultations?: number;
+  personal_consultations?: number;
 }
 
 export default function PlansScreen() {
