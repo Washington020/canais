@@ -348,7 +348,7 @@ export default function ClientSchedule() {
         <Text style={styles.title}>Agendamentos</Text>
         <View style={styles.planBadge}>
           <Text style={styles.planBadgeText}>
-            {user.plan_type === 'vip' ? 'VIP' : 'INTERMEDIÁRIO'}
+            {user.plan_type === 'vip' ? 'VIP' : user.plan_type === 'premium' ? 'PREMIUM' : 'INTERMEDIÁRIO'}
           </Text>
         </View>
       </View>
