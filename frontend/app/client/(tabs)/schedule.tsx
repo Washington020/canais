@@ -386,9 +386,9 @@ export default function ClientSchedule() {
             <Text style={styles.serviceDescription}>
               Treinos personalizados e acompanhamento profissional
             </Text>
-            {appointmentLimits && (
+            {appointmentLimits && appointmentLimits.remaining && appointmentLimits.limits && (
               <Text style={styles.limitsText}>
-                {appointmentLimits.remaining.personal} de {appointmentLimits.limits.personal} sessões restantes este mês
+                {appointmentLimits.remaining.personal || 0} de {appointmentLimits.limits.personal || 0} sessões restantes este mês
               </Text>
             )}
             <View style={styles.bookButton}>
