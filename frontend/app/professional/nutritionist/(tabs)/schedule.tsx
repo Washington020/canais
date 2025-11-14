@@ -499,6 +499,22 @@ export default function PersonalTrainerSchedule() {
           </View>
         </View>
       </Modal>
+
+      {/* Video Call Modal */}
+      {showVideoCall && videoChannelName && (
+        <AgoraVideoCall
+          visible={showVideoCall}
+          channelName={videoChannelName}
+          userName={user?.full_name || 'Nutricionista'}
+          onClose={() => {
+            setShowVideoCall(false);
+            setVideoChannelName('');
+          }}
+          onCallEnded={() => {
+            loadAppointments();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
