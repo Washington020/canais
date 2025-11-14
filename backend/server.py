@@ -4077,18 +4077,24 @@ async def create_pagarme_checkout_session(
         # Format customer data for Pagar.me
         customer_data = pagarme_service.format_customer_data(user_data)
         
+        # Calculate total amount (first month includes activation fee)
+        total_amount = plan["first_month_total"]
+        
         # Create order in Pagar.me
         order_result = await pagarme_service.create_order(
-            amount=plan["price"],
+            amount=total_amount,
             currency=plan["currency"],
             customer=customer_data,
             payment_method=request.payment_method,  # pix, boleto, credit_card
-            success_url=f"{request.origin_url}/client/(tabs)/financial?order_id={{ORDER_ID}}",
-            cancel_url=f"{request.origin_url}/client/(tabs)/financial",
+            success_url=f"{request.origin_url}/client/plans?payment_success=true&order_id={{ORDER_ID}}",
+            cancel_url=f"{request.origin_url}/client/plans?payment_cancelled=true",
             metadata={
                 "user_id": str(current_user.id),
                 "plan_id": request.plan_id,
-                "plan_name": plan["name"]
+                "plan_name": plan["name"],
+                "monthly_price": plan["monthly_price"],
+                "activation_fee": plan["activation_fee"],
+                "fidelity_months": plan["fidelity_months"]
             }
         )
         
