@@ -31,28 +31,6 @@ export default function ClientDashboard() {
   const [currentWorkout, setCurrentWorkout] = useState<any>(null);
   const router = useRouter();
 
-  const handleLogout = useCallback(async () => {
-    try {
-      Alert.alert(
-        'Sair do App',
-        'Deseja realmente sair?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Sair',
-            style: 'destructive',
-            onPress: async () => {
-              await AsyncStorage.clear();
-              router.replace('/cliente');
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('Erro no logout:', error);
-    }
-  }, [router]);
-
   const goBack = useCallback(() => {
     router.back();
   }, [router]);
