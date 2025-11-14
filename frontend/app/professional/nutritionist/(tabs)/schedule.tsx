@@ -505,6 +505,17 @@ export default function NutritionistSchedule() {
           </View>
         </View>
       </Modal>
+
+      {/* Video Call Modal */}
+      <VideoCallModal
+        visible={videoCallModal}
+        onClose={() => {
+          setVideoCallModal(false);
+          setSelectedAppointment(null);
+        }}
+        appointment={selectedAppointment}
+        userType="professional"
+      />
     </SafeAreaView>
   );
 }
