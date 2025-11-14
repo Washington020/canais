@@ -156,10 +156,6 @@ export default function ClientDashboard() {
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>LuxePass Cliente</Text>
         </View>
-        
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out" size={24} color="#FF4444" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
