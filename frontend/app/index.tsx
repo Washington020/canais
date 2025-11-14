@@ -50,12 +50,12 @@ export default function MainSelector() {
             
             <TouchableOpacity 
               style={styles.appLink}
-              onPress={() => router.push('/cliente')}
+              onPress={() => router.push('/client/auth')}
             >
               <Text style={styles.appLinkIcon}>📱</Text>
               <View style={styles.appLinkContent}>
                 <Text style={styles.appLinkText}>App Cliente</Text>
-                <Text style={styles.appLinkSubtext}>Login obrigatório para clientes</Text>
+                <Text style={styles.appLinkSubtext}>Login e seleção de planos unificados</Text>
               </View>
             </TouchableOpacity>
 
