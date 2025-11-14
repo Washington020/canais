@@ -71,8 +71,16 @@ export default function RegisterScreen() {
 
   const loadPlanDetails = async (planType: string) => {
     try {
-      const response = await axios.get(`${API_URL}/api/integration/plans/${planType}`);
-      setSelectedPlan(response.data);
+      // Buscar todos os planos e filtrar o selecionado
+      const response = await axios.get(`${API_URL}/api/integration/plans`);
+      const plans = response.data;
+      const plan = plans.find((p: any) => p.type === planType);
+      
+      if (plan) {
+        setSelectedPlan(plan);
+      } else {
+        throw new Error('Plano não encontrado');
+      }
     } catch (error) {
       console.error('Erro ao carregar plano:', error);
       Alert.alert('Erro', 'Não foi possível carregar os detalhes do plano.');
