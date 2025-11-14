@@ -124,7 +124,7 @@ PAYMENT_PLANS = {
         ],
         "nutritionist_consultations": 2,
         "personal_consultations": 2,
-        "token_limit": 0,
+        "token_limit": 31,
         "description": "O mais completo! Para quem não quer limites na busca pelos resultados",
         "marketing_benefits": [
             "👑 Plano mais completo e exclusivo",
