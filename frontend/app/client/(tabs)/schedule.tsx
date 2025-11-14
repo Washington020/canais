@@ -454,7 +454,7 @@ export default function ClientSchedule() {
                   <Text style={styles.appointmentNotes}>{appointment.notes}</Text>
                 )}
                 
-                {(appointment.status === 'scheduled' || appointment.status === 'confirmed') && (
+                {appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
                   <View style={styles.appointmentActions}>
                     <TouchableOpacity 
                       style={styles.videoButton}
