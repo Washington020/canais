@@ -117,20 +117,9 @@ export default function ClientAuth() {
   };
 
   const handlePlanSelect = (plan: PlanData) => {
-    Alert.alert(
-      `${plan.name}`,
-      `💰 Primeiro mês: R$ ${plan.first_month_total.toFixed(2).replace('.', ',')}\n💳 Mensal: R$ ${plan.monthly_price.toFixed(2).replace('.', ',')}\n\n${plan.description}`,
-      [
-        { text: 'Voltar', style: 'cancel' },
-        {
-          text: 'Contratar Agora',
-          onPress: () => {
-            // Redirecionar para cadastro com plano selecionado
-            router.push(`/client/register?plan=${plan.type}`);
-          }
-        }
-      ]
-    );
+    // Redirecionar direto para cadastro com plano selecionado
+    console.log('🎯 Plano selecionado:', plan.type);
+    router.push(`/client/register?plan=${plan.type}`);
   };
 
   const formatPrice = (price: number) => {
