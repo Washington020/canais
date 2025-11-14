@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import io, { Socket } from 'socket.io-client';
 
 interface AgoraVideoCallProps {
   visible: boolean;
@@ -10,27 +11,52 @@ interface AgoraVideoCallProps {
   onCallEnded?: () => void;
 }
 
-// Web version with WebRTC support
+// Web version with REAL WebRTC P2P support
 export default function AgoraVideoCall({ visible, channelName, userName, onClose, onCallEnded }: AgoraVideoCallProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string>('');
+  const [participantName, setParticipantName] = useState<string>('');
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const remoteUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (visible) {
       // Cleanup on unmount or when modal closes
       return () => {
-        if (localStream) {
-          localStream.getTracks().forEach(track => track.stop());
-        }
+        cleanup();
       };
     }
-  }, [visible, localStream]);
+  }, [visible]);
+  
+  const cleanup = () => {
+    console.log('🧹 Limpando recursos da videochamada...');
+    
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      setLocalStream(null);
+    }
+    
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+    
+    setRemoteStream(null);
+    setIsConnected(false);
+  };
 
   if (!visible) return null;
 
