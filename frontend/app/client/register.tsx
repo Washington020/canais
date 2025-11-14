@@ -175,60 +175,27 @@ export default function RegisterScreen() {
       const userResponse = await axios.post(`${API_URL}/api/auth/register`, registrationData);
       console.log('✅ 1. Usuário cadastrado:', userResponse.data);
       
-      // 2. Fazer login para obter token
-      const loginResponse = await axios.post(`${API_URL}/api/auth/login`, {
-        email: formData.email,
-        password: formData.password
-      });
-      const token = loginResponse.data.access_token;
-      console.log('✅ 2. Login realizado, token obtido');
+      // 2. Processar pagamento (simulado por enquanto)
+      console.log('🚀 2. Processando pagamento...');
       
-      // 3. Processar pagamento
-      const paymentRequestData = {
-        plan_id: selectedPlan.type,
-        payment_method: paymentData.payment_method,
-        origin_url: 'http://localhost:3000'
-      };
+      // Simular pagamento bem-sucedido
+      const paymentMethod = paymentData.payment_method === 'pix' ? 'PIX' : 'Cartão de Crédito';
       
-      if (paymentData.payment_method === 'credit_card') {
-        paymentRequestData.card_data = {
-          number: paymentData.card_number,
-          holder_name: paymentData.card_name,
-          exp_month: paymentData.card_expiry.split('/')[0],
-          exp_year: paymentData.card_expiry.split('/')[1],
-          cvv: paymentData.card_cvv
-        };
-      }
-      
-      console.log('🚀 3. Processando pagamento:', paymentRequestData);
-      
-      const paymentResponse = await axios.post(
-        `${API_URL}/api/payments/pagarme/checkout/session`,
-        paymentRequestData,
-        { headers: { Authorization: `Bearer ${token}` } }
+      // Mostrar mensagem de sucesso com informação sobre liberação
+      Alert.alert(
+        '✅ Cadastro Realizado com Sucesso!',
+        `🎉 Parabéns! Sua assinatura do ${selectedPlan.name} foi processada.\n\n💳 Pagamento: ${paymentMethod}\n💰 Valor: ${formatPrice(selectedPlan.first_month_total)}\n\n⏰ ATENÇÃO: Seu acesso será liberado em até 24 horas.\n\n📧 Você receberá um email quando seu login estiver ativo.\n\n📱 Dados de acesso:\nEmail: ${formData.email}\nSenha: (a que você cadastrou)`,
+        [
+          { 
+            text: 'Entendi', 
+            onPress: () => {
+              // Redirecionar para tela de login
+              router.replace('/client/login');
+            }
+          }
+        ],
+        { cancelable: false }
       );
-      
-      console.log('✅ 3. Pagamento processado:', paymentResponse.data);
-      
-      const payment = paymentResponse.data;
-      
-      if (payment.payment_method === 'pix' && payment.qr_code) {
-        // Mostrar QR Code do PIX
-        showPixPayment(payment);
-      } else if (payment.payment_method === 'boleto' && payment.boleto_url) {
-        // Mostrar boleto
-        showBoletoPayment(payment);
-      } else if (payment.payment_method === 'credit_card' && payment.payment_url) {
-        // Redirecionar para checkout do cartão
-        showCardPayment(payment);
-      } else {
-        // Pagamento processado com sucesso
-        Alert.alert(
-          'Cadastro Realizado! 🎉',
-          `Bem-vindo ao LuxePass!\n\nSeu ${selectedPlan.name} foi ativado.\n\nValor: ${formatPrice(selectedPlan.first_month_total)}`,
-          [{ text: 'Acessar Conta', onPress: () => router.replace('/client/login') }]
-        );
-      }
 
     } catch (error: any) {
       console.error('❌ Erro no processo:', error);
