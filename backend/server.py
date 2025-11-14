@@ -3577,6 +3577,67 @@ async def approve_client(client_id: str):
         logger.error(f"Erro ao aprovar cliente: {e}")
         raise HTTPException(status_code=500, detail="Erro ao aprovar cliente")
 
+@api_router.get("/admin/confirmed-appointments")
+async def get_confirmed_appointments(
+    month: int = None,
+    year: int = None
+):
+    """Get confirmed appointments for payment calculation"""
+    try:
+        # Default to current month if not specified
+        if not month or not year:
+            now = datetime.now(timezone.utc)
+            month = now.month
+            year = now.year
+        
+        # Get start and end of month
+        start_date = datetime(year, month, 1, tzinfo=timezone.utc)
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        else:
+            end_date = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+        
+        # Find all completed appointments in the month
+        appointments = await db.appointments.find({
+            "status": "completed",
+            "updated_at": {
+                "$gte": start_date,
+                "$lt": end_date
+            }
+        }).to_list(1000)
+        
+        result = []
+        for apt in appointments:
+            # Get client info
+            client_id = apt.get("client_id") or apt.get("user_id")
+            client = await db.users.find_one({"_id": ObjectId(client_id)}) if client_id else None
+            
+            # Get professional info
+            prof_id = apt.get("professional_id")
+            professional = await db.professionals.find_one({"_id": ObjectId(prof_id)}) if prof_id else None
+            
+            result.append({
+                "id": str(apt["_id"]),
+                "client_name": client.get("full_name", "Cliente") if client else "Cliente",
+                "client_email": client.get("email", "") if client else "",
+                "professional_name": professional.get("full_name", "Profissional") if professional else "Profissional",
+                "professional_type": apt.get("appointment_type", "unknown"),
+                "appointment_date": apt.get("appointment_date", "").isoformat() if isinstance(apt.get("appointment_date"), datetime) else apt.get("appointment_date", ""),
+                "completed_at": apt.get("updated_at", datetime.now(timezone.utc)).isoformat(),
+                "notes": apt.get("notes", "")
+            })
+        
+        return {
+            "appointments": result,
+            "month": month,
+            "year": year,
+            "total_count": len(result)
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar atendimentos confirmados: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar atendimentos confirmados")
+
 @api_router.get("/admin/dashboard/stats")
 async def get_admin_dashboard_stats():
     """Get complete dashboard statistics for admin"""
