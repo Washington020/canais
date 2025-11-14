@@ -415,28 +415,20 @@ export default function PersonalTrainerSchedule() {
                   <Text style={styles.appointmentNotes}>{appointment.notes}</Text>
                 )}
                 
-                {appointment.status !== 'completed' && (
+                {(appointment.status !== 'completed' && appointment.status !== 'cancelled') && (
                   <View style={styles.appointmentActions}>
                     <TouchableOpacity 
                       style={styles.videoButton}
-                      onPress={async () => {
-                        try {
-                          const token = await AsyncStorage.getItem('professionalToken');
-                          const response = await axios.post(
-                            `${API_URL}/video/create-agora-channel`,
-                            { appointment_id: appointment.id },
-                            { headers: { Authorization: `Bearer ${token}` } }
-                          );
-                          setVideoChannelName(response.data.channel_name);
-                          setShowVideoCall(true);
-                        } catch (error) {
-                          console.error('Erro ao criar canal:', error);
-                          Alert.alert('Erro', 'Não foi possível iniciar a videochamada.');
-                        }
+                      onPress={() => {
+                        // Usar o canal do agendamento diretamente
+                        const channelName = (appointment as any).video_channel_name || `luxepass_${appointment.id}`;
+                        console.log('🎥 Personal Trainer entrando no canal:', channelName);
+                        setVideoChannelName(channelName);
+                        setShowVideoCall(true);
                       }}
                     >
                       <Ionicons name="videocam" size={16} color="#FFFFFF" />
-                      <Text style={styles.videoButtonText}>Entrar em Consulta</Text>
+                      <Text style={styles.videoButtonText}>Entrar em Treino</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
