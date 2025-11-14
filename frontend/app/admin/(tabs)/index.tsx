@@ -140,8 +140,8 @@ export default function AdminDashboard() {
           colors={['#8B5CF6', '#6D28D9']}
           style={styles.header}
         >
-          <Text style={styles.headerTitle}>Dashboard Admin</Text>
-          <Text style={styles.headerSubtitle}>Painel de Controle</Text>
+          <Text style={styles.headerTitle}>Dashboard</Text>
+          <Text style={styles.headerSubtitle}>Painel Administrativo</Text>
         </LinearGradient>
 
         {/* Stats Cards */}
