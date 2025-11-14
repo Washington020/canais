@@ -5148,6 +5148,11 @@ async def get_professional_appointments(
         
         appointments = await db.appointments.find(query).sort("appointment_date", 1).to_list(100)
         
+        # Convert ObjectIds to strings
+        for appt in appointments:
+            appt['id'] = str(appt['_id'])
+            del appt['_id']
+        
         return {"appointments": appointments}
         
     except Exception as e:
