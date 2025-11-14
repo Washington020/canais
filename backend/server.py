@@ -510,15 +510,20 @@ async def get_current_professional(credentials: HTTPAuthorizationCredentials = D
         if professional_id is None or token_type != "professional":
             raise HTTPException(status_code=401, detail="Token inválido")
             
-        professional = await db.professionals.find_one({"_id": ObjectId(professional_id)})
+        # Find professional in users collection
+        professional = await db.users.find_one({
+            "_id": ObjectId(professional_id),
+            "user_type": "professional"
+        })
         if professional is None:
             raise HTTPException(status_code=401, detail="Profissional não encontrado")
             
         return {
+            "_id": professional["_id"],
             "id": str(professional["_id"]),
             "email": professional["email"],
             "full_name": professional["full_name"],
-            "professional_type": professional["professional_type"]
+            "professional_type": professional.get("professional_type")
         }
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
