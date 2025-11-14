@@ -377,23 +377,16 @@ export default function ProfileScreen() {
         <View style={styles.logoutContainer}>
           <TouchableOpacity 
             style={styles.logoutButton}
-            onPress={() => {
-              Alert.alert(
-                'Sair do App',
-                'Tem certeza que deseja sair da sua conta?',
-                [
-                  { text: 'Cancelar', style: 'cancel' },
-                  {
-                    text: 'Sair',
-                    style: 'destructive',
-                    onPress: async () => {
-                      await AsyncStorage.removeItem('token');
-                      await AsyncStorage.removeItem('userType');
-                      router.replace('/client/auth');
-                    }
-                  }
-                ]
-              );
+            onPress={async () => {
+              try {
+                await AsyncStorage.removeItem('token');
+                await AsyncStorage.removeItem('userType');
+                await AsyncStorage.removeItem('userAvatar');
+                router.replace('/client/login');
+              } catch (error) {
+                console.error('Erro ao fazer logout:', error);
+                router.replace('/client/login');
+              }
             }}
           >
             <Ionicons name="log-out" size={20} color="#EF4444" />
