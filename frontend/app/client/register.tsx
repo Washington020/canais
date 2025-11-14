@@ -181,11 +181,11 @@ export default function RegisterScreen() {
         };
       }
       
-      console.log('🚀 3. Processando pagamento:', paymentData);
+      console.log('🚀 3. Processando pagamento:', paymentRequestData);
       
       const paymentResponse = await axios.post(
         `${API_URL}/api/payments/pagarme/checkout/session`,
-        paymentData,
+        paymentRequestData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
