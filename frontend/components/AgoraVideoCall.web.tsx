@@ -95,7 +95,7 @@ export default function AgoraVideoCall({ visible, channelName, userName, onClose
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.channelName}>Canal: {channelName}</Text>
+          <Text style={styles.channelName}>Videochamada: {channelName}</Text>
           <TouchableOpacity onPress={handleDisconnect} style={styles.closeButton}>
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
@@ -108,32 +108,65 @@ export default function AgoraVideoCall({ visible, channelName, userName, onClose
               <Ionicons name="videocam-off" size={64} color="#64748B" />
               <Text style={styles.waitingTitle}>Pronto para Videochamada</Text>
               <Text style={styles.waitingText}>
-                Conecte-se ao canal para iniciar a chamada
+                Permita acesso à câmera e microfone para iniciar
               </Text>
+              {error && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                  <Text style={styles.errorSubtext}>
+                    Verifique as permissões do navegador
+                  </Text>
+                </View>
+              )}
               <Text style={styles.infoText}>
-                ⚠️ Versão Web Simplificada
+                🎥 Videochamada Web com WebRTC
               </Text>
               <Text style={styles.infoSubtext}>
-                Para videochamada completa, use o app móvel via Expo Go
+                Funciona em qualquer navegador moderno
               </Text>
             </View>
           ) : (
-            <View style={styles.connectedContainer}>
-              <Ionicons name="videocam" size={64} color="#22C55E" />
-              <Text style={styles.connectedTitle}>✅ Conectado!</Text>
-              <Text style={styles.connectedText}>
-                Canal: {channelName}
-              </Text>
-              <Text style={styles.connectedText}>
-                Usuário: {userName}
-              </Text>
-              <View style={styles.statusBox}>
-                <Text style={styles.statusText}>
-                  🎥 Videochamada em andamento
-                </Text>
-                <Text style={styles.statusSubtext}>
-                  Outros participantes com o mesmo canal aparecerão aqui
-                </Text>
+            <View style={styles.videoArea}>
+              {/* Local Video */}
+              <View style={styles.localVideoWrapper}>
+                <video 
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: 12,
+                    backgroundColor: '#1E293B'
+                  }}
+                />
+                <View style={styles.videoLabel}>
+                  <Text style={styles.videoLabelText}>Você</Text>
+                </View>
+              </View>
+              
+              {/* Remote Video Placeholder */}
+              <View style={styles.remoteVideoWrapper}>
+                <video 
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: 12,
+                    backgroundColor: '#0F172A'
+                  }}
+                />
+                <View style={styles.waitingRemote}>
+                  <Ionicons name="person" size={48} color="#64748B" />
+                  <Text style={styles.waitingRemoteText}>
+                    Aguardando outro participante...
+                  </Text>
+                </View>
               </View>
             </View>
           )}
@@ -149,19 +182,32 @@ export default function AgoraVideoCall({ visible, channelName, userName, onClose
           ) : (
             <>
               <View style={styles.controlsRow}>
-                <TouchableOpacity style={styles.controlButton}>
-                  <Ionicons name="mic" size={24} color="#FFFFFF" />
-                  <Text style={styles.controlLabel}>Microfone</Text>
+                <TouchableOpacity 
+                  style={[styles.controlButton, isMuted && styles.controlButtonActive]}
+                  onPress={toggleMute}
+                >
+                  <Ionicons 
+                    name={isMuted ? "mic-off" : "mic"} 
+                    size={24} 
+                    color={isMuted ? "#EF4444" : "#FFFFFF"} 
+                  />
+                  <Text style={styles.controlLabel}>
+                    {isMuted ? "Desmutar" : "Mutar"}
+                  </Text>
                 </TouchableOpacity>
                 
-                <TouchableOpacity style={styles.controlButton}>
-                  <Ionicons name="videocam" size={24} color="#FFFFFF" />
-                  <Text style={styles.controlLabel}>Câmera</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.controlButton}>
-                  <Ionicons name="volume-high" size={24} color="#FFFFFF" />
-                  <Text style={styles.controlLabel}>Volume</Text>
+                <TouchableOpacity 
+                  style={[styles.controlButton, isVideoOff && styles.controlButtonActive]}
+                  onPress={toggleVideo}
+                >
+                  <Ionicons 
+                    name={isVideoOff ? "videocam-off" : "videocam"} 
+                    size={24} 
+                    color={isVideoOff ? "#EF4444" : "#FFFFFF"} 
+                  />
+                  <Text style={styles.controlLabel}>
+                    {isVideoOff ? "Ligar Vídeo" : "Desligar Vídeo"}
+                  </Text>
                 </TouchableOpacity>
               </View>
               
