@@ -327,18 +327,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 32,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
   },
   statsGrid: {
