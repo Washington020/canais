@@ -7,7 +7,7 @@ import requests
 import os
 
 # Get backend URL from environment
-BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://gymvideos.preview.emergentagent.com')
+BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://trainconnect-1.preview.emergentagent.com')
 API_BASE = f"{BACKEND_URL}/api"
 
 def test_portuguese_errors():

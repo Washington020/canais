@@ -1332,7 +1332,7 @@ index 38f9312..e69de29 100644
 -------+import time
 -------+
 -------+# Backend URL from environment
--------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://gymvideos.preview.emergentagent.com')
+-------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://trainconnect-1.preview.emergentagent.com')
 -------+API_BASE = f"{BACKEND_URL}/api"
 -------+
 -------+class DeploymentHealthChecker:
@@ -2391,7 +2391,7 @@ index 38f9312..e69de29 100644
 ------------------------+import traceback
 ------------------------+
 ------------------------+# Get backend URL from environment
-------------------------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://gymvideos.preview.emergentagent.com')
+------------------------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://trainconnect-1.preview.emergentagent.com')
 ------------------------+API_BASE = f"{BACKEND_URL}/api"
 ------------------------+
 ------------------------+class EnhancedGymRegistrationTester:
@@ -4379,7 +4379,7 @@ index 38f9312..e69de29 100644
 --------------------------------------+from datetime import datetime, timezone
 --------------------------------------+
 --------------------------------------+# Configuration
---------------------------------------+BACKEND_URL = "https://gymvideos.preview.emergentagent.com/api"
+--------------------------------------+BACKEND_URL = "https://trainconnect-1.preview.emergentagent.com/api"
 --------------------------------------+
 --------------------------------------+def create_test_gym():
 --------------------------------------+    """Create test gym with academia_teste/teste123 credentials"""
@@ -4473,7 +4473,7 @@ index 38f9312..e69de29 100644
 --------------------------------------+import json
 --------------------------------------+
 --------------------------------------+# Configuration
---------------------------------------+BACKEND_URL = "https://gymvideos.preview.emergentagent.com/api"
+--------------------------------------+BACKEND_URL = "https://trainconnect-1.preview.emergentagent.com/api"
 --------------------------------------+
 --------------------------------------+def fix_gym_password():
 --------------------------------------+    """Fix gym password using admin endpoint"""
@@ -5417,7 +5417,7 @@ index 38f9312..e69de29 100644
 ------------------------+from datetime import datetime
 ------------------------+
 ------------------------+# Get backend URL from environment
-------------------------+BACKEND_URL = "https://gymvideos.preview.emergentagent.com/api"
+------------------------+BACKEND_URL = "https://trainconnect-1.preview.emergentagent.com/api"
 ------------------------+
 ------------------------+def test_unique_gym_registration():
 ------------------------+    """Test successful gym registration with unique CNPJ"""
