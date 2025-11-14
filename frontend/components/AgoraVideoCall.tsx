@@ -10,13 +10,23 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import RtcEngine, {
-  RtcLocalView,
-  RtcRemoteView,
-  VideoRenderMode,
-  ChannelProfile,
-  ClientRole,
-} from 'react-native-agora';
+// Conditional import for mobile only
+let RtcEngine: any;
+let RtcLocalView: any;
+let RtcRemoteView: any;
+let VideoRenderMode: any;
+let ChannelProfile: any;
+let ClientRole: any;
+
+if (Platform.OS !== 'web') {
+  const agora = require('react-native-agora');
+  RtcEngine = agora.default;
+  RtcLocalView = agora.RtcLocalView;
+  RtcRemoteView = agora.RtcRemoteView;
+  VideoRenderMode = agora.VideoRenderMode;
+  ChannelProfile = agora.ChannelProfile;
+  ClientRole = agora.ClientRole;
+}
 
 const { width, height } = Dimensions.get('window');
 
