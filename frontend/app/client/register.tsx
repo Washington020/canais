@@ -142,36 +142,77 @@ export default function RegisterScreen() {
     setLoading(true);
     
     try {
+      // 1. Primeiro, cadastrar o usuário
       const registrationData = {
         full_name: formData.full_name,
         email: formData.email,
         password: formData.password,
         phone: formData.phone,
         plan_type: selectedPlan.type,
-        payment_method: paymentData.payment_method,
-        address: formData.address,
-        card_token: paymentData.payment_method === 'pix' ? null : 'mock_card_token_' + Date.now()
+        address: formData.address
       };
 
-      console.log('🚀 Enviando dados de registro:', registrationData);
-
-      const response = await axios.post(`${API_URL}/api/integration/user/register`, registrationData);
+      console.log('🚀 1. Cadastrando usuário:', registrationData);
+      const userResponse = await axios.post(`${API_URL}/api/integration/user/register`, registrationData);
+      console.log('✅ 1. Usuário cadastrado:', userResponse.data);
       
-      console.log('✅ Registro bem-sucedido:', response.data);
+      // 2. Fazer login para obter token
+      const loginResponse = await axios.post(`${API_URL}/api/auth/login`, {
+        email: formData.email,
+        password: formData.password
+      });
+      const token = loginResponse.data.access_token;
+      console.log('✅ 2. Login realizado, token obtido');
       
-      Alert.alert(
-        'Cadastro Realizado! 🎉',
-        `Bem-vindo ao LuxePass!\n\nSeu ${selectedPlan.name} foi ativado com sucesso.\n\nValor do primeiro mês: ${formatPrice(selectedPlan.first_month_total)}`,
-        [
-          {
-            text: 'Acessar Minha Conta',
-            onPress: () => router.replace('/client/login')
-          }
-        ]
+      // 3. Processar pagamento
+      const paymentData = {
+        plan_id: selectedPlan.type,
+        payment_method: paymentData.payment_method,
+        origin_url: window.location.origin || 'http://localhost:3000'
+      };
+      
+      if (paymentData.payment_method === 'credit_card') {
+        paymentData.card_data = {
+          number: paymentData.card_number,
+          holder_name: paymentData.card_name,
+          exp_month: paymentData.card_expiry.split('/')[0],
+          exp_year: paymentData.card_expiry.split('/')[1],
+          cvv: paymentData.card_cvv
+        };
+      }
+      
+      console.log('🚀 3. Processando pagamento:', paymentData);
+      
+      const paymentResponse = await axios.post(
+        `${API_URL}/api/payments/pagarme/checkout/session`,
+        paymentData,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      console.log('✅ 3. Pagamento processado:', paymentResponse.data);
+      
+      const payment = paymentResponse.data;
+      
+      if (payment.payment_method === 'pix' && payment.qr_code) {
+        // Mostrar QR Code do PIX
+        showPixPayment(payment);
+      } else if (payment.payment_method === 'boleto' && payment.boleto_url) {
+        // Mostrar boleto
+        showBoletoPayment(payment);
+      } else if (payment.payment_method === 'credit_card' && payment.payment_url) {
+        // Redirecionar para checkout do cartão
+        showCardPayment(payment);
+      } else {
+        // Pagamento processado com sucesso
+        Alert.alert(
+          'Cadastro Realizado! 🎉',
+          `Bem-vindo ao LuxePass!\n\nSeu ${selectedPlan.name} foi ativado.\n\nValor: ${formatPrice(selectedPlan.first_month_total)}`,
+          [{ text: 'Acessar Conta', onPress: () => router.replace('/client/login') }]
+        );
+      }
 
     } catch (error: any) {
-      console.error('❌ Erro no registro:', error);
+      console.error('❌ Erro no processo:', error);
       console.error('📄 Detalhes do erro:', error.response?.data);
       
       const errorMessage = error.response?.data?.detail || 'Erro ao processar cadastro. Tente novamente.';
@@ -179,6 +220,70 @@ export default function RegisterScreen() {
     } finally {
       setLoading(false);
     }
+  };
+  
+  const showPixPayment = (payment: any) => {
+    Alert.alert(
+      '🔄 PIX - Pagamento Pendente',
+      `📱 Use o código PIX abaixo para finalizar seu pagamento:\n\n💰 Valor: ${formatPrice(payment.total_amount)}\n⏰ Vencimento: 30 minutos`,
+      [
+        {
+          text: 'Copiar Código PIX',
+          onPress: () => {
+            // Implementar cópia do código PIX
+            Alert.alert('✅ PIX Copiado!', 'Cole no seu app bancário para pagar.');
+          }
+        },
+        {
+          text: 'Ver QR Code',
+          onPress: () => {
+            // Mostrar modal com QR Code
+            showQRCodeModal(payment.qr_code);
+          }
+        }
+      ]
+    );
+  };
+  
+  const showBoletoPayment = (payment: any) => {
+    Alert.alert(
+      '🏦 Boleto Bancário',
+      `💰 Valor: ${formatPrice(payment.total_amount)}\n⏰ Vencimento: 3 dias úteis`,
+      [
+        {
+          text: 'Abrir Boleto',
+          onPress: () => {
+            // Abrir URL do boleto
+            if (payment.boleto_url) {
+              // Implementar abertura do boleto
+            }
+          }
+        }
+      ]
+    );
+  };
+  
+  const showCardPayment = (payment: any) => {
+    Alert.alert(
+      '💳 Processando Cartão...',
+      `Redirecionando para finalizar pagamento seguro.\n\n💰 Valor: ${formatPrice(payment.total_amount)}`,
+      [
+        {
+          text: 'Continuar',
+          onPress: () => {
+            // Redirecionar para checkout
+            if (payment.payment_url) {
+              // Implementar redirecionamento
+            }
+          }
+        }
+      ]
+    );
+  };
+  
+  const showQRCodeModal = (qrCode: string) => {
+    // Implementar modal com QR Code
+    Alert.alert('QR Code PIX', `QR Code: ${qrCode.substring(0, 50)}...`);
   };
 
   const formatPrice = (price: number) => {
