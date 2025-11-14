@@ -5889,6 +5889,139 @@ async def get_notification_stats():
         logger.error(f"Erro ao buscar estatísticas de notificação: {e}")
         raise HTTPException(status_code=500, detail="Erro ao buscar estatísticas")
 
+# Video Call API Endpoints
+@api_router.post("/video-call/start")
+async def start_video_call(
+    appointment_id: str,
+    current_user = Depends(get_current_user)
+):
+    """Start a video call for an appointment"""
+    try:
+        # Verify appointment exists and user has access
+        appointment = await db.appointments.find_one({"_id": ObjectId(appointment_id)})
+        if not appointment:
+            raise HTTPException(status_code=404, detail="Consulta não encontrada")
+        
+        # Check if user is participant (client or professional)
+        user_id = str(current_user.id)
+        if (appointment.get("client_id") != user_id and 
+            appointment.get("professional_id") != user_id):
+            raise HTTPException(status_code=403, detail="Acesso negado à consulta")
+        
+        # Generate room ID
+        room_id = f"call_{appointment_id}_{int(datetime.now().timestamp())}"
+        
+        # Update appointment with video call info
+        await db.appointments.update_one(
+            {"_id": ObjectId(appointment_id)},
+            {
+                "$set": {
+                    "video_call": {
+                        "room_id": room_id,
+                        "status": "started",
+                        "started_at": datetime.now(timezone.utc),
+                        "started_by": user_id
+                    }
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "room_id": room_id,
+            "appointment_id": appointment_id,
+            "websocket_url": f"ws://localhost:8001/socket.io/",
+            "message": "Videochamada iniciada com sucesso"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao iniciar videochamada: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao iniciar videochamada")
+
+@api_router.post("/video-call/end")
+async def end_video_call(
+    appointment_id: str,
+    current_user = Depends(get_current_user)
+):
+    """End a video call for an appointment"""
+    try:
+        # Verify appointment exists and user has access
+        appointment = await db.appointments.find_one({"_id": ObjectId(appointment_id)})
+        if not appointment:
+            raise HTTPException(status_code=404, detail="Consulta não encontrada")
+        
+        # Check if user is participant
+        user_id = str(current_user.id)
+        if (appointment.get("client_id") != user_id and 
+            appointment.get("professional_id") != user_id):
+            raise HTTPException(status_code=403, detail="Acesso negado à consulta")
+        
+        # Update appointment
+        await db.appointments.update_one(
+            {"_id": ObjectId(appointment_id)},
+            {
+                "$set": {
+                    "video_call.status": "ended",
+                    "video_call.ended_at": datetime.now(timezone.utc),
+                    "video_call.ended_by": user_id,
+                    "status": "completed"  # Mark appointment as completed
+                }
+            }
+        )
+        
+        # Notify via WebSocket if room exists
+        room_id = appointment.get("video_call", {}).get("room_id")
+        if room_id and room_id in active_calls:
+            await sio.emit('call_ended', {
+                'message': 'Videochamada encerrada',
+                'ended_by': user_id
+            }, room=room_id)
+        
+        return {
+            "success": True,
+            "message": "Videochamada encerrada e consulta marcada como concluída"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao encerrar videochamada: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao encerrar videochamada")
+
+@api_router.get("/video-call/status/{appointment_id}")
+async def get_video_call_status(
+    appointment_id: str,
+    current_user = Depends(get_current_user)
+):
+    """Get video call status for an appointment"""
+    try:
+        appointment = await db.appointments.find_one({"_id": ObjectId(appointment_id)})
+        if not appointment:
+            raise HTTPException(status_code=404, detail="Consulta não encontrada")
+        
+        # Check access
+        user_id = str(current_user.id)
+        if (appointment.get("client_id") != user_id and 
+            appointment.get("professional_id") != user_id):
+            raise HTTPException(status_code=403, detail="Acesso negado")
+        
+        video_call = appointment.get("video_call", {})
+        room_id = video_call.get("room_id")
+        
+        # Check if call is active
+        is_active = room_id in active_calls if room_id else False
+        participants_count = len(active_calls[room_id]["participants"]) if is_active else 0
+        
+        return {
+            "appointment_id": appointment_id,
+            "video_call": video_call,
+            "is_active": is_active,
+            "participants_count": participants_count,
+            "websocket_url": f"ws://localhost:8001/socket.io/" if is_active else None
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar status da videochamada: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar status")
+
 # Include the router in the main app
 # Include routers
 app.include_router(api_router)
