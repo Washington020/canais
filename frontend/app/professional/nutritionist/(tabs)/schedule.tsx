@@ -51,6 +51,7 @@ export default function PersonalTrainerSchedule() {
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [videoChannelName, setVideoChannelName] = useState('');
+  const [currentAppointmentId, setCurrentAppointmentId] = useState<string>('');
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
