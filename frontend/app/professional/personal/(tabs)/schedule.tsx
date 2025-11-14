@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
+import AgoraVideoCall from '@/components/AgoraVideoCall';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
 
@@ -48,6 +49,9 @@ export default function PersonalTrainerSchedule() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [showVideoCall, setShowVideoCall] = useState(false);
+  const [videoChannelName, setVideoChannelName] = useState('');
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -412,13 +416,37 @@ export default function PersonalTrainerSchedule() {
                 )}
                 
                 {appointment.status !== 'completed' && (
-                  <TouchableOpacity 
-                    style={styles.completeButton}
-                    onPress={() => markAppointmentComplete(appointment.id)}
-                  >
-                    <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
-                    <Text style={styles.completeButtonText}>Marcar como Concluído</Text>
-                  </TouchableOpacity>
+                  <View style={styles.appointmentActions}>
+                    <TouchableOpacity 
+                      style={styles.videoButton}
+                      onPress={async () => {
+                        try {
+                          const token = await AsyncStorage.getItem('professionalToken');
+                          const response = await axios.post(
+                            `${API_URL}/video/create-agora-channel`,
+                            { appointment_id: appointment.id },
+                            { headers: { Authorization: `Bearer ${token}` } }
+                          );
+                          setVideoChannelName(response.data.channel_name);
+                          setShowVideoCall(true);
+                        } catch (error) {
+                          console.error('Erro ao criar canal:', error);
+                          Alert.alert('Erro', 'Não foi possível iniciar a videochamada.');
+                        }
+                      }}
+                    >
+                      <Ionicons name="videocam" size={16} color="#FFFFFF" />
+                      <Text style={styles.videoButtonText}>Entrar em Consulta</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.completeButton}
+                      onPress={() => markAppointmentComplete(appointment.id)}
+                    >
+                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+                      <Text style={styles.completeButtonText}>Concluir</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
             ))
@@ -471,6 +499,22 @@ export default function PersonalTrainerSchedule() {
           </View>
         </View>
       </Modal>
+
+      {/* Video Call Modal */}
+      {showVideoCall && videoChannelName && (
+        <AgoraVideoCall
+          visible={showVideoCall}
+          channelName={videoChannelName}
+          userName={user?.full_name || 'Nutricionista'}
+          onClose={() => {
+            setShowVideoCall(false);
+            setVideoChannelName('');
+          }}
+          onCallEnded={() => {
+            loadAppointments();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -682,14 +726,34 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 8,
   },
+  appointmentActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  videoButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#22C55E',
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  videoButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
   completeButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F59E0B',
     paddingVertical: 8,
     borderRadius: 6,
-    marginTop: 12,
   },
   completeButtonText: {
     color: '#FFFFFF',
