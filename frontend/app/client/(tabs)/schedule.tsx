@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,20 +16,34 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import VideoCallModal from '@/components/VideoCallModal';
+import Constants from 'expo-constants';
 
-const API_URL = '/api';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
+
+interface AvailableSlot {
+  id: string;
+  professional_id: string;
+  professional_type: string;
+  date: string;
+  time: string;
+  available: boolean;
+}
 
 interface MyAppointment {
   id: string;
-  professional_id: string;
-  professional_name: string;
   professional_type: string;
   appointment_date: string;
   appointment_time: string;
   status: string;
-  video_room_url?: string;
+  notes?: string;
   can_cancel: boolean;
+}
+
+interface AppointmentLimits {
+  plan_type: string;
+  limits: { nutritionist: number; personal: number };
+  usage: { nutritionist: number; personal: number };
+  remaining: { nutritionist: number; personal: number };
 }
 
 interface UserProfile {
@@ -40,17 +55,25 @@ interface UserProfile {
 export default function ClientSchedule() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [appointments, setAppointments] = useState<MyAppointment[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
+  const [appointmentLimits, setAppointmentLimits] = useState<AppointmentLimits | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showVideoModal, setShowVideoModal] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<MyAppointment | null>(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedProfessionalType, setSelectedProfessionalType] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const router = useRouter();
 
   useEffect(() => {
-    loadData();
+    loadUserProfile();
+    loadMyAppointments();
+    loadAppointmentLimits();
   }, []);
 
-  const loadData = async () => {
+  const loadUserProfile = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
@@ -59,327 +82,516 @@ export default function ClientSchedule() {
       }
 
       const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/users/profile`, { headers });
       
-      // Load user profile
-      const profileResponse = await axios.get(`${API_URL}/users/profile`, { headers });
-      setUser(profileResponse.data);
-
-      // Load appointments
-      const appointmentsResponse = await axios.get(`${API_URL}/appointments/my-appointments`, { headers });
-      setAppointments(appointmentsResponse.data.appointments || []);
-      
+      setUser(response.data);
     } catch (error: any) {
-      console.error('Erro ao carregar dados:', error);
+      console.error('Error loading profile:', error);
       if (error.response?.status === 401) {
         router.replace('/client/login');
       }
+    }
+  };
+
+  const loadMyAppointments = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/appointments/my-appointments`, { headers });
+      
+      setAppointments(response.data.appointments || []);
+    } catch (error: any) {
+      console.error('Error loading appointments:', error);
+      setAppointments([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const cancelAppointment = async (appointmentId: string) => {
-    Alert.alert(
-      'Cancelar Consulta',
-      'Tem certeza que deseja cancelar esta consulta?',
-      [
-        { text: 'Não', style: 'cancel' },
-        {
-          text: 'Sim, Cancelar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const token = await AsyncStorage.getItem('token');
-              await axios.delete(
-                `${API_URL}/appointments/${appointmentId}/cancel`,
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
-              
-              Alert.alert('Sucesso', 'Consulta cancelada com sucesso!');
-              loadData();
-            } catch (error) {
-              console.error('Erro ao cancelar:', error);
-              Alert.alert('Erro', 'Não foi possível cancelar a consulta.');
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const joinVideoCall = async (appointment: MyAppointment) => {
+  const loadAppointmentLimits = async () => {
     try {
-      // Check if it's time for the appointment (within 15 minutes before)
-      const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
-      const now = new Date();
-      const timeDiff = appointmentDateTime.getTime() - now.getTime();
-      const minutesDiff = Math.floor(timeDiff / (1000 * 60));
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
 
-      if (minutesDiff > 15) {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/appointments/monthly-limits`, { headers });
+      
+      setAppointmentLimits(response.data);
+    } catch (error: any) {
+      console.error('Error loading appointment limits:', error);
+    }
+  };
+
+  const cancelAppointment = async (appointmentId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.delete(`${API_URL}/appointments/${appointmentId}/cancel`, { headers });
+      
+      Alert.alert(
+        'Agendamento Cancelado',
+        'Seu agendamento foi cancelado com sucesso. O horário foi liberado para outros clientes.',
+        [{ text: 'OK', onPress: () => {
+          loadMyAppointments();
+          loadAppointmentLimits();
+        }}]
+      );
+    } catch (error: any) {
+      console.error('Error cancelling appointment:', error);
+      Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível cancelar o agendamento');
+    }
+  };
+
+  const loadAvailableSlots = async (professionalType: string, date: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(
+        `${API_URL}/appointments/available-slots?professional_type=${professionalType}&date=${date}`,
+        { headers }
+      );
+      
+      setAvailableSlots(response.data.available_slots || []);
+    } catch (error: any) {
+      console.error('Error loading available slots:', error);
+      if (error.response?.status === 403) {
         Alert.alert(
-          'Aguarde',
-          `A consulta começa às ${appointment.appointment_time}. Você poderá entrar 15 minutos antes.`
+          'Acesso Restrito',
+          'Agendamentos disponíveis apenas para planos VIP e Intermediário. Faça upgrade para acessar esta funcionalidade.',
+          [
+            { text: 'OK' },
+            { text: 'Fazer Upgrade', onPress: () => router.push('/client/plans') }
+          ]
+        );
+      }
+    }
+  };
+
+  const bookAppointment = async (slot: AvailableSlot, notes?: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const appointmentData = {
+        professional_id: slot.professional_id,
+        professional_type: slot.professional_type,
+        appointment_date: slot.date,
+        appointment_time: slot.time,
+        notes: notes || ''
+      };
+
+      await axios.post(`${API_URL}/appointments/book`, appointmentData, { headers });
+      
+      Alert.alert(
+        'Agendamento Confirmado!',
+        `Sua ${slot.professional_type === 'nutritionist' ? 'consulta nutricional' : 'sessão de treino'} foi agendada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${slot.time}h.`,
+        [{ text: 'OK', onPress: () => {
+          setShowBookingModal(false);
+          loadMyAppointments();
+          loadAppointmentLimits();
+        }}]
+      );
+    } catch (error: any) {
+      console.error('Error booking appointment:', error);
+      Alert.alert('Erro', error.response?.data?.detail || 'Não foi possível agendar a consulta');
+    }
+  };
+
+  const openBookingModal = (professionalType: string) => {
+    if (!user || (user.plan_type !== 'vip' && user.plan_type !== 'intermediario')) {
+      Alert.alert(
+        'Acesso Restrito',
+        'Agendamentos disponíveis apenas para planos VIP e Intermediário. Faça upgrade para acessar esta funcionalidade.',
+        [
+          { text: 'OK' },
+          { text: 'Fazer Upgrade', onPress: () => router.push('/client/plans') }
+        ]
+      );
+      return;
+    }
+
+    // Check monthly limits
+    if (appointmentLimits && appointmentLimits.remaining) {
+      const remaining = appointmentLimits.remaining[professionalType as keyof typeof appointmentLimits.remaining];
+      if (remaining !== undefined && remaining <= 0) {
+        const serviceType = professionalType === 'nutritionist' ? 'consultas nutricionais' : 'sessões de personal training';
+        const planName = user.plan_type === 'vip' ? 'VIP' : 'Intermediário';
+        Alert.alert(
+          'Limite Atingido',
+          `Você atingiu o limite mensal de ${serviceType} para o plano ${planName}. Aguarde o próximo mês ou cancele um agendamento existente.`,
+          [{ text: 'OK' }]
         );
         return;
       }
-
-      if (minutesDiff < -30) {
-        Alert.alert(
-          'Consulta Expirada',
-          'O horário desta consulta já passou.'
-        );
-        return;
-      }
-
-      // Create or get video room
-      let roomUrl = appointment.video_room_url;
-      
-      if (!roomUrl) {
-        const token = await AsyncStorage.getItem('token');
-        const response = await axios.post(
-          `${API_URL}/video/create-room`,
-          { appointment_id: appointment.id },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        roomUrl = response.data.room_url;
-      }
-
-      setSelectedAppointment({ ...appointment, video_room_url: roomUrl });
-      setShowVideoModal(true);
-      
-    } catch (error) {
-      console.error('Erro ao entrar na chamada:', error);
-      Alert.alert('Erro', 'Não foi possível iniciar a videochamada.');
     }
+
+    setSelectedProfessionalType(professionalType);
+    setShowBookingModal(true);
   };
 
-  const getProfessionalIcon = (type: string) => {
-    return type === 'nutritionist' ? 'restaurant' : 'barbell';
-  };
-
-  const getProfessionalColor = (type: string) => {
-    return type === 'nutritionist' ? '#10B981' : '#8B5CF6';
-  };
-
-  const getProfessionalLabel = (type: string) => {
-    return type === 'nutritionist' ? 'Nutricionista' : 'Personal Trainer';
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed': return '#22C55E';
-      case 'completed': return '#3B82F6';
-      case 'cancelled': return '#EF4444';
-      default: return '#F59E0B';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'confirmed': return 'Confirmado';
-      case 'completed': return 'Concluído';
-      case 'cancelled': return 'Cancelado';
-      default: return 'Pendente';
-    }
-  };
-
-  const canJoinCall = (appointment: MyAppointment) => {
-    if (appointment.status !== 'confirmed') return false;
+  const generateCalendarDates = () => {
+    const dates = [];
+    const today = new Date();
+    const currentMonth = new Date(selectedYear, selectedMonth, 1);
+    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
     
-    const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
-    const now = new Date();
-    const timeDiff = appointmentDateTime.getTime() - now.getTime();
-    const minutesDiff = Math.floor(timeDiff / (1000 * 60));
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(selectedYear, selectedMonth, day);
+      const dateString = date.toISOString().split('T')[0];
+      
+      dates.push({
+        day,
+        date: dateString,
+        isPast: date < today,
+        isToday: dateString === today.toISOString().split('T')[0],
+        isWeekend: date.getDay() === 0 || date.getDay() === 6
+      });
+    }
+    
+    return dates;
+  };
 
-    return minutesDiff <= 15 && minutesDiff >= -30;
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const nextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
+
+  const prevMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+  };
+
+  const onDateSelect = (dateString: string) => {
+    setSelectedDate(dateString);
+    setAvailableSlots([]); // Clear previous slots
+    loadAvailableSlots(selectedProfessionalType, dateString);
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadUserProfile();
+    loadMyAppointments();
+    loadAppointmentLimits();
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Carregando consultas...</Text>
+          <ActivityIndicator size="large" color="#22C55E" />
+          <Text style={styles.loadingText}>Carregando agenda...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const upcomingAppointments = appointments.filter(a => a.status === 'confirmed');
-  const pastAppointments = appointments.filter(a => a.status === 'completed');
+  // Show upgrade banner for Basic users
+  if (!user || user.plan_type === 'basic') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        
+        <View style={styles.header}>
+          <Text style={styles.title}>Agendamentos</Text>
+        </View>
+
+        <View style={styles.upgradeContainer}>
+          <Ionicons name="calendar-outline" size={64} color="#64748B" />
+          <Text style={styles.upgradeTitle}>Agendamentos Premium</Text>
+          <Text style={styles.upgradeDescription}>
+            Os agendamentos estão disponíveis apenas para clientes VIP e Intermediário.
+            Faça upgrade para agendar consultas com nutricionistas e personal trainers.
+          </Text>
+          
+          <TouchableOpacity 
+            style={styles.upgradeButton}
+            onPress={() => router.push('/client/plans')}
+          >
+            <Ionicons name="arrow-up-circle" size={20} color="#FFFFFF" />
+            <Text style={styles.upgradeButtonText}>Fazer Upgrade</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       
+      <View style={styles.header}>
+        <Text style={styles.title}>Agendamentos</Text>
+        <View style={styles.planBadge}>
+          <Text style={styles.planBadgeText}>
+            {user.plan_type === 'vip' ? 'VIP' : 'INTERMEDIÁRIO'}
+          </Text>
+        </View>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={loadData} tintColor="#8B5CF6" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Ionicons name="calendar" size={32} color="#8B5CF6" />
-          <Text style={styles.headerTitle}>Minhas Consultas</Text>
-          <Text style={styles.headerSubtitle}>
-            Plano: {user?.plan_type?.toUpperCase()}
-          </Text>
+        {/* Service Cards */}
+        <View style={styles.servicesContainer}>
+          <TouchableOpacity 
+            style={[styles.serviceCard, styles.nutritionCard]}
+            onPress={() => openBookingModal('nutritionist')}
+          >
+            <Ionicons name="nutrition" size={32} color="#22C55E" />
+            <Text style={styles.serviceTitle}>Consulta Nutricional</Text>
+            <Text style={styles.serviceDescription}>
+              Planos alimentares personalizados e orientação nutricional
+            </Text>
+            {appointmentLimits && appointmentLimits.remaining && appointmentLimits.limits && (
+              <Text style={styles.limitsText}>
+                {appointmentLimits.remaining.nutritionist || 0} de {appointmentLimits.limits.nutritionist || 0} consultas restantes este mês
+              </Text>
+            )}
+            <View style={styles.bookButton}>
+              <Ionicons name="calendar" size={16} color="#22C55E" />
+              <Text style={styles.bookButtonText}>Agendar</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.serviceCard, styles.trainingCard]}
+            onPress={() => openBookingModal('personal')}
+          >
+            <Ionicons name="fitness" size={32} color="#F59E0B" />
+            <Text style={styles.serviceTitle}>Personal Training</Text>
+            <Text style={styles.serviceDescription}>
+              Treinos personalizados e acompanhamento profissional
+            </Text>
+            {appointmentLimits && appointmentLimits.remaining && appointmentLimits.limits && (
+              <Text style={styles.limitsText}>
+                {appointmentLimits.remaining.personal || 0} de {appointmentLimits.limits.personal || 0} sessões restantes este mês
+              </Text>
+            )}
+            <View style={styles.bookButton}>
+              <Ionicons name="calendar" size={16} color="#F59E0B" />
+              <Text style={styles.bookButtonText}>Agendar</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
-        {/* Book New Appointment Button */}
-        <TouchableOpacity
-          style={styles.newAppointmentButton}
-          onPress={() => router.push('/client/(tabs)/schedule')}
-        >
-          <Ionicons name="add-circle" size={24} color="#FFFFFF" />
-          <Text style={styles.newAppointmentText}>Agendar Nova Consulta</Text>
-        </TouchableOpacity>
-
-        {/* Upcoming Appointments */}
-        {upcomingAppointments.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Próximas Consultas</Text>
-            
-            {upcomingAppointments.map((appointment) => (
-              <View
-                key={appointment.id}
-                style={[
-                  styles.appointmentCard,
-                  { borderLeftColor: getProfessionalColor(appointment.professional_type) }
-                ]}
-              >
+        {/* My Appointments */}
+        <View style={styles.appointmentsSection}>
+          <Text style={styles.sectionTitle}>Meus Agendamentos</Text>
+          
+          {appointments.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={48} color="#64748B" />
+              <Text style={styles.emptyText}>Você ainda não tem agendamentos</Text>
+              <Text style={styles.emptySubtext}>Escolha um serviço acima para agendar</Text>
+            </View>
+          ) : (
+            appointments.map((appointment) => (
+              <View key={appointment.id} style={styles.appointmentCard}>
                 <View style={styles.appointmentHeader}>
-                  <View style={styles.professionalInfo}>
-                    <Ionicons
-                      name={getProfessionalIcon(appointment.professional_type)}
-                      size={24}
-                      color={getProfessionalColor(appointment.professional_type)}
+                  <View style={styles.serviceIcon}>
+                    <Ionicons 
+                      name={appointment.professional_type === 'nutritionist' ? 'nutrition' : 'fitness'} 
+                      size={20} 
+                      color={appointment.professional_type === 'nutritionist' ? '#22C55E' : '#F59E0B'} 
                     />
-                    <View style={styles.professionalText}>
-                      <Text style={styles.professionalName}>
-                        {appointment.professional_name}
-                      </Text>
-                      <Text style={styles.professionalType}>
-                        {getProfessionalLabel(appointment.professional_type)}
-                      </Text>
-                    </View>
                   </View>
-                  
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: `${getStatusColor(appointment.status)}20` }
-                    ]}
+                  <View style={styles.appointmentInfo}>
+                    <Text style={styles.appointmentService}>
+                      {appointment.professional_type === 'nutritionist' ? 'Consulta Nutricional' : 'Personal Training'}
+                    </Text>
+                    <Text style={styles.appointmentDateTime}>
+                      {new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às {appointment.appointment_time}h
+                    </Text>
+                  </View>
+                  <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: appointment.status === 'completed' ? '#22C55E' : '#3B82F6' }
+                  ]}>
+                    <Text style={styles.statusText}>
+                      {appointment.status === 'completed' ? 'Concluído' : 'Agendado'}
+                    </Text>
+                  </View>
+                </View>
+                
+                {appointment.notes && (
+                  <Text style={styles.appointmentNotes}>{appointment.notes}</Text>
+                )}
+                
+                {appointment.can_cancel && appointment.status === 'scheduled' && (
+                  <TouchableOpacity 
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      Alert.alert(
+                        'Cancelar Agendamento',
+                        'Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.',
+                        [
+                          { text: 'Não', style: 'cancel' },
+                          { text: 'Sim, Cancelar', style: 'destructive', onPress: () => cancelAppointment(appointment.id) }
+                        ]
+                      );
+                    }}
                   >
-                    <Text
-                      style={[
-                        styles.statusText,
-                        { color: getStatusColor(appointment.status) }
-                      ]}
-                    >
-                      {getStatusLabel(appointment.status)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.appointmentDetails}>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="calendar" size={16} color="#94A3B8" />
-                    <Text style={styles.detailText}>
-                      {new Date(appointment.appointment_date).toLocaleDateString('pt-BR')}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.detailRow}>
-                    <Ionicons name="time" size={16} color="#94A3B8" />
-                    <Text style={styles.detailText}>{appointment.appointment_time}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.appointmentActions}>
-                  {canJoinCall(appointment) && (
-                    <TouchableOpacity
-                      style={styles.joinButton}
-                      onPress={() => joinVideoCall(appointment)}
-                    >
-                      <Ionicons name="videocam" size={20} color="#FFFFFF" />
-                      <Text style={styles.joinButtonText}>Entrar em Consulta</Text>
-                    </TouchableOpacity>
-                  )}
-                  
-                  {appointment.can_cancel && (
-                    <TouchableOpacity
-                      style={styles.cancelButton}
-                      onPress={() => cancelAppointment(appointment.id)}
-                    >
-                      <Ionicons name="close-circle" size={20} color="#EF4444" />
-                      <Text style={styles.cancelButtonText}>Cancelar</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+                    <Ionicons name="close-circle" size={16} color="#EF4444" />
+                    <Text style={styles.cancelButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-            ))}
-          </View>
-        )}
-
-        {/* Past Appointments */}
-        {pastAppointments.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Consultas Anteriores</Text>
-            
-            {pastAppointments.map((appointment) => (
-              <View key={appointment.id} style={styles.pastAppointmentCard}>
-                <View style={styles.appointmentHeader}>
-                  <View style={styles.professionalInfo}>
-                    <Ionicons
-                      name={getProfessionalIcon(appointment.professional_type)}
-                      size={20}
-                      color="#64748B"
-                    />
-                    <Text style={styles.pastProfessionalName}>
-                      {appointment.professional_name}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.appointmentDetails}>
-                  <Text style={styles.pastDetailText}>
-                    {new Date(appointment.appointment_date).toLocaleDateString('pt-BR')} às {appointment.appointment_time}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {appointments.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={64} color="#64748B" />
-            <Text style={styles.emptyText}>Nenhuma consulta agendada</Text>
-            <Text style={styles.emptySubtext}>
-              Clique em "Agendar Nova Consulta" para começar
-            </Text>
-          </View>
-        )}
+            ))
+          )}
+        </View>
       </ScrollView>
 
-      {/* Video Call Modal */}
-      {showVideoModal && selectedAppointment && (
-        <VideoCallModal
-          visible={showVideoModal}
-          roomUrl={selectedAppointment.video_room_url || ''}
-          userName={user?.full_name || 'Cliente'}
-          onClose={() => {
-            setShowVideoModal(false);
-            setSelectedAppointment(null);
-          }}
-          onCallEnded={() => {
-            loadData();
-          }}
-        />
-      )}
+      {/* Booking Modal */}
+      <Modal
+        visible={showBookingModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowBookingModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Agendar {selectedProfessionalType === 'nutritionist' ? 'Consulta Nutricional' : 'Personal Training'}
+              </Text>
+              <TouchableOpacity onPress={() => setShowBookingModal(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalScroll}>
+              <Text style={styles.stepTitle}>1. Selecione a data:</Text>
+              
+              {/* Calendar Header */}
+              <View style={styles.calendarHeader}>
+                <TouchableOpacity onPress={prevMonth} style={styles.monthButton}>
+                  <Ionicons name="chevron-back" size={20} color={selectedProfessionalType === 'nutritionist' ? '#22C55E' : '#F59E0B'} />
+                </TouchableOpacity>
+                
+                <Text style={styles.monthTitle}>
+                  {monthNames[selectedMonth]} {selectedYear}
+                </Text>
+                
+                <TouchableOpacity onPress={nextMonth} style={styles.monthButton}>
+                  <Ionicons name="chevron-forward" size={20} color={selectedProfessionalType === 'nutritionist' ? '#22C55E' : '#F59E0B'} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Calendar Grid */}
+              <View style={styles.calendar}>
+                <View style={styles.weekHeader}>
+                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                    <Text key={day} style={styles.weekDay}>{day}</Text>
+                  ))}
+                </View>
+                
+                <View style={styles.calendarGrid}>
+                  {generateCalendarDates().map((dateInfo, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.dateCell,
+                        dateInfo.isToday && styles.todayCell,
+                        selectedDate === dateInfo.date && styles.selectedDateCell,
+                        (dateInfo.isPast || dateInfo.isWeekend) && styles.disabledDateCell
+                      ]}
+                      onPress={() => {
+                        if (!dateInfo.isPast && !dateInfo.isWeekend) {
+                          onDateSelect(dateInfo.date);
+                        }
+                      }}
+                      disabled={dateInfo.isPast || dateInfo.isWeekend}
+                    >
+                      <Text style={[
+                        styles.dateText,
+                        dateInfo.isToday && styles.todayText,
+                        selectedDate === dateInfo.date && styles.selectedDateText,
+                        (dateInfo.isPast || dateInfo.isWeekend) && styles.disabledDateText
+                      ]}>
+                        {dateInfo.day}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              
+              {selectedDate && (
+                <View style={styles.timeSlotsSection}>
+                  <Text style={styles.stepTitle}>
+                    2. Horários disponíveis para {new Date(selectedDate).toLocaleDateString('pt-BR')}:
+                  </Text>
+                  
+                  {availableSlots.length === 0 ? (
+                    <View style={styles.noSlotsContainer}>
+                      <Ionicons name="time-outline" size={32} color="#64748B" />
+                      <Text style={styles.noSlotsText}>
+                        Nenhum horário disponível nesta data
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.slotsGrid}>
+                      {availableSlots.map((slot) => (
+                        <TouchableOpacity
+                          key={slot.id}
+                          style={[
+                            styles.timeSlot,
+                            selectedSlot?.id === slot.id && styles.selectedTimeSlot
+                          ]}
+                          onPress={() => setSelectedSlot(slot)}
+                        >
+                          <Text style={[
+                            styles.timeSlotText,
+                            selectedSlot?.id === slot.id && styles.selectedTimeSlotText
+                          ]}>
+                            {slot.time}h
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+              
+              {selectedSlot && (
+                <TouchableOpacity 
+                  style={[
+                    styles.confirmButton,
+                    { backgroundColor: selectedProfessionalType === 'nutritionist' ? '#22C55E' : '#F59E0B' }
+                  ]}
+                  onPress={() => bookAppointment(selectedSlot)}
+                >
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                  <Text style={styles.confirmButtonText}>Confirmar Agendamento</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -399,171 +611,365 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 16,
   },
-  scrollView: {
-    flex: 1,
-  },
   header: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginTop: 12,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#94A3B8',
-    marginTop: 4,
-  },
-  newAppointmentButton: {
-    flexDirection: 'row',
-    backgroundColor: '#8B5CF6',
-    marginHorizontal: 20,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 24,
-  },
-  newAppointmentText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  appointmentCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  appointmentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  professionalInfo: {
+  title: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  planBadge: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  planBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  upgradeContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  upgradeTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  upgradeDescription: {
+    color: '#94A3B8',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 24,
+  },
+  upgradeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    backgroundColor: '#22C55E',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 32,
   },
-  professionalText: {
-    gap: 2,
+  upgradeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
-  professionalName: {
+  servicesContainer: {
+    padding: 24,
+    gap: 16,
+  },
+  serviceCard: {
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+  },
+  nutritionCard: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  trainingCard: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  serviceTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 12,
+  },
+  serviceDescription: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  bookButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+  },
+  bookButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  appointmentsSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    marginTop: 16,
   },
-  professionalType: {
-    fontSize: 12,
+  emptySubtext: {
     color: '#94A3B8',
+    fontSize: 14,
+    marginTop: 8,
   },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+  appointmentCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  appointmentDetails: {
-    gap: 8,
+    padding: 16,
     marginBottom: 12,
   },
-  detailRow: {
+  appointmentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  detailText: {
-    fontSize: 14,
-    color: '#E2E8F0',
-  },
-  appointmentActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  joinButton: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#22C55E',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+  serviceIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
-    gap: 6,
+    alignItems: 'center',
+    marginRight: 12,
   },
-  joinButtonText: {
+  appointmentInfo: {
+    flex: 1,
+  },
+  appointmentService: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  appointmentDateTime: {
+    color: '#94A3B8',
     fontSize: 14,
-    fontWeight: '600',
+    marginTop: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  appointmentNotes: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 12,
+  },
+  limitsText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '500',
   },
   cancelButton: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    padding: 12,
-    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   cancelButtonText: {
     color: '#EF4444',
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#0B0D17',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '85%',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  modalScroll: {
+    padding: 20,
+  },
+  stepTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  monthButton: {
+    padding: 8,
+  },
+  monthTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  calendar: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  weekHeader: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  weekDay: {
+    flex: 1,
+    textAlign: 'center',
+    color: '#94A3B8',
+    fontSize: 12,
     fontWeight: '600',
   },
-  pastAppointmentCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    opacity: 0.7,
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
-  pastProfessionalName: {
+  dateCell: {
+    width: '14.28%',
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  todayCell: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderRadius: 6,
+  },
+  selectedDateCell: {
+    backgroundColor: '#22C55E',
+    borderRadius: 6,
+  },
+  disabledDateCell: {
+    opacity: 0.3,
+  },
+  dateText: {
+    color: '#FFFFFF',
     fontSize: 14,
-    color: '#94A3B8',
   },
-  pastDetailText: {
-    fontSize: 12,
+  todayText: {
+    color: '#22C55E',
+    fontWeight: 'bold',
+  },
+  selectedDateText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  disabledDateText: {
     color: '#64748B',
   },
-  emptyState: {
+  timeSlotsSection: {
+    marginTop: 24,
+  },
+  noSlotsContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  noSlotsText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  slotsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  timeSlot: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  selectedTimeSlot: {
+    backgroundColor: '#22C55E',
+    borderColor: '#22C55E',
+  },
+  timeSlotText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  selectedTimeSlotText: {
+    color: '#FFFFFF',
+  },
+  confirmButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 64,
+    paddingVertical: 16,
+    borderRadius: 8,
+    marginTop: 24,
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
+  confirmButtonText: {
     color: '#FFFFFF',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#94A3B8',
-    marginTop: 8,
-    textAlign: 'center',
-    paddingHorizontal: 40,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });
