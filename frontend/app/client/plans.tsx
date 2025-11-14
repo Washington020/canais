@@ -196,13 +196,29 @@ export default function PlansScreen() {
                       <Text style={styles.monthlyPrice}>
                         {formatPrice(plan.monthly_price)}/mês
                       </Text>
-                      <Text style={styles.activationFee}>
-                        Taxa de adesão: {formatPrice(plan.activation_fee)}
-                      </Text>
+                      
+                      {plan.activation_fee > 0 ? (
+                        <Text style={styles.activationFee}>
+                          Taxa de adesão: {formatPrice(plan.activation_fee)}
+                        </Text>
+                      ) : (
+                        <Text style={styles.noActivationFee}>
+                          🎁 SEM TAXA DE ADESÃO!
+                        </Text>
+                      )}
+                      
                       <View style={styles.totalContainer}>
                         <Text style={styles.totalLabel}>1º mês total:</Text>
                         <Text style={styles.totalPrice}>
                           {formatPrice(plan.first_month_total)}
+                        </Text>
+                      </View>
+                      
+                      {/* Fidelity Badge */}
+                      <View style={styles.fidelityBadge}>
+                        <Ionicons name="time" size={14} color="#F59E0B" />
+                        <Text style={styles.fidelityText}>
+                          Fidelidade: {plan.fidelity_months} meses
                         </Text>
                       </View>
                     </View>
