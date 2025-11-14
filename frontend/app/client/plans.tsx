@@ -47,11 +47,25 @@ export default function PlansScreen() {
       console.log('🚀 Carregando planos da URL:', `${API_URL}/integration/plans`);
       const response = await axios.get(`${API_URL}/integration/plans`);
       console.log('✅ Planos recebidos:', response.data);
+      console.log('📊 Total de planos:', response.data.length);
+      
+      // Verificar se cada plano tem as propriedades necessárias
+      response.data.forEach((plan: any, index: number) => {
+        console.log(`🔍 Plano ${index}:`, {
+          type: plan.type,
+          name: plan.name,
+          monthly_price: plan.monthly_price,
+          hasMarketingBenefits: !!plan.marketing_benefits
+        });
+      });
+      
       setPlans(response.data);
+      console.log('✅ Estado dos planos atualizado');
     } catch (error) {
       console.error('❌ Erro ao carregar planos:', error);
       Alert.alert('Erro', 'Não foi possível carregar os planos. Tente novamente.');
     } finally {
+      console.log('🏁 Loading definido como false');
       setLoading(false);
     }
   };
