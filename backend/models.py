@@ -134,11 +134,17 @@ class Subscription(BaseModel):
 class PaymentPlan(BaseModel):
     id: str
     name: str
-    price: float
+    monthly_price: float
+    activation_fee: float = 0.0
+    first_month_total: float
     currency: str = "BRL"
     duration_days: int
+    fidelity_months: int = 12
     features: List[str]
-    token_limit: int
+    marketing_benefits: List[str] = []
+    nutritionist_consultations: int = 0
+    personal_consultations: int = 0
+    token_limit: int = 0
     description: str
 
 class PaymentTransaction(BaseModel):
