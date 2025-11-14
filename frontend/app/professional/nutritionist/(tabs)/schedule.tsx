@@ -49,6 +49,8 @@ export default function NutritionistSchedule() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [videoCallModal, setVideoCallModal] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const router = useRouter();
 
   useEffect(() => {
