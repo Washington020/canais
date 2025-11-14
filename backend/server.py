@@ -3526,6 +3526,156 @@ async def get_gym_performance(limit: int = 10):
         logger.error(f"Erro ao buscar performance das academias: {e}")
         raise HTTPException(status_code=500, detail="Erro ao carregar performance")
 
+@api_router.get("/admin/pending-clients")
+async def get_pending_clients():
+    """Get clients pending approval"""
+    try:
+        # Buscar usuários com status pendente ou inactive
+        clients = await db.users.find({
+            "payment_status": {"$in": ["pending", "inactive"]}
+        }).sort("created_at", -1).to_list(100)
+        
+        result = []
+        for client in clients:
+            result.append({
+                "id": str(client["_id"]),
+                "full_name": client.get("full_name", "Usuário"),
+                "email": client.get("email", ""),
+                "plan_type": client.get("plan_type", "basico"),
+                "status": client.get("payment_status", "inactive"),
+                "created_at": client.get("created_at", datetime.now(timezone.utc)).isoformat()
+            })
+        
+        return {"clients": result}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar clientes pendentes: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar clientes pendentes")
+
+@api_router.post("/admin/approve-client/{client_id}")
+async def approve_client(client_id: str):
+    """Approve a client and activate their account"""
+    try:
+        # Atualizar status do cliente para ativo
+        result = await db.users.update_one(
+            {"_id": ObjectId(client_id)},
+            {
+                "$set": {
+                    "payment_status": "active",
+                    "approved_at": datetime.now(timezone.utc),
+                    "status": "active"
+                }
+            }
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        return {"success": True, "message": "Cliente aprovado com sucesso"}
+        
+    except Exception as e:
+        logger.error(f"Erro ao aprovar cliente: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao aprovar cliente")
+
+@api_router.get("/admin/dashboard/stats")
+async def get_admin_dashboard_stats():
+    """Get complete dashboard statistics for admin"""
+    try:
+        # Total de clientes
+        total_clients = await db.users.count_documents({})
+        
+        # Clientes aguardando aprovação
+        pending_approval = await db.users.count_documents({
+            "payment_status": {"$in": ["pending", "inactive"]}
+        })
+        
+        # Clientes aprovados
+        approved_clients = await db.users.count_documents({
+            "payment_status": "active"
+        })
+        
+        # Total de academias
+        total_gyms = await db.gyms.count_documents({})
+        
+        # Total de nutricionistas
+        total_nutritionists = await db.professionals.count_documents({
+            "type": "nutritionist"
+        })
+        
+        # Total de personal trainers
+        total_personal_trainers = await db.professionals.count_documents({
+            "type": "personal"
+        })
+        
+        # Pagamentos pendentes (soma dos valores)
+        pending_payments_pipeline = [
+            {
+                "$match": {
+                    "payment_status": "pending"
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "users",
+                    "localField": "user_id",
+                    "foreignField": "_id",
+                    "as": "user"
+                }
+            },
+            {
+                "$unwind": {
+                    "path": "$user",
+                    "preserveNullAndEmptyArrays": True
+                }
+            },
+            {
+                "$group": {
+                    "_id": None,
+                    "total": {
+                        "$sum": "$amount"
+                    }
+                }
+            }
+        ]
+        
+        pending_result = await db.payment_transactions.aggregate(pending_payments_pipeline).to_list(1)
+        pending_payments = pending_result[0]["total"] if pending_result else 0
+        
+        # Total de receita
+        total_revenue_pipeline = [
+            {
+                "$match": {
+                    "payment_status": "paid"
+                }
+            },
+            {
+                "$group": {
+                    "_id": None,
+                    "total": {
+                        "$sum": "$amount"
+                    }
+                }
+            }
+        ]
+        
+        revenue_result = await db.payment_transactions.aggregate(total_revenue_pipeline).to_list(1)
+        total_revenue = revenue_result[0]["total"] if revenue_result else 0
+        
+        return {
+            "total_clients": total_clients,
+            "pending_approval": pending_approval,
+            "approved_clients": approved_clients,
+            "total_gyms": total_gyms,
+            "total_nutritionists": total_nutritionists,
+            "total_personal_trainers": total_personal_trainers,
+            "pending_payments": pending_payments,
+            "total_revenue": total_revenue
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar estatísticas do dashboard: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar estatísticas")
+
 @api_router.put("/admin/users/{user_id}/block")
 async def block_user(user_id: str):
     result = await db.users.update_one(
