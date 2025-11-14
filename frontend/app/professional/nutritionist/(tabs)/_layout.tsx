@@ -102,6 +102,17 @@ export default function NutritionistTabsLayout() {
       />
       
       <Tabs.Screen
+        name="availability"
+        options={{
+          title: 'Disponibilidade',
+          headerTitle: 'Minha Disponibilidade',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="time" size={size} color={color} />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen
         name="schedule"
         options={{
           title: 'Agenda',
