@@ -445,23 +445,50 @@ export default function ClientSchedule() {
                   <Text style={styles.appointmentNotes}>{appointment.notes}</Text>
                 )}
                 
-                {appointment.can_cancel && appointment.status === 'scheduled' && (
-                  <TouchableOpacity 
-                    style={styles.cancelButton}
-                    onPress={() => {
-                      Alert.alert(
-                        'Cancelar Agendamento',
-                        'Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.',
-                        [
-                          { text: 'Não', style: 'cancel' },
-                          { text: 'Sim, Cancelar', style: 'destructive', onPress: () => cancelAppointment(appointment.id) }
-                        ]
-                      );
-                    }}
-                  >
-                    <Ionicons name="close-circle" size={16} color="#EF4444" />
-                    <Text style={styles.cancelButtonText}>Cancelar</Text>
-                  </TouchableOpacity>
+                {appointment.status === 'scheduled' && (
+                  <View style={styles.appointmentActions}>
+                    <TouchableOpacity 
+                      style={styles.videoButton}
+                      onPress={async () => {
+                        try {
+                          const token = await AsyncStorage.getItem('token');
+                          const response = await axios.post(
+                            `${API_URL}/video/create-agora-channel`,
+                            { appointment_id: appointment.id },
+                            { headers: { Authorization: `Bearer ${token}` } }
+                          );
+                          setVideoChannelName(response.data.channel_name);
+                          setCurrentAppointmentId(appointment.id);
+                          setShowVideoCall(true);
+                        } catch (error) {
+                          console.error('Erro ao criar canal:', error);
+                          Alert.alert('Erro', 'Não foi possível iniciar a videochamada.');
+                        }
+                      }}
+                    >
+                      <Ionicons name="videocam" size={16} color="#FFFFFF" />
+                      <Text style={styles.videoButtonText}>Entrar em Consulta</Text>
+                    </TouchableOpacity>
+                    
+                    {appointment.can_cancel && (
+                      <TouchableOpacity 
+                        style={styles.cancelButton}
+                        onPress={() => {
+                          Alert.alert(
+                            'Cancelar Agendamento',
+                            'Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.',
+                            [
+                              { text: 'Não', style: 'cancel' },
+                              { text: 'Sim, Cancelar', style: 'destructive', onPress: () => cancelAppointment(appointment.id) }
+                            ]
+                          );
+                        }}
+                      >
+                        <Ionicons name="close-circle" size={16} color="#EF4444" />
+                        <Text style={styles.cancelButtonText}>Cancelar</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 )}
               </View>
             ))
