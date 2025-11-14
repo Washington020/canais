@@ -453,25 +453,17 @@ export default function ClientSchedule() {
                   <Text style={styles.appointmentNotes}>{appointment.notes}</Text>
                 )}
                 
-                {appointment.status === 'scheduled' && (
+                {(appointment.status === 'scheduled' || appointment.status === 'confirmed') && (
                   <View style={styles.appointmentActions}>
                     <TouchableOpacity 
                       style={styles.videoButton}
-                      onPress={async () => {
-                        try {
-                          const token = await AsyncStorage.getItem('token');
-                          const response = await axios.post(
-                            `${API_URL}/video/create-agora-channel`,
-                            { appointment_id: appointment.id },
-                            { headers: { Authorization: `Bearer ${token}` } }
-                          );
-                          setVideoChannelName(response.data.channel_name);
-                          setCurrentAppointmentId(appointment.id);
-                          setShowVideoCall(true);
-                        } catch (error) {
-                          console.error('Erro ao criar canal:', error);
-                          Alert.alert('Erro', 'Não foi possível iniciar a videochamada.');
-                        }
+                      onPress={() => {
+                        // Usar o canal de vídeo do agendamento diretamente
+                        const channelName = appointment.video_channel_name || `luxepass_${appointment.id}`;
+                        console.log('🎥 Iniciando videochamada no canal:', channelName);
+                        setVideoChannelName(channelName);
+                        setCurrentAppointmentId(appointment.id);
+                        setShowVideoCall(true);
                       }}
                     >
                       <Ionicons name="videocam" size={16} color="#FFFFFF" />
