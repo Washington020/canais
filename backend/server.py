@@ -5264,7 +5264,7 @@ async def get_monthly_appointment_limits(current_user: User = Depends(get_curren
         user_plan = current_user.plan_type if hasattr(current_user, 'plan_type') else 'basic'
         
         # Set limits based on plan
-        if user_plan == 'basic':
+        if user_plan in ['basic', 'basico']:
             limits = {"nutritionist": 0, "personal": 0}
         elif user_plan == 'intermediario':
             limits = {"nutritionist": 1, "personal": 1}
