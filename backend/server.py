@@ -4103,13 +4103,17 @@ async def create_pagarme_checkout_session(
             user_id=str(current_user.id),
             plan_id=request.plan_id,
             session_id=order_result["order_id"],
-            amount=plan["price"],
+            amount=total_amount,
             currency=plan["currency"],
             payment_status="pending",
             payment_method=request.payment_method,
             created_at=datetime.now(timezone.utc).isoformat(),
             metadata={
                 "order_id": order_result["order_id"],
+                "monthly_price": plan["monthly_price"],
+                "activation_fee": plan["activation_fee"],
+                "first_month_total": plan["first_month_total"],
+                "fidelity_months": plan["fidelity_months"],
                 "pagarme_data": order_result.get("response", {})
             }
         )
