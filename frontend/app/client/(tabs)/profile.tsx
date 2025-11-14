@@ -49,18 +49,39 @@ export default function ProfileScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        Alert.alert('Erro', 'Token não encontrado. Faça login novamente.');
+        console.log('❌ Token não encontrado, redirecionando para login...');
+        router.replace('/client/login');
         return;
       }
 
+      console.log('📡 Buscando perfil do usuário...');
       const response = await axios.get(`${API_URL}/users/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      console.log('✅ Perfil carregado:', response.data);
       setProfile(response.data);
     } catch (error: any) {
-      console.error('Erro ao carregar perfil:', error);
-      Alert.alert('Erro', 'Não foi possível carregar seu perfil.');
+      console.error('❌ Erro ao carregar perfil:', error);
+      console.error('📄 Status:', error.response?.status);
+      console.error('📄 Data:', error.response?.data);
+      
+      if (error.response?.status === 401) {
+        // Token inválido ou expirado
+        console.log('🔐 Token inválido, limpando e redirecionando...');
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('userType');
+        router.replace('/client/login');
+      } else {
+        Alert.alert(
+          'Erro ao Carregar Perfil',
+          'Não foi possível carregar suas informações. Tente novamente.',
+          [
+            { text: 'Tentar Novamente', onPress: () => loadProfile() },
+            { text: 'Voltar ao Login', onPress: () => router.replace('/client/login') }
+          ]
+        );
+      }
     } finally {
       setLoading(false);
     }
