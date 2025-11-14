@@ -387,7 +387,7 @@ export default function PersonalTrainerSchedule() {
           {getTodaysAppointments().length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="fitness-outline" size={48} color="#64748B" />
-              <Text style={styles.emptyText}>Nenhum treino agendado para hoje</Text>
+              <Text style={styles.emptyText}>Nenhuma consulta agendada para hoje</Text>
             </View>
           ) : (
             getTodaysAppointments().map((appointment) => (
