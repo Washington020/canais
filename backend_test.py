@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Suite for LuxePass
-Testing the GET /api/integration/plans endpoint as requested in review.
+LuxePass Backend Testing Suite
+Testing critical endpoints for deployment readiness
+Focus: Authentication, Plans, Appointments, Video Call Integration
 """
 
 import requests
 import json
 import sys
-from datetime import datetime
-from typing import Dict, List, Any
+from datetime import datetime, timedelta
+import os
+from dotenv import load_dotenv
 
-# Configuration
-BACKEND_URL = "https://gymvideos.preview.emergentagent.com/api"
+# Load environment variables
+load_dotenv('/app/frontend/.env')
+
+# Get backend URL from environment
+BACKEND_URL = os.getenv('EXPO_PUBLIC_BACKEND_URL', 'https://gymvideos.preview.emergentagent.com')
+API_BASE = f"{BACKEND_URL}/api"
 
 class TestResult:
     def __init__(self):
