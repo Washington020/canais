@@ -148,6 +148,17 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 # Create the main app
 app = FastAPI(title="Luxe Forma API", version="1.0.0")
 
+# Create SocketIO server for real-time video calls
+sio = socketio.AsyncServer(
+    async_mode='asgi',
+    cors_allowed_origins="*",
+    logger=True,
+    engineio_logger=True
+)
+
+# Wrap FastAPI app with SocketIO
+socket_app = socketio.ASGIApp(sio, app)
+
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
