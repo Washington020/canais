@@ -276,7 +276,7 @@ export default function PersonalTrainerSchedule() {
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Agenda Personal Trainer</Text>
+        <Text style={styles.title}>Agenda Nutricionista</Text>
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => setAvailabilityModal(true)}
