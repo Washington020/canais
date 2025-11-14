@@ -155,7 +155,6 @@ class PagarMeService:
     
     def _get_boleto_due_date(self) -> str:
         """Get due date for boleto (3 days from now)"""
-        from datetime import timedelta
         due_date = datetime.now(timezone.utc) + timedelta(days=3)
         return due_date.strftime("%Y-%m-%d")
     
