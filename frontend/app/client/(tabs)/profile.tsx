@@ -34,6 +34,7 @@ interface UserProfile {
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
