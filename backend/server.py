@@ -18,6 +18,7 @@ import base64
 import secrets
 import qrcode
 from io import BytesIO
+import socketio
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 
 # Import the advanced token system
