@@ -310,8 +310,8 @@ export default function ClientSchedule() {
     );
   }
 
-  // Show upgrade banner for Basic users
-  if (!user || user.plan_type === 'basic') {
+  // Show upgrade banner for Basic users only
+  if (!user || user.plan_type === 'basic' || user.plan_type === 'basico') {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
@@ -324,8 +324,8 @@ export default function ClientSchedule() {
           <Ionicons name="calendar-outline" size={64} color="#64748B" />
           <Text style={styles.upgradeTitle}>Agendamentos Premium</Text>
           <Text style={styles.upgradeDescription}>
-            Os agendamentos estão disponíveis apenas para clientes VIP e Intermediário.
-            Faça upgrade para agendar consultas com nutricionistas e personal trainers.
+            Os agendamentos com profissionais estão disponíveis nos planos Intermediário, Premium e VIP.
+            Faça upgrade agora e tenha acesso a consultas com nutricionistas e personal trainers.
           </Text>
           
           <TouchableOpacity 
@@ -333,7 +333,7 @@ export default function ClientSchedule() {
             onPress={() => router.push('/client/plans')}
           >
             <Ionicons name="arrow-up-circle" size={20} color="#FFFFFF" />
-            <Text style={styles.upgradeButtonText}>Fazer Upgrade</Text>
+            <Text style={styles.upgradeButtonText}>Fazer Upgrade Agora</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
