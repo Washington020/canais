@@ -218,10 +218,11 @@ export default function ClientSchedule() {
   };
 
   const openBookingModal = (professionalType: string) => {
-    if (!user || (user.plan_type !== 'vip' && user.plan_type !== 'intermediario')) {
+    // Check if user has a valid plan for appointments
+    if (!user || user.plan_type === 'basico' || user.plan_type === 'basic') {
       Alert.alert(
         'Acesso Restrito',
-        'Agendamentos disponíveis apenas para planos VIP e Intermediário. Faça upgrade para acessar esta funcionalidade.',
+        'Agendamentos disponíveis apenas para planos Intermediário, Premium e VIP. Faça upgrade para acessar esta funcionalidade.',
         [
           { text: 'OK' },
           { text: 'Fazer Upgrade', onPress: () => router.push('/client/plans') }
