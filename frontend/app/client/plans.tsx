@@ -230,6 +230,18 @@ export default function PlansScreen() {
                       {plan.description}
                     </Text>
 
+                    {/* Marketing Benefits */}
+                    {plan.marketing_benefits && plan.marketing_benefits.length > 0 && (
+                      <View style={styles.marketingContainer}>
+                        <Text style={styles.marketingTitle}>🚀 Por que escolher este plano:</Text>
+                        {plan.marketing_benefits.map((benefit, benefitIndex) => (
+                          <View key={benefitIndex} style={styles.marketingItem}>
+                            <Text style={styles.marketingText}>{benefit}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
                     {/* Features */}
                     <View style={styles.featuresContainer}>
                       <Text style={styles.featuresTitle}>✨ O que está incluído:</Text>
@@ -240,6 +252,29 @@ export default function PlansScreen() {
                         </View>
                       ))}
                     </View>
+
+                    {/* Professional Consultations Info */}
+                    {(plan.nutritionist_consultations > 0 || plan.personal_consultations > 0) && (
+                      <View style={styles.consultationsContainer}>
+                        <Text style={styles.consultationsTitle}>👩‍⚕️ Consultas Mensais Incluídas:</Text>
+                        {plan.nutritionist_consultations > 0 && (
+                          <View style={styles.consultationItem}>
+                            <Ionicons name="nutrition" size={16} color="#22C55E" />
+                            <Text style={styles.consultationText}>
+                              {plan.nutritionist_consultations}x Nutricionista especializada
+                            </Text>
+                          </View>
+                        )}
+                        {plan.personal_consultations > 0 && (
+                          <View style={styles.consultationItem}>
+                            <Ionicons name="fitness" size={16} color="#8B5CF6" />
+                            <Text style={styles.consultationText}>
+                              {plan.personal_consultations}x Personal Trainer qualificado
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
 
                     {/* Action Button */}
                     <TouchableOpacity 
