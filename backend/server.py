@@ -3648,9 +3648,9 @@ async def get_my_availability(request: Request):
         logger.error(f"Erro ao buscar disponibilidade: {e}")
         raise HTTPException(status_code=500, detail="Erro ao carregar disponibilidade")
 
-@api_router.post("/video/create-room")
-async def create_video_room(request: Request):
-    """Create Daily.co video room for appointment"""
+@api_router.post("/video/create-agora-channel")
+async def create_agora_channel(request: Request):
+    """Create Agora channel for video call"""
     try:
         data = await request.json()
         appointment_id = data.get("appointment_id")
@@ -3663,29 +3663,29 @@ async def create_video_room(request: Request):
         if not appointment:
             raise HTTPException(status_code=404, detail="Agendamento não encontrado")
         
-        # Create unique room name
-        room_name = f"luxepass-{appointment_id}"
+        # Create unique channel name
+        channel_name = f"luxepass_{appointment_id}"
         
-        # Store room info in appointment
+        # Store channel info in appointment
         await db.appointments.update_one(
             {"_id": ObjectId(appointment_id)},
             {
                 "$set": {
-                    "video_room_url": f"https://luxepass.daily.co/{room_name}",
-                    "video_room_name": room_name,
+                    "video_channel_name": channel_name,
+                    "video_provider": "agora",
                     "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
         
         return {
-            "room_url": f"https://luxepass.daily.co/{room_name}",
-            "room_name": room_name
+            "channel_name": channel_name,
+            "app_id": "luxepass-app-id"  # You'll need to configure this
         }
         
     except Exception as e:
-        logger.error(f"Erro ao criar sala de vídeo: {e}")
-        raise HTTPException(status_code=500, detail="Erro ao criar sala de vídeo")
+        logger.error(f"Erro ao criar canal de vídeo: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar canal de vídeo")
 
 @api_router.get("/admin/confirmed-appointments")
 async def get_confirmed_appointments(
