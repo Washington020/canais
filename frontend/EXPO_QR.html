@@ -132,17 +132,8 @@
         // Get the Expo URL from environment or construct it
         async function loadQRCode() {
             try {
-                // Get the hostname from the current page
-                const hostname = window.location.hostname;
-                
-                // Construct Expo tunnel URL (update this with your actual tunnel URL)
-                // The format is: exp://[tunnel-url]
-                const expoUrl = `exp://${hostname}:3000`;
-                
-                // Try to fetch Expo dev server info
-                const response = await fetch('http://localhost:3000/__inspect', {
-                    mode: 'no-cors'
-                }).catch(() => null);
+                // Use the correct Expo tunnel URL
+                const expoUrl = 'exp://trainconnect-1.preview.emergentagent.com';
                 
                 document.getElementById('loading').style.display = 'none';
                 
