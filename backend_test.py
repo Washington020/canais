@@ -510,28 +510,9 @@ class LuxePassTester:
         
         return passed_tests, failed_tests, total_tests
 
-def main():
-    """Main test execution"""
-    print("🚀 LUXEPASS BACKEND API TESTING")
-    print("Testing GET /api/integration/plans endpoint")
-    print(f"Backend URL: {BACKEND_URL}")
-    print(f"Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("="*60)
-    
-    # Run the integration plans test
-    result = test_integration_plans_endpoint()
-    
-    # Print summary
-    result.print_summary()
-    
-    # Return appropriate exit code
-    if result.failed_tests > 0:
-        print(f"\n❌ TESTING COMPLETED WITH {result.failed_tests} FAILURES")
-        return 1
-    else:
-        print(f"\n✅ ALL TESTS PASSED SUCCESSFULLY!")
-        return 0
-
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    tester = LuxePassTester()
+    passed, failed, total = tester.run_all_tests()
+    
+    # Exit with error code if tests failed
+    sys.exit(0 if failed == 0 else 1)
