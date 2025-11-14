@@ -238,14 +238,6 @@ export default function ClientDashboard() {
             <Text style={styles.actionButtonText}>Academias Parceiras</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Logout Section */}
-        <View style={styles.logoutSection}>
-          <TouchableOpacity style={styles.logoutFullButton} onPress={handleLogout}>
-            <Ionicons name="log-out" size={20} color="#FFFFFF" />
-            <Text style={styles.logoutFullText}>Sair do App Cliente</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
 
       {/* Workout Modal */}
