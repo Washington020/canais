@@ -627,11 +627,16 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Professional System Complete Functionality Testing"
+    - "Payment System Critical Fixes"
+    - "Gym Authentication System Fixes"
+    - "Token Generation System Fixes"
+    - "Critical Workflow Validation"
   stuck_tasks:
     - "Professional System Complete Functionality Testing"
+    - "Payment System Critical Fixes"
+    - "Gym Authentication System Fixes"
   test_all: false
-  test_priority: "high_first"
+  test_priority: "critical_blockers_first"
 
 agent_communication:
     - agent: "testing"
