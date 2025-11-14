@@ -271,12 +271,14 @@ def test_appointment_booking_blocking(results):
         results.add_result("Basic User Authentication", True, "Successfully authenticated basic user")
         
         # Try to book an appointment (should be blocked)
+        print(f"   Testing booking with token: {token[:20]}...")
         booking_response = make_request("POST", "/appointments/book", {
             "professional_type": "nutritionist",
             "professional_id": "test_professional_id",
             "appointment_date": "2025-01-20",
             "appointment_time": "10:00"
         }, auth_token=token)
+        print(f"   Booking response: {booking_response.status_code if booking_response else 'None'}")
         
         if booking_response:
             response_text = booking_response.text.lower()
