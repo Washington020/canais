@@ -419,12 +419,31 @@ export default function PersonalTrainerSchedule() {
                   <View style={styles.appointmentActions}>
                     <TouchableOpacity 
                       style={styles.videoButton}
-                      onPress={() => {
-                        // Usar o canal do agendamento diretamente
-                        const channelName = (appointment as any).video_channel_name || `luxepass_${appointment.id}`;
-                        console.log('🎥 Nutricionista entrando no canal:', channelName);
-                        setVideoChannelName(channelName);
-                        setShowVideoCall(true);
+                      onPress={async () => {
+                        try {
+                          console.log('🎥 Nutricionista iniciando videochamada para consulta:', appointment.id);
+                          
+                          // Start video call via API
+                          const token = await AsyncStorage.getItem('professionalToken');
+                          const response = await axios.post(
+                            `${API_URL}/video-call/start`,
+                            { appointment_id: appointment.id },
+                            {
+                              headers: { Authorization: `Bearer ${token}` }
+                            }
+                          );
+                          
+                          if (response.data.success) {
+                            setVideoChannelName(response.data.room_id);
+                            setCurrentAppointmentId(appointment.id);
+                            setShowVideoCall(true);
+                          } else {
+                            Alert.alert('Erro', 'Não foi possível iniciar a videochamada');
+                          }
+                        } catch (error) {
+                          console.error('❌ Erro ao iniciar videochamada:', error);
+                          Alert.alert('Erro', 'Erro ao conectar com o servidor');
+                        }
                       }}
                     >
                       <Ionicons name="videocam" size={16} color="#FFFFFF" />
