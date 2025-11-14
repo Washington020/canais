@@ -165,14 +165,14 @@ export default function RegisterScreen() {
       console.log('✅ 2. Login realizado, token obtido');
       
       // 3. Processar pagamento
-      const paymentData = {
+      const paymentRequestData = {
         plan_id: selectedPlan.type,
         payment_method: paymentData.payment_method,
-        origin_url: window.location.origin || 'http://localhost:3000'
+        origin_url: 'http://localhost:3000'
       };
       
       if (paymentData.payment_method === 'credit_card') {
-        paymentData.card_data = {
+        paymentRequestData.card_data = {
           number: paymentData.card_number,
           holder_name: paymentData.card_name,
           exp_month: paymentData.card_expiry.split('/')[0],
