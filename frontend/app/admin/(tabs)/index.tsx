@@ -357,16 +357,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statIconContainer: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statValue: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#94A3B8',
     textAlign: 'center',
   },
