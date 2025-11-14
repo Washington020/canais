@@ -1,52 +1,100 @@
 #!/usr/bin/env python3
 """
-LuxePass Backend Testing Suite
-Testing critical endpoints for deployment readiness
-Focus: Authentication, Plans, Appointments, Video Call Integration
+Backend Testing Script for LuxePass Token and Query Limits Corrections
+Testing the corrections implemented for query limits and tokens as requested.
 """
 
 import requests
 import json
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv('/app/frontend/.env')
 
 # Get backend URL from environment
-BACKEND_URL = os.getenv('EXPO_PUBLIC_BACKEND_URL', 'https://trainconnect-1.preview.emergentagent.com')
+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://trainconnect-1.preview.emergentagent.com')
 API_BASE = f"{BACKEND_URL}/api"
 
-class LuxePassTester:
+class TestResults:
     def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        })
-        self.tokens = {}
-        self.test_results = []
+        self.total_tests = 0
+        self.passed_tests = 0
+        self.failed_tests = 0
+        self.results = []
+    
+    def add_result(self, test_name, passed, details="", error=""):
+        self.total_tests += 1
+        if passed:
+            self.passed_tests += 1
+            status = "✅ PASS"
+        else:
+            self.failed_tests += 1
+            status = "❌ FAIL"
         
-    def log_test(self, test_name, success, details="", error=""):
-        """Log test results"""
         result = {
-            'test': test_name,
-            'success': success,
-            'details': details,
-            'error': error,
-            'timestamp': datetime.now().isoformat()
+            "test": test_name,
+            "status": status,
+            "passed": passed,
+            "details": details,
+            "error": error
         }
-        self.test_results.append(result)
-        
-        status = "✅" if success else "❌"
-        print(f"{status} {test_name}")
+        self.results.append(result)
+        print(f"{status}: {test_name}")
         if details:
             print(f"   Details: {details}")
         if error:
             print(f"   Error: {error}")
-        print()
+    
+    def print_summary(self):
+        print("\n" + "="*80)
+        print("🎯 LUXEPASS TOKEN AND QUERY LIMITS TESTING SUMMARY")
+        print("="*80)
+        print(f"Total Tests: {self.total_tests}")
+        print(f"Passed: {self.passed_tests} ✅")
+        print(f"Failed: {self.failed_tests} ❌")
+        print(f"Success Rate: {(self.passed_tests/self.total_tests)*100:.1f}%")
+        
+        if self.failed_tests > 0:
+            print("\n❌ FAILED TESTS:")
+            for result in self.results:
+                if not result["passed"]:
+                    print(f"  - {result['test']}: {result['error']}")
+
+def make_request(method, endpoint, data=None, headers=None, auth_token=None):
+    """Make HTTP request with proper error handling"""
+    url = f"{API_BASE}{endpoint}"
+    
+    if headers is None:
+        headers = {"Content-Type": "application/json"}
+    
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
+    
+    try:
+        if method.upper() == "GET":
+            response = requests.get(url, headers=headers, timeout=10)
+        elif method.upper() == "POST":
+            response = requests.post(url, json=data, headers=headers, timeout=10)
+        elif method.upper() == "PUT":
+            response = requests.put(url, json=data, headers=headers, timeout=10)
+        else:
+            raise ValueError(f"Unsupported method: {method}")
+        
+        return response
+    except requests.exceptions.RequestException as e:
+        print(f"Request error for {method} {url}: {e}")
+        return None
+
+def authenticate_user(email, password):
+    """Authenticate user and return JWT token"""
+    response = make_request("POST", "/auth/login", {
+        "email": email,
+        "password": password
+    })
+    
+    if response and response.status_code == 200:
+        data = response.json()
+        return data.get("access_token")
+    return None
 
     def test_client_authentication(self):
         """Test client authentication with different plan types"""
