@@ -268,6 +268,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 30,
   },
+  errorBox: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  errorSubtext: {
+    color: '#F87171',
+    fontSize: 12,
+    textAlign: 'center',
+  },
   infoText: {
     color: '#F59E0B',
     fontSize: 14,
@@ -280,41 +300,54 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-  connectedContainer: {
-    alignItems: 'center',
-    maxWidth: 500,
+  videoArea: {
+    flex: 1,
+    width: '100%',
+    flexDirection: 'column',
+    gap: 16,
   },
-  connectedTitle: {
-    color: '#22C55E',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  connectedText: {
-    color: '#E2E8F0',
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  statusBox: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  localVideoWrapper: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: '#1E293B',
     borderRadius: 12,
-    padding: 20,
-    marginTop: 30,
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
+    overflow: 'hidden',
   },
-  statusText: {
-    color: '#22C55E',
-    fontSize: 16,
+  remoteVideoWrapper: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: '#0F172A',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  videoLabel: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  videoLabelText: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
   },
-  statusSubtext: {
-    color: '#94A3B8',
+  waitingRemote: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+  },
+  waitingRemoteText: {
+    color: '#64748B',
     fontSize: 14,
-    textAlign: 'center',
+    marginTop: 12,
   },
   controls: {
     padding: 20,
@@ -330,6 +363,10 @@ const styles = StyleSheet.create({
   controlButton: {
     alignItems: 'center',
     padding: 12,
+    borderRadius: 8,
+  },
+  controlButtonActive: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   controlLabel: {
     color: '#94A3B8',
