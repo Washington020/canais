@@ -514,7 +514,7 @@ export default function PersonalTrainerSchedule() {
 
       {/* Video Call Modal */}
       {showVideoCall && videoChannelName && (
-        <AgoraVideoCall
+        <WebRTCVideoCall
           visible={showVideoCall}
           channelName={videoChannelName}
           userName={user?.full_name || 'Nutricionista'}
