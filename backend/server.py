@@ -3577,6 +3577,116 @@ async def approve_client(client_id: str):
         logger.error(f"Erro ao aprovar cliente: {e}")
         raise HTTPException(status_code=500, detail="Erro ao aprovar cliente")
 
+@api_router.post("/professionals/set-weekly-availability")
+async def set_weekly_availability(request: Request):
+    """Professional sets their weekly availability"""
+    try:
+        # Get professional from token
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        professional_id = payload.get("sub")
+        
+        data = await request.json()
+        
+        # Update or create weekly availability
+        await db.professional_availability.update_one(
+            {"professional_id": ObjectId(professional_id)},
+            {
+                "$set": {
+                    "professional_id": ObjectId(professional_id),
+                    "weekly_schedule": data.get("weekly_schedule", {}),
+                    "slot_duration": 15,  # 15 minutes
+                    "start_time": "09:00",
+                    "end_time": "18:00",
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            },
+            upsert=True
+        )
+        
+        return {"success": True, "message": "Disponibilidade atualizada com sucesso"}
+        
+    except Exception as e:
+        logger.error(f"Erro ao definir disponibilidade: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao salvar disponibilidade")
+
+@api_router.get("/professionals/my-availability")
+async def get_my_availability(request: Request):
+    """Get professional's weekly availability"""
+    try:
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        professional_id = payload.get("sub")
+        
+        availability = await db.professional_availability.find_one({
+            "professional_id": ObjectId(professional_id)
+        })
+        
+        if not availability:
+            # Return default availability (all days available)
+            return {
+                "weekly_schedule": {
+                    "monday": True,
+                    "tuesday": True,
+                    "wednesday": True,
+                    "thursday": True,
+                    "friday": True
+                },
+                "start_time": "09:00",
+                "end_time": "18:00",
+                "slot_duration": 15
+            }
+        
+        return {
+            "weekly_schedule": availability.get("weekly_schedule", {}),
+            "start_time": availability.get("start_time", "09:00"),
+            "end_time": availability.get("end_time", "18:00"),
+            "slot_duration": availability.get("slot_duration", 15)
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar disponibilidade: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao carregar disponibilidade")
+
+@api_router.post("/video/create-room")
+async def create_video_room(request: Request):
+    """Create Daily.co video room for appointment"""
+    try:
+        data = await request.json()
+        appointment_id = data.get("appointment_id")
+        
+        if not appointment_id:
+            raise HTTPException(status_code=400, detail="appointment_id é obrigatório")
+        
+        # Get appointment
+        appointment = await db.appointments.find_one({"_id": ObjectId(appointment_id)})
+        if not appointment:
+            raise HTTPException(status_code=404, detail="Agendamento não encontrado")
+        
+        # Create unique room name
+        room_name = f"luxepass-{appointment_id}"
+        
+        # Store room info in appointment
+        await db.appointments.update_one(
+            {"_id": ObjectId(appointment_id)},
+            {
+                "$set": {
+                    "video_room_url": f"https://luxepass.daily.co/{room_name}",
+                    "video_room_name": room_name,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        return {
+            "room_url": f"https://luxepass.daily.co/{room_name}",
+            "room_name": room_name
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar sala de vídeo: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar sala de vídeo")
+
 @api_router.get("/admin/confirmed-appointments")
 async def get_confirmed_appointments(
     month: int = None,
