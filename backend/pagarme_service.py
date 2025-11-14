@@ -121,36 +121,37 @@ class PagarMeService:
             return {
                 "payment_method": "pix",
                 "pix": {
-                    "expires_in": 3600  # 1 hour expiration
+                    "expires_in": 3600  # 1 hour
                 }
             }
-        
         elif payment_method == "boleto":
             return {
                 "payment_method": "boleto",
                 "boleto": {
-                    "instructions": "Pagamento da assinatura LuxePass",
-                    "due_at": self._get_boleto_due_date()
+                    "bank": "001",  # Banco do Brasil
+                    "instructions": "Pagamento referente à assinatura LuxePass. Não receber após o vencimento.",
+                    "due_at": (datetime.now(timezone.utc) + timedelta(days=3)).strftime("%Y-%m-%d")
                 }
             }
-        
         elif payment_method == "credit_card":
             return {
                 "payment_method": "credit_card",
                 "credit_card": {
                     "installments": 1,
-                    "capture": True
+                    "statement_descriptor": "LUXEPASS",
+                    "card": {
+                        "billing_address": {
+                            "line_1": "Rua exemplo, 123",
+                            "zip_code": "01234567",
+                            "city": "São Paulo",
+                            "state": "SP",
+                            "country": "BR"
+                        }
+                    }
                 }
             }
-        
         else:
-            # Default to PIX
-            return {
-                "payment_method": "pix",
-                "pix": {
-                    "expires_in": 3600
-                }
-            }
+            raise ValueError(f"Unsupported payment method: {payment_method}")
     
     def _get_boleto_due_date(self) -> str:
         """Get due date for boleto (3 days from now)"""
