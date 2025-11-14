@@ -63,12 +63,20 @@ export default function ClientAuth() {
   };
 
   const loadPlans = async () => {
+    if (loadingPlans) return; // Evitar carregamento duplicado
+    
     setLoadingPlans(true);
     try {
       console.log('🚀 Carregando planos...');
       const response = await axios.get(`${API_URL}/integration/plans`);
       console.log('✅ Planos carregados:', response.data);
-      setPlans(response.data);
+      
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        setPlans(response.data);
+      } else {
+        console.warn('⚠️ Nenhum plano retornado do backend');
+        Alert.alert('Aviso', 'Nenhum plano disponível no momento.');
+      }
     } catch (error) {
       console.error('❌ Erro ao carregar planos:', error);
       Alert.alert('Erro', 'Não foi possível carregar os planos. Tente novamente.');
