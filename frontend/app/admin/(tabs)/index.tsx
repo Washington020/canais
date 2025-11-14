@@ -371,17 +371,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   section: {
-    paddingHorizontal: 24,
-    marginTop: 32,
+    paddingHorizontal: 20,
+    marginTop: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
+    marginBottom: 12,
+    gap: 8,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
