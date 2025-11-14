@@ -279,10 +279,15 @@ def test_appointment_booking_blocking(results):
         }, auth_token=token)
         
         if booking_response:
+            response_text = booking_response.text.lower()
             if booking_response.status_code == 403:
-                results.add_result("Basic User Booking Block", True, 
-                                 "Correctly blocked basic user from booking appointments")
-            elif booking_response.status_code == 400 and ("bloqueado" in booking_response.text.lower() or "básico" in booking_response.text.lower()):
+                if "planos vip" in response_text or "upgrade" in response_text or "básico" in response_text:
+                    results.add_result("Basic User Booking Block", True, 
+                                     "Correctly blocked basic user with proper message")
+                else:
+                    results.add_result("Basic User Booking Block", True, 
+                                     "Correctly blocked basic user from booking appointments")
+            elif booking_response.status_code == 400 and ("bloqueado" in response_text or "básico" in response_text):
                 results.add_result("Basic User Booking Block", True, 
                                  "Correctly blocked with appropriate message")
             elif booking_response.status_code == 422 and "professional_id" in booking_response.text:
@@ -290,8 +295,8 @@ def test_appointment_booking_blocking(results):
                 results.add_result("Basic User Booking Block", False,
                                  error="Basic user was not blocked - validation passed to professional_id check")
             else:
-                results.add_result("Basic User Booking Block", True,
-                                 f"Blocked with status {booking_response.status_code} (acceptable)")
+                results.add_result("Basic User Booking Block", False,
+                                 error=f"Unexpected response: {booking_response.status_code} - {booking_response.text}")
         else:
             results.add_result("Basic User Booking Block", False, error="Failed to test booking endpoint")
     else:
