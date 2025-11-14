@@ -2214,7 +2214,8 @@ async def set_gym_password(gym_id: str, password_data: dict):
 # Gym authentication endpoint for validation system
 @api_router.post("/gym/auth")
 async def gym_authenticate(credentials: dict):
-    login = credentials.get("login")
+    # Aceitar tanto "login" quanto "username" para compatibilidade
+    login = credentials.get("login") or credentials.get("username")
     password = credentials.get("password")
     
     if not login or not password:
