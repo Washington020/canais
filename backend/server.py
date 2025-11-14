@@ -2830,8 +2830,11 @@ async def register_professional(professional: ProfessionalRegister):
 async def login_professional(professional_login: ProfessionalLogin):
     """Professional login"""
     try:
-        # Find professional
-        professional = await db.professionals.find_one({"email": professional_login.email})
+        # Find professional in users collection
+        professional = await db.users.find_one({
+            "email": professional_login.email,
+            "user_type": "professional"
+        })
         if not professional:
             raise HTTPException(status_code=401, detail="Email ou senha incorretos")
         
@@ -2839,13 +2842,13 @@ async def login_professional(professional_login: ProfessionalLogin):
         if not pwd_context.verify(professional_login.password, professional["password_hash"]):
             raise HTTPException(status_code=401, detail="Email ou senha incorretos")
         
-        if not professional.get("active", True):
+        if not professional.get("is_active", True):
             raise HTTPException(status_code=401, detail="Conta de profissional desativada")
         
         # Create access token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": str(professional["_id"]), "type": "professional", "professional_type": professional["professional_type"]},
+            data={"sub": str(professional["_id"]), "type": "professional", "professional_type": professional.get("professional_type")},
             expires_delta=access_token_expires
         )
         
@@ -2856,8 +2859,8 @@ async def login_professional(professional_login: ProfessionalLogin):
                 "id": str(professional["_id"]),
                 "full_name": professional["full_name"],
                 "email": professional["email"],
-                "professional_type": professional["professional_type"],
-                "cref_crn": professional["cref_crn"]
+                "professional_type": professional.get("professional_type"),
+                "cref": professional.get("cref", "")
             }
         }
         
