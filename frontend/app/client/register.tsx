@@ -172,7 +172,7 @@ export default function RegisterScreen() {
       };
 
       console.log('🚀 1. Cadastrando usuário:', registrationData);
-      const userResponse = await axios.post(`${API_URL}/api/integration/user/register`, registrationData);
+      const userResponse = await axios.post(`${API_URL}/api/auth/register`, registrationData);
       console.log('✅ 1. Usuário cadastrado:', userResponse.data);
       
       // 2. Fazer login para obter token
