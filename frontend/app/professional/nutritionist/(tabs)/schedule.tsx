@@ -432,15 +432,28 @@ export default function NutritionistSchedule() {
                   <Text style={styles.appointmentNotes}>{appointment.notes}</Text>
                 )}
                 
-                {appointment.status !== 'completed' && (
+                <View style={styles.buttonContainer}>
                   <TouchableOpacity 
-                    style={styles.completeButton}
-                    onPress={() => markAppointmentComplete(appointment.id)}
+                    style={styles.videoCallButton}
+                    onPress={() => {
+                      setSelectedAppointment(appointment);
+                      setVideoCallModal(true);
+                    }}
                   >
-                    <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
-                    <Text style={styles.completeButtonText}>Marcar como Concluída</Text>
+                    <Ionicons name="videocam" size={16} color="#FFFFFF" />
+                    <Text style={styles.videoCallButtonText}>Entrar em Consulta</Text>
                   </TouchableOpacity>
-                )}
+                  
+                  {appointment.status !== 'completed' && (
+                    <TouchableOpacity 
+                      style={styles.completeButton}
+                      onPress={() => markAppointmentComplete(appointment.id)}
+                    >
+                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+                      <Text style={styles.completeButtonText}>Marcar como Concluída</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             ))
           )}
