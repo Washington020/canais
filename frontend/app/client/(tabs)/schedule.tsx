@@ -66,6 +66,9 @@ export default function ClientSchedule() {
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showVideoCall, setShowVideoCall] = useState(false);
+  const [videoChannelName, setVideoChannelName] = useState('');
+  const [currentAppointmentId, setCurrentAppointmentId] = useState('');
   const router = useRouter();
 
   useEffect(() => {
