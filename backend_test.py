@@ -451,6 +451,243 @@ class LuxePassTester:
                     False,
                     error=f"Exception: {str(e)}"
                 )
+
+    def test_appointment_completion_system(self):
+        """Test appointment completion functionality - MAIN FOCUS OF REVIEW REQUEST"""
+        print("✅ TESTING APPOINTMENT COMPLETION SYSTEM")
+        print("=" * 50)
+        
+        # Store professional tokens for later use
+        professional_tokens = {}
+        
+        # Test professional authentication first
+        professionals = [
+            {"email": "nutri@luxepass.com", "password": "nutri123", "type": "nutritionist"},
+            {"email": "personal@luxepass.com", "password": "personal123", "type": "personal"}
+        ]
+        
+        for prof in professionals:
+            try:
+                response = self.session.post(f"{API_BASE}/professionals/login", json={
+                    "email": prof["email"],
+                    "password": prof["password"]
+                })
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    token = data.get('access_token')
+                    professional_info = data.get('professional', {})
+                    
+                    if token:
+                        professional_tokens[prof['type']] = {
+                            'token': token,
+                            'email': prof['email'],
+                            'info': professional_info
+                        }
+                        self.log_test(
+                            f"Professional Auth: {prof['type']}",
+                            True,
+                            f"Email: {prof['email']}, Name: {professional_info.get('full_name', 'N/A')}"
+                        )
+                    else:
+                        self.log_test(
+                            f"Professional Auth: {prof['type']}",
+                            False,
+                            error="No access token received"
+                        )
+                else:
+                    self.log_test(
+                        f"Professional Auth: {prof['type']}",
+                        False,
+                        error=f"HTTP {response.status_code}: {response.text}"
+                    )
+                    
+            except Exception as e:
+                self.log_test(
+                    f"Professional Auth: {prof['type']}",
+                    False,
+                    error=f"Exception: {str(e)}"
+                )
+        
+        # Test GET /api/professionals/appointments for each professional
+        for prof_type, prof_data in professional_tokens.items():
+            headers = {'Authorization': f'Bearer {prof_data["token"]}'}
+            
+            try:
+                response = self.session.get(f"{API_BASE}/professionals/appointments", headers=headers)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    appointments = data.get('appointments', [])
+                    
+                    self.log_test(
+                        f"List Appointments: {prof_type}",
+                        True,
+                        f"Found {len(appointments)} appointments for {prof_data['email']}"
+                    )
+                    
+                    # Check appointment data structure
+                    if appointments:
+                        first_appt = appointments[0]
+                        required_fields = ['id', 'client_name', 'appointment_date', 'status']
+                        missing_fields = [field for field in required_fields if field not in first_appt]
+                        
+                        if not missing_fields:
+                            self.log_test(
+                                f"Appointment Data Structure: {prof_type}",
+                                True,
+                                f"All required fields present: {list(first_appt.keys())}"
+                            )
+                        else:
+                            self.log_test(
+                                f"Appointment Data Structure: {prof_type}",
+                                False,
+                                error=f"Missing fields: {missing_fields}"
+                            )
+                    
+                else:
+                    self.log_test(
+                        f"List Appointments: {prof_type}",
+                        False,
+                        error=f"HTTP {response.status_code}: {response.text}"
+                    )
+                    
+            except Exception as e:
+                self.log_test(
+                    f"List Appointments: {prof_type}",
+                    False,
+                    error=f"Exception: {str(e)}"
+                )
+        
+        # Test appointment completion endpoint with mock appointment IDs
+        # Since we may not have real appointments, test with various scenarios
+        test_appointment_ids = [
+            "507f1f77bcf86cd799439011",  # Valid ObjectId format
+            "invalid_id",                # Invalid format
+            "000000000000000000000000"   # Valid format but non-existent
+        ]
+        
+        for prof_type, prof_data in professional_tokens.items():
+            headers = {'Authorization': f'Bearer {prof_data["token"]}'}
+            
+            for i, appointment_id in enumerate(test_appointment_ids):
+                try:
+                    response = self.session.put(
+                        f"{API_BASE}/appointments/{appointment_id}/complete",
+                        headers=headers
+                    )
+                    
+                    # Expected responses:
+                    # 404 - Appointment not found (expected for test IDs)
+                    # 400 - Invalid ID format
+                    # 200 - Success (if real appointment exists)
+                    
+                    if response.status_code in [404, 400]:
+                        # Expected for test data
+                        self.log_test(
+                            f"Complete Appointment Test {i+1}: {prof_type}",
+                            True,
+                            f"Correctly handled test ID {appointment_id[:8]}... - Status: {response.status_code}"
+                        )
+                    elif response.status_code == 200:
+                        # Unexpected success with test data
+                        self.log_test(
+                            f"Complete Appointment Test {i+1}: {prof_type}",
+                            True,
+                            f"Successfully completed appointment {appointment_id[:8]}..."
+                        )
+                    else:
+                        self.log_test(
+                            f"Complete Appointment Test {i+1}: {prof_type}",
+                            False,
+                            error=f"Unexpected status {response.status_code}: {response.text}"
+                        )
+                        
+                except Exception as e:
+                    self.log_test(
+                        f"Complete Appointment Test {i+1}: {prof_type}",
+                        False,
+                        error=f"Exception: {str(e)}"
+                    )
+        
+        # Test security: unauthenticated access
+        try:
+            response = self.session.put(f"{API_BASE}/appointments/test_id/complete")
+            
+            if response.status_code == 401:
+                self.log_test(
+                    "Security: Unauthenticated Access",
+                    True,
+                    "Correctly rejected unauthenticated request"
+                )
+            else:
+                self.log_test(
+                    "Security: Unauthenticated Access",
+                    False,
+                    error=f"Should return 401, got {response.status_code}"
+                )
+        except Exception as e:
+            self.log_test(
+                "Security: Unauthenticated Access",
+                False,
+                error=f"Exception: {str(e)}"
+            )
+        
+        # Test admin confirmed appointments endpoint
+        if "admin@luxepass.com" in self.tokens:
+            admin_headers = {'Authorization': f'Bearer {self.tokens["admin@luxepass.com"]}'}
+            
+            try:
+                # Test without parameters (current month)
+                response = self.session.get(f"{API_BASE}/admin/confirmed-appointments", headers=admin_headers)
+                
+                if response.status_code == 200:
+                    appointments = response.json()
+                    self.log_test(
+                        "Admin Confirmed Appointments",
+                        True,
+                        f"Retrieved {len(appointments)} confirmed appointments"
+                    )
+                else:
+                    self.log_test(
+                        "Admin Confirmed Appointments",
+                        False,
+                        error=f"HTTP {response.status_code}: {response.text}"
+                    )
+                
+                # Test with specific month/year
+                current_date = datetime.now()
+                params = {
+                    "month": current_date.month,
+                    "year": current_date.year
+                }
+                
+                response = self.session.get(
+                    f"{API_BASE}/admin/confirmed-appointments",
+                    headers=admin_headers,
+                    params=params
+                )
+                
+                if response.status_code == 200:
+                    appointments = response.json()
+                    self.log_test(
+                        "Admin Confirmed Appointments (with params)",
+                        True,
+                        f"Retrieved {len(appointments)} appointments for {current_date.month}/{current_date.year}"
+                    )
+                else:
+                    self.log_test(
+                        "Admin Confirmed Appointments (with params)",
+                        False,
+                        error=f"HTTP {response.status_code}: {response.text}"
+                    )
+                    
+            except Exception as e:
+                self.log_test(
+                    "Admin Confirmed Appointments",
+                    False,
+                    error=f"Exception: {str(e)}"
+                )
     
     def run_all_tests(self):
         """Run all test suites"""
