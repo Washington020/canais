@@ -5148,12 +5148,30 @@ async def get_professional_appointments(
         
         appointments = await db.appointments.find(query).sort("appointment_date", 1).to_list(100)
         
-        # Convert ObjectIds to strings
+        # Convert to serializable format
+        serialized_appointments = []
         for appt in appointments:
-            appt['id'] = str(appt['_id'])
-            del appt['_id']
+            serialized_appt = {
+                "id": str(appt['_id']),
+                "client_id": appt.get('client_id'),
+                "professional_id": appt.get('professional_id'),
+                "client_name": appt.get('client_name'),
+                "client_email": appt.get('client_email'),
+                "client_phone": appt.get('client_phone'),
+                "appointment_date": appt.get('appointment_date').isoformat() if appt.get('appointment_date') else None,
+                "appointment_time": appt.get('appointment_time'),
+                "duration_minutes": appt.get('duration_minutes'),
+                "service_type": appt.get('service_type'),
+                "status": appt.get('status'),
+                "notes": appt.get('notes'),
+                "video_channel_name": appt.get('video_channel_name'),
+                "video_provider": appt.get('video_provider'),
+                "professional_type": appt.get('professional_type'),
+                "professional_name": appt.get('professional_name')
+            }
+            serialized_appointments.append(serialized_appt)
         
-        return {"appointments": appointments}
+        return {"appointments": serialized_appointments}
         
     except Exception as e:
         logger.error(f"Erro ao buscar agendamentos: {e}")
