@@ -727,14 +727,15 @@ async def register(user: UserCreate):
     user_dict["created_at"] = datetime.now(timezone.utc)
     
     # Set subscription and tokens based on plan
-    if user.plan_type == "premium":
+    # All plans get 31 tokens (1 per day for the month)
+    user_dict["tokens_available"] = 31
+    
+    if user.plan_type in ["premium", "vip"]:
         user_dict["subscription_end"] = datetime.now(timezone.utc) + timedelta(days=30)
-        user_dict["tokens_available"] = 60  # 2 per day for 30 days
-    elif user.plan_type == "intermediate":
+    elif user.plan_type == "intermediario":
         user_dict["subscription_end"] = datetime.now(timezone.utc) + timedelta(days=30)
-        user_dict["tokens_available"] = 30  # 1 per day for 30 days
-    else:
-        user_dict["tokens_available"] = 15  # basic plan
+    elif user.plan_type in ["basic", "basico"]:
+        user_dict["subscription_end"] = datetime.now(timezone.utc) + timedelta(days=30)
     
     result = await db.users.insert_one(user_dict)
     user_dict["id"] = str(result.inserted_id)
