@@ -593,7 +593,13 @@ class DeploymentHealthChecker:
 
 if __name__ == "__main__":
     checker = DeploymentHealthChecker()
-    report = checker.run_comprehensive_health_check()
+    checker.run_comprehensive_health_check()
+    
+    # Calculate final result
+    total_tests = len(checker.test_results)
+    passed_tests = len([t for t in checker.test_results if t['success']])
+    pass_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
+    deployment_ready = pass_rate >= 85
     
     # Exit with appropriate code
-    sys.exit(0 if report['deployment_ready'] else 1)
+    sys.exit(0 if deployment_ready else 1)
