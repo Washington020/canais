@@ -643,11 +643,13 @@ export default function ClientSchedule() {
       </Modal>
 
       {/* Video Call Modal */}
-      {showVideoCall && videoChannelName && (
-        <AgoraVideoCall
+      {showVideoCall && videoChannelName && currentAppointmentId && (
+        <WebRTCVideoCall
           visible={showVideoCall}
-          channelName={videoChannelName}
+          appointmentId={currentAppointmentId}
+          roomId={videoChannelName}
           userName={user?.full_name || 'Cliente'}
+          userType="client"
           onClose={() => {
             setShowVideoCall(false);
             setVideoChannelName('');
