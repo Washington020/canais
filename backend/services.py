@@ -38,9 +38,9 @@ class PlanService:
                 "Suporte 24/7",
                 "Sem taxa de cancelamento"
             ],
-            monthly_price=59.90,
-            activation_fee=39.90,
-            first_month_total=99.80
+            monthly_price=99.90,
+            activation_fee=29.90,
+            first_month_total=129.80
         ),
         
         PlanType.INTERMEDIARIO: PlanDetails(
