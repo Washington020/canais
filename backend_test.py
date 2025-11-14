@@ -48,325 +48,467 @@ class LuxePassTester:
             print(f"   Error: {error}")
         print()
 
-def test_integration_plans_endpoint():
-    """Test the GET /api/integration/plans endpoint as requested in review"""
-    test_result = TestResult()
-    
-    print("🎯 TESTING GET /api/integration/plans ENDPOINT")
-    print("="*60)
-    
-    try:
-        # Test 1: Basic endpoint connectivity
-        print("\n1. Testing endpoint connectivity...")
-        response = requests.get(f"{BACKEND_URL}/integration/plans", timeout=10)
+    def test_client_authentication(self):
+        """Test client authentication with different plan types"""
+        print("🔐 TESTING CLIENT AUTHENTICATION")
+        print("=" * 50)
         
-        if response.status_code == 200:
-            test_result.add_result(
-                "Endpoint Connectivity", 
-                True, 
-                f"Status 200 OK - Endpoint accessible",
-                {"status_code": response.status_code, "response_time": f"{response.elapsed.total_seconds():.2f}s"}
-            )
-        else:
-            test_result.add_result(
-                "Endpoint Connectivity", 
-                False, 
-                f"Status {response.status_code} - Expected 200",
-                {"status_code": response.status_code, "response_text": response.text[:200]}
-            )
-            return test_result
-        
-        # Test 2: Response format validation
-        print("\n2. Testing response format...")
-        try:
-            plans_data = response.json()
-            if isinstance(plans_data, list):
-                test_result.add_result(
-                    "Response Format", 
-                    True, 
-                    f"Valid JSON array returned with {len(plans_data)} plans",
-                    {"data_type": type(plans_data).__name__, "plan_count": len(plans_data)}
-                )
-            else:
-                test_result.add_result(
-                    "Response Format", 
-                    False, 
-                    f"Expected array, got {type(plans_data).__name__}",
-                    {"actual_type": type(plans_data).__name__}
-                )
-                return test_result
-        except json.JSONDecodeError as e:
-            test_result.add_result(
-                "Response Format", 
-                False, 
-                f"Invalid JSON response: {str(e)}",
-                {"error": str(e)}
-            )
-            return test_result
-        
-        # Test 3: Expected plan count
-        print("\n3. Testing plan count...")
-        expected_plans = ["basico", "intermediario", "vip"]
-        if len(plans_data) >= 3:
-            test_result.add_result(
-                "Plan Count", 
-                True, 
-                f"Found {len(plans_data)} plans (expected 3 or 4)",
-                {"plan_count": len(plans_data), "expected": "3-4"}
-            )
-        else:
-            test_result.add_result(
-                "Plan Count", 
-                False, 
-                f"Found {len(plans_data)} plans, expected at least 3",
-                {"plan_count": len(plans_data), "expected": "3-4"}
-            )
-        
-        # Test 4: Plan structure validation
-        print("\n4. Testing plan data structure...")
-        required_fields = [
-            "type", "name", "description", "features", "monthly_price", 
-            "activation_fee", "first_month_total", "fidelity_months",
-            "marketing_benefits", "nutritionist_consultations", "personal_consultations"
+        # Test credentials from review request
+        test_users = [
+            {"email": "vip@luxepass.com", "password": "vip123", "expected_plan": "vip"},
+            {"email": "intermediario@luxepass.com", "password": "inter123", "expected_plan": "intermediario"},
+            {"email": "cliente@luxepass.com", "password": "cliente123", "expected_plan": "premium"}
         ]
         
-        structure_valid = True
-        missing_fields = []
-        
-        for i, plan in enumerate(plans_data):
-            plan_missing = []
-            for field in required_fields:
-                if field not in plan:
-                    plan_missing.append(field)
-                    structure_valid = False
-            
-            if plan_missing:
-                missing_fields.append(f"Plan {i+1} ({plan.get('name', 'Unknown')}): {plan_missing}")
-        
-        if structure_valid:
-            test_result.add_result(
-                "Plan Structure", 
-                True, 
-                "All plans have required fields",
-                {"required_fields": required_fields, "validated_plans": len(plans_data)}
-            )
-        else:
-            test_result.add_result(
-                "Plan Structure", 
-                False, 
-                "Missing required fields in some plans",
-                {"missing_fields": missing_fields}
-            )
-        
-        # Test 5: Specific plan validation (basico, intermediario, vip)
-        print("\n5. Testing specific plan types...")
-        found_plans = {plan.get("type"): plan for plan in plans_data}
-        
-        for expected_plan in expected_plans:
-            if expected_plan in found_plans:
-                plan = found_plans[expected_plan]
-                test_result.add_result(
-                    f"Plan {expected_plan.title()}", 
-                    True, 
-                    f"Found {plan.get('name')} with price R$ {plan.get('monthly_price', 0):.2f}",
-                    {
-                        "type": plan.get("type"),
-                        "name": plan.get("name"),
-                        "monthly_price": plan.get("monthly_price"),
-                        "activation_fee": plan.get("activation_fee"),
-                        "first_month_total": plan.get("first_month_total")
-                    }
+        for user in test_users:
+            try:
+                response = self.session.post(f"{API_BASE}/auth/login", json={
+                    "email": user["email"],
+                    "password": user["password"]
+                })
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    token = data.get('access_token')
+                    if token:
+                        self.tokens[user["email"]] = token
+                        
+                        # Test /api/users/me endpoint
+                        headers = {'Authorization': f'Bearer {token}'}
+                        me_response = self.session.get(f"{API_BASE}/users/me", headers=headers)
+                        
+                        if me_response.status_code == 200:
+                            user_data = me_response.json()
+                            plan_type = user_data.get('plan_type')
+                            
+                            self.log_test(
+                                f"Client Login: {user['email']}", 
+                                True,
+                                f"Plan: {plan_type}, Token: {len(token)} chars"
+                            )
+                        else:
+                            self.log_test(
+                                f"Client Login: {user['email']}", 
+                                False,
+                                error=f"Failed to get user profile: {me_response.status_code}"
+                            )
+                    else:
+                        self.log_test(
+                            f"Client Login: {user['email']}", 
+                            False,
+                            error="No access token in response"
+                        )
+                else:
+                    self.log_test(
+                        f"Client Login: {user['email']}", 
+                        False,
+                        error=f"HTTP {response.status_code}: {response.text}"
+                    )
+                    
+            except Exception as e:
+                self.log_test(
+                    f"Client Login: {user['email']}", 
+                    False,
+                    error=f"Exception: {str(e)}"
                 )
+    
+    def test_plans_system(self):
+        """Test GET /api/integration/plans endpoint"""
+        print("📋 TESTING PLANS SYSTEM")
+        print("=" * 50)
+        
+        try:
+            response = self.session.get(f"{API_BASE}/integration/plans")
+            
+            if response.status_code == 200:
+                plans = response.json()
+                
+                if isinstance(plans, list) and len(plans) >= 3:
+                    plan_types = [plan.get('type') for plan in plans]
+                    expected_plans = ['basico', 'intermediario', 'vip']
+                    
+                    found_plans = [plan for plan in expected_plans if plan in plan_types]
+                    
+                    self.log_test(
+                        "GET /api/integration/plans",
+                        len(found_plans) == 3,
+                        f"Found plans: {plan_types}, Expected: {expected_plans}"
+                    )
+                    
+                    # Test plan structure
+                    for plan in plans:
+                        required_fields = ['type', 'name', 'monthly_price', 'nutritionist_consultations', 'personal_consultations']
+                        missing_fields = [field for field in required_fields if field not in plan]
+                        
+                        if not missing_fields:
+                            self.log_test(
+                                f"Plan Structure: {plan.get('type')}",
+                                True,
+                                f"Price: R$ {plan.get('monthly_price')}, Nutri: {plan.get('nutritionist_consultations')}, Personal: {plan.get('personal_consultations')}"
+                            )
+                        else:
+                            self.log_test(
+                                f"Plan Structure: {plan.get('type')}",
+                                False,
+                                error=f"Missing fields: {missing_fields}"
+                            )
+                else:
+                    self.log_test(
+                        "GET /api/integration/plans",
+                        False,
+                        error=f"Expected list with 3+ plans, got: {type(plans)} with {len(plans) if isinstance(plans, list) else 'N/A'} items"
+                    )
             else:
-                test_result.add_result(
-                    f"Plan {expected_plan.title()}", 
-                    False, 
-                    f"Plan type '{expected_plan}' not found",
-                    {"available_types": list(found_plans.keys())}
+                self.log_test(
+                    "GET /api/integration/plans",
+                    False,
+                    error=f"HTTP {response.status_code}: {response.text}"
                 )
-        
-        # Test 6: Price validation
-        print("\n6. Testing price data...")
-        price_valid = True
-        price_issues = []
-        
-        for plan in plans_data:
-            plan_name = plan.get("name", "Unknown")
-            monthly_price = plan.get("monthly_price", 0)
-            activation_fee = plan.get("activation_fee", 0)
-            first_month_total = plan.get("first_month_total", 0)
-            
-            # Validate prices are numbers and positive
-            if not isinstance(monthly_price, (int, float)) or monthly_price <= 0:
-                price_issues.append(f"{plan_name}: Invalid monthly_price ({monthly_price})")
-                price_valid = False
-            
-            if not isinstance(activation_fee, (int, float)) or activation_fee < 0:
-                price_issues.append(f"{plan_name}: Invalid activation_fee ({activation_fee})")
-                price_valid = False
-            
-            if not isinstance(first_month_total, (int, float)) or first_month_total <= 0:
-                price_issues.append(f"{plan_name}: Invalid first_month_total ({first_month_total})")
-                price_valid = False
-            
-            # Validate first month calculation (should be monthly + activation)
-            expected_total = monthly_price + activation_fee
-            if abs(first_month_total - expected_total) > 0.01:  # Allow small floating point differences
-                price_issues.append(f"{plan_name}: first_month_total ({first_month_total}) != monthly_price + activation_fee ({expected_total})")
-                price_valid = False
-        
-        if price_valid:
-            test_result.add_result(
-                "Price Validation", 
-                True, 
-                "All price fields are valid and calculations correct",
-                {"validated_plans": len(plans_data)}
+                
+        except Exception as e:
+            self.log_test(
+                "GET /api/integration/plans",
+                False,
+                error=f"Exception: {str(e)}"
             )
-        else:
-            test_result.add_result(
-                "Price Validation", 
-                False, 
-                "Price validation issues found",
-                {"issues": price_issues}
-            )
+    
+    def test_appointment_system(self):
+        """Test appointment system with monthly limits"""
+        print("📅 TESTING APPOINTMENT SYSTEM")
+        print("=" * 50)
         
-        # Test 7: Features and benefits validation
-        print("\n7. Testing features and benefits...")
-        features_valid = True
-        features_issues = []
+        # Test with different user types
+        test_users = ["vip@luxepass.com", "intermediario@luxepass.com", "cliente@luxepass.com"]
         
-        for plan in plans_data:
-            plan_name = plan.get("name", "Unknown")
-            features = plan.get("features", [])
-            marketing_benefits = plan.get("marketing_benefits", [])
+        for email in test_users:
+            if email not in self.tokens:
+                continue
+                
+            headers = {'Authorization': f'Bearer {self.tokens[email]}'}
             
-            if not isinstance(features, list) or len(features) == 0:
-                features_issues.append(f"{plan_name}: features should be non-empty array")
-                features_valid = False
+            # Test my appointments
+            try:
+                response = self.session.get(f"{API_BASE}/appointments/my-appointments", headers=headers)
+                
+                if response.status_code == 200:
+                    appointments = response.json()
+                    self.log_test(
+                        f"My Appointments: {email}",
+                        True,
+                        f"Found {len(appointments)} appointments"
+                    )
+                else:
+                    self.log_test(
+                        f"My Appointments: {email}",
+                        False,
+                        error=f"HTTP {response.status_code}: {response.text}"
+                    )
+            except Exception as e:
+                self.log_test(
+                    f"My Appointments: {email}",
+                    False,
+                    error=f"Exception: {str(e)}"
+                )
             
-            if not isinstance(marketing_benefits, list):
-                features_issues.append(f"{plan_name}: marketing_benefits should be array")
-                features_valid = False
-        
-        if features_valid:
-            test_result.add_result(
-                "Features Validation", 
-                True, 
-                "All plans have valid features and marketing benefits",
-                {"validated_plans": len(plans_data)}
-            )
-        else:
-            test_result.add_result(
-                "Features Validation", 
-                False, 
-                "Features validation issues found",
-                {"issues": features_issues}
-            )
-        
-        # Test 8: Consultation fields validation
-        print("\n8. Testing consultation fields...")
-        consultation_valid = True
-        consultation_issues = []
-        
-        for plan in plans_data:
-            plan_name = plan.get("name", "Unknown")
-            nutritionist_consultations = plan.get("nutritionist_consultations", 0)
-            personal_consultations = plan.get("personal_consultations", 0)
-            
-            if not isinstance(nutritionist_consultations, int) or nutritionist_consultations < 0:
-                consultation_issues.append(f"{plan_name}: Invalid nutritionist_consultations ({nutritionist_consultations})")
-                consultation_valid = False
-            
-            if not isinstance(personal_consultations, int) or personal_consultations < 0:
-                consultation_issues.append(f"{plan_name}: Invalid personal_consultations ({personal_consultations})")
-                consultation_valid = False
-        
-        if consultation_valid:
-            test_result.add_result(
-                "Consultation Fields", 
-                True, 
-                "All consultation fields are valid",
-                {"validated_plans": len(plans_data)}
-            )
-        else:
-            test_result.add_result(
-                "Consultation Fields", 
-                False, 
-                "Consultation field validation issues found",
-                {"issues": consultation_issues}
-            )
-        
-        # Test 9: Frontend compatibility test
-        print("\n9. Testing frontend compatibility...")
-        frontend_compatible = True
-        compatibility_issues = []
-        
-        # Check if the response matches what the frontend expects
-        for plan in plans_data:
-            # Check if all fields used by frontend are present
-            frontend_fields = ["type", "name", "description", "monthly_price", "activation_fee", 
-                             "first_month_total", "features", "marketing_benefits"]
-            
-            for field in frontend_fields:
-                if field not in plan:
-                    compatibility_issues.append(f"Missing frontend field '{field}' in plan {plan.get('name', 'Unknown')}")
-                    frontend_compatible = False
-        
-        if frontend_compatible:
-            test_result.add_result(
-                "Frontend Compatibility", 
-                True, 
-                "Response format matches frontend expectations",
-                {"frontend_fields_validated": len(frontend_fields)}
-            )
-        else:
-            test_result.add_result(
-                "Frontend Compatibility", 
-                False, 
-                "Frontend compatibility issues found",
-                {"issues": compatibility_issues}
-            )
-        
-        # Test 10: Sample plan data display
-        print("\n10. Displaying sample plan data...")
-        if plans_data:
-            sample_plan = plans_data[0]
-            test_result.add_result(
-                "Sample Plan Data", 
-                True, 
-                f"Sample plan: {sample_plan.get('name')} - R$ {sample_plan.get('monthly_price', 0):.2f}/mês",
-                {
-                    "sample_plan": {
-                        "type": sample_plan.get("type"),
-                        "name": sample_plan.get("name"),
-                        "description": sample_plan.get("description"),
-                        "monthly_price": sample_plan.get("monthly_price"),
-                        "activation_fee": sample_plan.get("activation_fee"),
-                        "first_month_total": sample_plan.get("first_month_total"),
-                        "features_count": len(sample_plan.get("features", [])),
-                        "marketing_benefits_count": len(sample_plan.get("marketing_benefits", [])),
-                        "nutritionist_consultations": sample_plan.get("nutritionist_consultations"),
-                        "personal_consultations": sample_plan.get("personal_consultations")
+            # Test available slots
+            try:
+                test_date = "2025-11-20"
+                response = self.session.get(
+                    f"{API_BASE}/appointments/available-slots",
+                    headers=headers,
+                    params={
+                        "professional_type": "nutritionist",
+                        "date": test_date
                     }
+                )
+                
+                if response.status_code == 200:
+                    slots = response.json()
+                    self.log_test(
+                        f"Available Slots: {email}",
+                        True,
+                        f"Found {len(slots)} available slots for {test_date}"
+                    )
+                elif response.status_code == 403:
+                    self.log_test(
+                        f"Available Slots: {email}",
+                        False,
+                        error="Access denied - plan may not allow appointments"
+                    )
+                else:
+                    self.log_test(
+                        f"Available Slots: {email}",
+                        False,
+                        error=f"HTTP {response.status_code}: {response.text}"
+                    )
+            except Exception as e:
+                self.log_test(
+                    f"Available Slots: {email}",
+                    False,
+                    error=f"Exception: {str(e)}"
+                )
+    
+    def test_agora_token_generation(self):
+        """Test Agora.io video call token generation"""
+        print("🎥 TESTING AGORA.IO TOKEN GENERATION")
+        print("=" * 50)
+        
+        try:
+            response = self.session.get(
+                f"{API_BASE}/agora/token",
+                params={
+                    "channelName": "test-channel",
+                    "uid": "12345"
                 }
             )
-        
-    except requests.exceptions.RequestException as e:
-        test_result.add_result(
-            "Network Connection", 
-            False, 
-            f"Failed to connect to API: {str(e)}",
-            {"error": str(e), "url": f"{BACKEND_URL}/integration/plans"}
-        )
-    except Exception as e:
-        test_result.add_result(
-            "Unexpected Error", 
-            False, 
-            f"Unexpected error during testing: {str(e)}",
-            {"error": str(e)}
-        )
+            
+            if response.status_code == 200:
+                data = response.json()
+                token = data.get('token')
+                
+                if token and len(token) > 50:  # Agora tokens are typically long
+                    self.log_test(
+                        "Agora Token Generation",
+                        True,
+                        f"Token length: {len(token)} chars, Channel: test-channel"
+                    )
+                else:
+                    self.log_test(
+                        "Agora Token Generation",
+                        False,
+                        error=f"Invalid token format: {token}"
+                    )
+            else:
+                self.log_test(
+                    "Agora Token Generation",
+                    False,
+                    error=f"HTTP {response.status_code}: {response.text}"
+                )
+                
+        except Exception as e:
+            self.log_test(
+                "Agora Token Generation",
+                False,
+                error=f"Exception: {str(e)}"
+            )
     
-    return test_result
+    def test_professional_authentication(self):
+        """Test professional authentication"""
+        print("👨‍⚕️ TESTING PROFESSIONAL AUTHENTICATION")
+        print("=" * 50)
+        
+        professionals = [
+            {"email": "nutri@luxepass.com", "password": "nutri123", "type": "nutritionist"},
+            {"email": "personal@luxepass.com", "password": "personal123", "type": "personal"}
+        ]
+        
+        for prof in professionals:
+            try:
+                response = self.session.post(f"{API_BASE}/professionals/login", json={
+                    "email": prof["email"],
+                    "password": prof["password"]
+                })
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    token = data.get('access_token')
+                    professional_type = data.get('professional_type')
+                    
+                    if token:
+                        self.log_test(
+                            f"Professional Login: {prof['type']}",
+                            True,
+                            f"Email: {prof['email']}, Type: {professional_type}, Token: {len(token)} chars"
+                        )
+                    else:
+                        self.log_test(
+                            f"Professional Login: {prof['type']}",
+                            False,
+                            error="No access token in response"
+                        )
+                else:
+                    self.log_test(
+                        f"Professional Login: {prof['type']}",
+                        False,
+                        error=f"HTTP {response.status_code}: {response.text}"
+                    )
+                    
+            except Exception as e:
+                self.log_test(
+                    f"Professional Login: {prof['type']}",
+                    False,
+                    error=f"Exception: {str(e)}"
+                )
+    
+    def test_admin_authentication(self):
+        """Test admin authentication"""
+        print("👑 TESTING ADMIN AUTHENTICATION")
+        print("=" * 50)
+        
+        try:
+            response = self.session.post(f"{API_BASE}/auth/login", json={
+                "email": "admin@luxepass.com",
+                "password": "admin123"
+            })
+            
+            if response.status_code == 200:
+                data = response.json()
+                token = data.get('access_token')
+                
+                if token:
+                    self.tokens["admin@luxepass.com"] = token
+                    self.log_test(
+                        "Admin Login",
+                        True,
+                        f"Token: {len(token)} chars"
+                    )
+                else:
+                    self.log_test(
+                        "Admin Login",
+                        False,
+                        error="No access token in response"
+                    )
+            else:
+                self.log_test(
+                    "Admin Login",
+                    False,
+                    error=f"HTTP {response.status_code}: {response.text}"
+                )
+                
+        except Exception as e:
+            self.log_test(
+                "Admin Login",
+                False,
+                error=f"Exception: {str(e)}"
+            )
+    
+    def test_monthly_limits_validation(self):
+        """Test monthly consultation limits based on plan type"""
+        print("📊 TESTING MONTHLY LIMITS VALIDATION")
+        print("=" * 50)
+        
+        # Expected limits based on PAYMENT_PLANS configuration
+        expected_limits = {
+            "basico": {"nutritionist": 0, "personal": 0},
+            "intermediario": {"nutritionist": 1, "personal": 1},
+            "vip": {"nutritionist": 2, "personal": 2}
+        }
+        
+        for email in self.tokens:
+            if "admin" in email:
+                continue
+                
+            headers = {'Authorization': f'Bearer {self.tokens[email]}'}
+            
+            try:
+                # Get user profile to determine plan
+                me_response = self.session.get(f"{API_BASE}/users/me", headers=headers)
+                if me_response.status_code != 200:
+                    continue
+                    
+                user_data = me_response.json()
+                plan_type = user_data.get('plan_type')
+                
+                # Map premium to vip for limits checking
+                if plan_type == "premium":
+                    plan_type = "vip"
+                
+                if plan_type in expected_limits:
+                    expected = expected_limits[plan_type]
+                    
+                    # Test nutritionist limit
+                    try:
+                        response = self.session.get(
+                            f"{API_BASE}/appointments/available-slots",
+                            headers=headers,
+                            params={"professional_type": "nutritionist", "date": "2025-11-20"}
+                        )
+                        
+                        if expected["nutritionist"] > 0:
+                            # Should have access
+                            success = response.status_code == 200
+                            details = f"Expected access (limit: {expected['nutritionist']}), Got: {response.status_code}"
+                        else:
+                            # Should be denied
+                            success = response.status_code == 403
+                            details = f"Expected denial (limit: {expected['nutritionist']}), Got: {response.status_code}"
+                        
+                        self.log_test(
+                            f"Nutritionist Limit: {email} ({plan_type})",
+                            success,
+                            details
+                        )
+                    except Exception as e:
+                        self.log_test(
+                            f"Nutritionist Limit: {email} ({plan_type})",
+                            False,
+                            error=f"Exception: {str(e)}"
+                        )
+                        
+            except Exception as e:
+                self.log_test(
+                    f"Monthly Limits: {email}",
+                    False,
+                    error=f"Exception: {str(e)}"
+                )
+    
+    def run_all_tests(self):
+        """Run all test suites"""
+        print("🚀 LUXEPASS BACKEND TESTING SUITE")
+        print("=" * 60)
+        print(f"Backend URL: {API_BASE}")
+        print(f"Test Time: {datetime.now().isoformat()}")
+        print("=" * 60)
+        print()
+        
+        # Run test suites in order
+        self.test_admin_authentication()
+        self.test_client_authentication()
+        self.test_plans_system()
+        self.test_appointment_system()
+        self.test_agora_token_generation()
+        self.test_professional_authentication()
+        self.test_monthly_limits_validation()
+        
+        # Summary
+        print("📊 TEST SUMMARY")
+        print("=" * 50)
+        
+        total_tests = len(self.test_results)
+        passed_tests = len([r for r in self.test_results if r['success']])
+        failed_tests = total_tests - passed_tests
+        
+        print(f"Total Tests: {total_tests}")
+        print(f"Passed: {passed_tests} ✅")
+        print(f"Failed: {failed_tests} ❌")
+        print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
+        print()
+        
+        if failed_tests > 0:
+            print("❌ FAILED TESTS:")
+            for result in self.test_results:
+                if not result['success']:
+                    print(f"  - {result['test']}: {result['error']}")
+            print()
+        
+        print("🎯 CRITICAL ENDPOINTS STATUS:")
+        critical_endpoints = [
+            "Client Login: vip@luxepass.com",
+            "Client Login: intermediario@luxepass.com", 
+            "Client Login: cliente@luxepass.com",
+            "GET /api/integration/plans",
+            "Agora Token Generation",
+            "Professional Login: nutritionist",
+            "Professional Login: personal"
+        ]
+        
+        for endpoint in critical_endpoints:
+            result = next((r for r in self.test_results if endpoint in r['test']), None)
+            if result:
+                status = "✅" if result['success'] else "❌"
+                print(f"  {status} {endpoint}")
+        
+        return passed_tests, failed_tests, total_tests
 
 def main():
     """Main test execution"""
