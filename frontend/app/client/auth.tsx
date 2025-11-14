@@ -104,16 +104,8 @@ export default function ClientAuth() {
       await AsyncStorage.setItem('token', response.data.access_token);
       await AsyncStorage.setItem('userType', 'client');
 
-      Alert.alert(
-        'Login Realizado!',
-        'Bem-vindo ao LuxePass!',
-        [
-          {
-            text: 'Continuar',
-            onPress: () => router.replace('/client/(tabs)')
-          }
-        ]
-      );
+      // Redirecionar direto para área do cliente
+      router.replace('/client/(tabs)');
 
     } catch (error: any) {
       console.error('❌ Erro no login:', error);
