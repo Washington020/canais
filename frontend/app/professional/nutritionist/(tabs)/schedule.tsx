@@ -383,7 +383,7 @@ export default function PersonalTrainerSchedule() {
 
         {/* Today's Appointments */}
         <View style={styles.todaySection}>
-          <Text style={styles.sectionTitle}>Treinos de Hoje</Text>
+          <Text style={styles.sectionTitle}>Consultas de Hoje</Text>
           {getTodaysAppointments().length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="fitness-outline" size={48} color="#64748B" />
