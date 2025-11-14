@@ -60,8 +60,11 @@ export default function ClientLayout() {
         contentStyle: { backgroundColor: '#0B0D17' },
       }}
     >
+      <Stack.Screen name="index" />
+      <Stack.Screen name="auth" />
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
+      <Stack.Screen name="plans" />
       <Stack.Screen name="(tabs)" />
     </Stack>
   );
