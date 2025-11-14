@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Corrigir os apps do nutricionista e personal trainer para funcionarem de forma real: sistema de agendamento funcional, criação de treinos/dietas, atribuição de clientes (sair da lista geral para 'meus clientes'), integração com limites de planos do cliente. Manter configurações existentes e interação entre apps."
+user_problem_statement: "Unificar login e seleção de planos do cliente numa única tela, proporcionando uma experiência mais fluida para o cliente, eliminando a navegação entre telas."
 
 backend:
   - task: "Professional Client Assignment System Fix"
