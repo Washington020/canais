@@ -274,32 +274,32 @@ export default function AdminDashboard() {
               style={styles.actionButton}
               onPress={() => router.push('/admin/(tabs)/gyms')}
             >
-              <Ionicons name="fitness" size={32} color="#3B82F6" />
-              <Text style={styles.actionButtonText}>Gerenciar Academias</Text>
+              <Ionicons name="fitness" size={24} color="#3B82F6" />
+              <Text style={styles.actionButtonText}>Academias</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionButton}
               onPress={() => router.push('/admin/(tabs)/nutritionist')}
             >
-              <Ionicons name="restaurant" size={32} color="#10B981" />
-              <Text style={styles.actionButtonText}>Gerenciar Nutricionistas</Text>
+              <Ionicons name="restaurant" size={24} color="#10B981" />
+              <Text style={styles.actionButtonText}>Nutricionistas</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionButton}
               onPress={() => router.push('/admin/(tabs)/personal')}
             >
-              <Ionicons name="barbell" size={32} color="#8B5CF6" />
-              <Text style={styles.actionButtonText}>Gerenciar Personal</Text>
+              <Ionicons name="barbell" size={24} color="#8B5CF6" />
+              <Text style={styles.actionButtonText}>Personal Trainers</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionButton}
               onPress={() => router.push('/admin/(tabs)/users')}
             >
-              <Ionicons name="people" size={32} color="#22C55E" />
-              <Text style={styles.actionButtonText}>Ver Todos Clientes</Text>
+              <Ionicons name="people" size={24} color="#22C55E" />
+              <Text style={styles.actionButtonText}>Todos Clientes</Text>
             </TouchableOpacity>
           </View>
         </View>
