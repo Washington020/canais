@@ -222,8 +222,9 @@ def test_monthly_limits_endpoint(results):
             limits_data = response.json()
             
             # Check if limits are separated by professional type
-            nutritionist_limit = limits_data.get("nutritionist_consultations", 0)
-            personal_limit = limits_data.get("personal_consultations", 0)
+            limits = limits_data.get("limits", {})
+            nutritionist_limit = limits.get("nutritionist", 0)
+            personal_limit = limits.get("personal", 0)
             
             expected_nutritionist = 2 if user["plan"] in ["VIP", "Premium"] else 1
             expected_personal = 2 if user["plan"] in ["VIP", "Premium"] else 1
