@@ -71,9 +71,9 @@ class PlanService:
                 "Relatórios de progresso",
                 "Prioridade no agendamento"
             ],
-            monthly_price=99.90,
-            activation_fee=49.90,
-            first_month_total=149.80
+            monthly_price=159.90,
+            activation_fee=59.90,
+            first_month_total=219.80
         ),
         
         PlanType.AVANCADO: PlanDetails(
