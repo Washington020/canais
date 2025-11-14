@@ -507,15 +507,20 @@ export default function NutritionistSchedule() {
       </Modal>
 
       {/* Video Call Modal */}
-      <VideoCallModal
-        visible={videoCallModal}
-        onClose={() => {
-          setVideoCallModal(false);
-          setSelectedAppointment(null);
-        }}
-        appointment={selectedAppointment}
-        userType="professional"
-      />
+      {videoCallModal && selectedAppointment && (
+        <VideoCallModal
+          visible={videoCallModal}
+          roomUrl={selectedAppointment.video_room_url || `https://luxepass.daily.co/room-${selectedAppointment.id}`}
+          userName={user?.full_name || 'Profissional'}
+          onClose={() => {
+            setVideoCallModal(false);
+            setSelectedAppointment(null);
+          }}
+          onCallEnded={() => {
+            loadAppointments();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
