@@ -3816,6 +3816,29 @@ async def get_payment_plans():
         plans.append(PaymentPlan(**plan_data))
     return plans
 
+@api_router.get("/integration/plans")
+async def get_integration_plans():
+    """Get plans for the integration/frontend with marketing information"""
+    plans = []
+    
+    for plan_id, plan_data in PAYMENT_PLANS.items():
+        plan_info = {
+            "type": plan_data["id"],
+            "name": plan_data["name"],
+            "description": plan_data["description"],
+            "features": plan_data["features"],
+            "monthly_price": plan_data["monthly_price"],
+            "activation_fee": plan_data["activation_fee"], 
+            "first_month_total": plan_data["first_month_total"],
+            "fidelity_months": plan_data["fidelity_months"],
+            "marketing_benefits": plan_data.get("marketing_benefits", []),
+            "nutritionist_consultations": plan_data.get("nutritionist_consultations", 0),
+            "personal_consultations": plan_data.get("personal_consultations", 0)
+        }
+        plans.append(plan_info)
+    
+    return plans
+
 @api_router.post("/payments/checkout/session")
 async def create_checkout_session(
     request: CreateCheckoutRequest,
