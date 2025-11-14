@@ -65,7 +65,7 @@ PAYMENT_PLANS = {
             "Check-in inteligente",
             "Flexibilidade total de horários"
         ],
-        "token_limit": 0,
+        "token_limit": 31,
         "description": "Perfeito para quem quer liberdade e economia nos treinos",
         "marketing_benefits": [
             "💪 Livre acesso a +50 academias parceiras",
@@ -93,7 +93,7 @@ PAYMENT_PLANS = {
         ],
         "nutritionist_consultations": 1,
         "personal_consultations": 1,
-        "token_limit": 0,
+        "token_limit": 31,
         "description": "Ideal para quem busca orientação profissional e resultados consistentes",
         "marketing_benefits": [
             "🏆 Mais vendido! Melhor custo-benefício",
