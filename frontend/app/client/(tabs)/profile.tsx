@@ -600,4 +600,25 @@ const styles = StyleSheet.create({
     color: '#E2E8F0',
     lineHeight: 20,
   },
+  logoutContainer: {
+    paddingHorizontal: 24,
+    marginTop: 8,
+    marginBottom: 32,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    gap: 12,
+  },
+  logoutButtonText: {
+    color: '#EF4444',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
