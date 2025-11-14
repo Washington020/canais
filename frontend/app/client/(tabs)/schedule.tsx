@@ -100,14 +100,22 @@ export default function ClientSchedule() {
   const loadMyAppointments = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        console.log('❌ Token não encontrado');
+        return;
+      }
 
+      console.log('🔄 Buscando agendamentos...');
       const headers = { Authorization: `Bearer ${token}` };
       const response = await axios.get(`${API_URL}/appointments/my-appointments`, { headers });
       
+      console.log('✅ Agendamentos recebidos:', response.data);
+      console.log('📊 Total de agendamentos:', response.data.appointments?.length || 0);
+      
       setAppointments(response.data.appointments || []);
     } catch (error: any) {
-      console.error('Error loading appointments:', error);
+      console.error('❌ Error loading appointments:', error);
+      console.error('❌ Error details:', error.response?.data);
       setAppointments([]);
     } finally {
       setLoading(false);
