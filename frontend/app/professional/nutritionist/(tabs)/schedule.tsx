@@ -296,7 +296,7 @@ export default function PersonalTrainerSchedule() {
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>{stats.total_appointments_month || 0}</Text>
-              <Text style={styles.statLabel}>Treinos/Mês</Text>
+              <Text style={styles.statLabel}>Consultas/Mês</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>{stats.total_clients_served || 0}</Text>
