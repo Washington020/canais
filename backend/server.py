@@ -48,35 +48,91 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', 'sk-emergent-f400b75B69872
 
 # Payment Plans Configuration
 PAYMENT_PLANS = {
-    "basic": {
-        "id": "basic",
+    "basico": {
+        "id": "basico",
         "name": "Plano Básico",
-        "price": 79.80,
+        "monthly_price": 99.90,
+        "activation_fee": 29.90,
+        "first_month_total": 129.80,
         "currency": "BRL",
         "duration_days": 30,
-        "features": ["10 tokens por mês", "Acesso a academias básicas", "Suporte por email"],
-        "token_limit": 10,
-        "description": "Ideal para uso ocasional"
+        "fidelity_months": 12,
+        "features": [
+            "Acesso ilimitado a academias básicas",
+            "App exclusivo LuxePass",
+            "Suporte por WhatsApp",
+            "Check-in inteligente",
+            "Flexibilidade total de horários"
+        ],
+        "token_limit": 0,
+        "description": "Perfeito para quem quer liberdade e economia nos treinos",
+        "marketing_benefits": [
+            "💪 Livre acesso a +50 academias parceiras",
+            "📱 App intuitivo e fácil de usar", 
+            "⏰ Treinar a qualquer horário",
+            "🎯 Fidelidade de 12 meses com desconto especial"
+        ]
     },
     "intermediario": {
-        "id": "intermediario",
+        "id": "intermediario", 
         "name": "Plano Intermediário",
-        "price": 49.90,
+        "monthly_price": 159.90,
+        "activation_fee": 59.90,
+        "first_month_total": 219.80,
         "currency": "BRL",
         "duration_days": 30,
-        "features": ["30 tokens por mês", "Acesso a academias básicas", "Suporte por chat", "Agendamentos profissionais"],
-        "token_limit": 30,
-        "description": "Para usuários que querem mais benefícios"
+        "fidelity_months": 12,
+        "features": [
+            "Tudo do Plano Básico",
+            "1 consulta mensal com nutricionista",
+            "1 consulta mensal com personal trainer",
+            "Planos personalizados de treino",
+            "Orientação nutricional completa",
+            "Suporte prioritário 24/7"
+        ],
+        "nutritionist_consultations": 1,
+        "personal_consultations": 1,
+        "token_limit": 0,
+        "description": "Ideal para quem busca orientação profissional e resultados consistentes",
+        "marketing_benefits": [
+            "🏆 Mais vendido! Melhor custo-benefício",
+            "👩‍⚕️ Nutricionista especializada mensal",
+            "🏋️‍♂️ Personal trainer exclusivo mensal", 
+            "📊 Planos personalizados inclusos",
+            "🎯 Fidelidade de 12 meses com vantagens exclusivas"
+        ]
     },
-    "premium": {
-        "id": "premium", 
-        "name": "Plano Premium",
-        "price": 59.90,
-        "currency": "BRL",
+    "vip": {
+        "id": "vip",
+        "name": "Plano VIP",
+        "monthly_price": 349.90,
+        "activation_fee": 0.00,
+        "first_month_total": 349.90,
+        "currency": "BRL", 
         "duration_days": 30,
-        "features": ["60 tokens por mês", "Acesso a todas as academias", "Suporte prioritário", "Relatórios detalhados"],
-        "token_limit": 60,
-        "description": "Recomendado para uso regular"
+        "fidelity_months": 12,
+        "features": [
+            "Tudo dos Planos anteriores",
+            "2 consultas mensais com nutricionista",
+            "2 consultas mensais com personal trainer",
+            "Acompanhamento semanal personalizado",
+            "Acesso a academias VIP exclusivas",
+            "Relatórios detalhados de evolução",
+            "Suporte dedicado via WhatsApp",
+            "Sem taxa de adesão!"
+        ],
+        "nutritionist_consultations": 2,
+        "personal_consultations": 2,
+        "token_limit": 0,
+        "description": "O mais completo! Para quem não quer limites na busca pelos resultados",
+        "marketing_benefits": [
+            "👑 Plano mais completo e exclusivo",
+            "🎁 TAXA DE ADESÃO GRÁTIS (economia de R$ 99,90)",
+            "👩‍⚕️ 2 consultas nutricionista + 2 personal trainer/mês",
+            "🏋️‍♀️ Academias VIP com equipamentos premium",
+            "📈 Acompanhamento semanal personalizado",
+            "🎯 Fidelidade de 12 meses com benefícios VIP"
+        ]
     },
     "vip": {
         "id": "vip",
