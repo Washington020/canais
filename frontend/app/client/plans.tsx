@@ -164,6 +164,7 @@ export default function PlansScreen() {
         {/* Plans */}
         <View style={styles.plansContainer}>
           {plans.map((plan, index) => {
+            console.log('🔄 Renderizando plano:', plan.type, index);
             const planColor = getPlanColor(plan.type);
             const isPopular = plan.type === 'intermediario';
             
