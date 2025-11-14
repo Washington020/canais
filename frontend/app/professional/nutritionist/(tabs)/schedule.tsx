@@ -120,7 +120,7 @@ export default function PersonalTrainerSchedule() {
       
       await axios.put(`${API_URL}/appointments/${appointmentId}/complete`, {}, { headers });
       
-      Alert.alert('Sucesso', 'Treino marcado como concluído');
+      Alert.alert('Sucesso', 'Consulta marcada como concluída!');
       loadAppointments();
       loadStats();
     } catch (error: any) {
