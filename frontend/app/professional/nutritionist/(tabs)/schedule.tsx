@@ -49,6 +49,9 @@ export default function PersonalTrainerSchedule() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [showVideoCall, setShowVideoCall] = useState(false);
+  const [videoChannelName, setVideoChannelName] = useState('');
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
