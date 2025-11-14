@@ -680,6 +680,30 @@ frontend:
           agent: "testing"
           comment: "❌ AGORA.IO TOKEN ENDPOINT NOT IMPLEMENTED (2025-11-14): Testing revealed that the GET /api/agora/token endpoint returns 404 Not Found. This endpoint is mentioned in the review request but is not implemented in the current backend. Found related endpoint /video/create-agora-channel but not the token generation endpoint specifically requested. This feature needs to be implemented for video call functionality."
 
+  - task: "Personal Trainer Complete Button Implementation"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/professional/personal/(tabs)/schedule.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main" 
+          comment: "Removida a duplicação do botão 'Concluir' na interface do Personal Trainer. A funcionalidade já estava implementada mas havia dois botões idênticos sendo renderizados. Agora existe apenas um botão que chama a função markAppointmentComplete. A interface do Nutricionista já estava correta com apenas um botão. Ambas as interfaces agora têm o botão 'Concluir' funcionando corretamente. Pronto para teste."
+
+  - task: "Nutritionist Complete Button Implementation"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/professional/nutritionist/(tabs)/schedule.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main" 
+          comment: "O botão 'Concluir' já estava implementado corretamente na interface do Nutricionista. A implementação chama a função markAppointmentComplete que faz uma chamada PUT para /api/appointments/{appointment_id}/complete. Pronto para teste."
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"
