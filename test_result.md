@@ -102,7 +102,20 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Unificar login e seleção de planos do cliente numa única tela, proporcionando uma experiência mais fluida para o cliente, eliminando a navegação entre telas."
+user_problem_statement: "Completar a implementação da funcionalidade 'Marcar Consulta como Concluída' para o Personal Trainer e testar todas as interfaces profissionais."
+
+backend:
+  - task: "Appointment Complete Endpoint"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main" 
+          comment: "Backend endpoint PUT /api/appointments/{appointment_id}/complete já existe e foi implementado anteriormente. Precisa ser testado para verificar se está funcionando corretamente com as duas interfaces profissionais (Nutricionista e Personal Trainer)."
 
 backend:
   - task: "Professional Client Assignment System Fix"
