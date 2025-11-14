@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LuxePass - QR Code Expo Go</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0B0D17 0%, #1E293B 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            max-width: 500px;
+        }
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            font-size: 18px;
+            color: #94A3B8;
+            margin-bottom: 30px;
+        }
+        #qrcode {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        .instructions {
+            background: rgba(245, 158, 11, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: left;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .instructions h3 {
+            color: #F59E0B;
+            margin-top: 0;
+            font-size: 20px;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 10px 0;
+            color: #CBD5E1;
+            line-height: 1.6;
+        }
+        .url-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #22C55E;
+        }
+        .warning {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            color: #FCA5A5;
+        }
+        .loading {
+            color: #F59E0B;
+            font-size: 18px;
+            margin: 20px 0;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🏋️ LuxePass App</h1>
+        <p class="subtitle">Escaneie para abrir no Expo Go</p>
+        
+        <div class="loading" id="loading">⏳ Carregando QR Code...</div>
+        <div id="qrcode"></div>
+        
+        <div class="url-box" id="url-display">
+            Aguardando URL...
+        </div>
+        
+        <div class="instructions">
+            <h3>📱 Como Testar no Celular:</h3>
+            <ol>
+                <li>Instale o <strong>Expo Go</strong> na Play Store (Android) ou App Store (iOS)</li>
+                <li>Abra o Expo Go no seu celular</li>
+                <li>Escaneie o QR Code acima:
+                    <ul>
+                        <li><strong>iOS:</strong> Use a câmera nativa do iPhone</li>
+                        <li><strong>Android:</strong> Use o scanner dentro do app Expo Go</li>
+                    </ul>
+                </li>
+                <li>Aguarde o app carregar (pode levar alguns segundos)</li>
+                <li>Pronto! Agora você pode testar as videochamadas</li>
+            </ol>
+        </div>
+        
+        <div class="warning">
+            ⚠️ <strong>Importante:</strong> Certifique-se de que seu celular está na mesma rede Wi-Fi que o servidor de desenvolvimento.
+        </div>
+    </div>
+
+    <script>
+        // Get the Expo URL from environment or construct it
+        async function loadQRCode() {
+            try {
+                // Get the hostname from the current page
+                const hostname = window.location.hostname;
+                
+                // Construct Expo tunnel URL (update this with your actual tunnel URL)
+                // The format is: exp://[tunnel-url]
+                const expoUrl = `exp://${hostname}:3000`;
+                
+                // Try to fetch Expo dev server info
+                const response = await fetch('http://localhost:3000/__inspect', {
+                    mode: 'no-cors'
+                }).catch(() => null);
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                // Display URL
+                document.getElementById('url-display').textContent = expoUrl;
+                
+                // Generate QR Code
+                new QRCode(document.getElementById("qrcode"), {
+                    text: expoUrl,
+                    width: 256,
+                    height: 256,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                
+            } catch (error) {
+                console.error('Error loading QR code:', error);
+                document.getElementById('loading').textContent = '❌ Erro ao carregar QR Code';
+                document.getElementById('url-display').textContent = 'Erro: ' + error.message;
+            }
+        }
+        
+        // Load QR code when page loads
+        window.addEventListener('load', loadQRCode);
+    </script>
+</body>
+</html>
