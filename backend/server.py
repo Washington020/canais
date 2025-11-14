@@ -159,6 +159,164 @@ sio = socketio.AsyncServer(
 # Wrap FastAPI app with SocketIO
 socket_app = socketio.ASGIApp(sio, app)
 
+# Store active video call rooms
+active_calls = {}
+
+# WebSocket event handlers for video calls
+@sio.event
+async def connect(sid, environ):
+    """Handle client connection"""
+    print(f"Client {sid} connected")
+    await sio.emit('connected', {'status': 'connected'}, room=sid)
+
+@sio.event
+async def disconnect(sid):
+    """Handle client disconnection"""
+    print(f"Client {sid} disconnected")
+    # Clean up any active calls
+    for room_id, call_data in list(active_calls.items()):
+        if sid in call_data.get('participants', []):
+            # Notify other participants
+            await sio.emit('user_left', {'user_id': sid}, room=room_id)
+            # Remove participant
+            call_data['participants'].remove(sid)
+            if len(call_data['participants']) == 0:
+                del active_calls[room_id]
+
+@sio.event
+async def join_call(sid, data):
+    """Join a video call room"""
+    room_id = data.get('room_id')
+    user_id = data.get('user_id')
+    user_type = data.get('user_type', 'client')  # client or professional
+    
+    if not room_id:
+        await sio.emit('error', {'message': 'Room ID required'}, room=sid)
+        return
+    
+    # Join the room
+    await sio.enter_room(sid, room_id)
+    
+    # Initialize room if it doesn't exist
+    if room_id not in active_calls:
+        active_calls[room_id] = {
+            'participants': [],
+            'created_at': datetime.now(timezone.utc),
+            'status': 'waiting'
+        }
+    
+    # Add participant
+    active_calls[room_id]['participants'].append(sid)
+    
+    # Notify others in the room
+    await sio.emit('user_joined', {
+        'user_id': user_id,
+        'user_type': user_type,
+        'sid': sid
+    }, room=room_id, skip_sid=sid)
+    
+    # Send current participants to the new user
+    await sio.emit('room_joined', {
+        'room_id': room_id,
+        'participants': len(active_calls[room_id]['participants']),
+        'status': 'joined'
+    }, room=sid)
+
+@sio.event
+async def leave_call(sid, data):
+    """Leave a video call room"""
+    room_id = data.get('room_id')
+    
+    if room_id and room_id in active_calls:
+        # Remove from participants
+        if sid in active_calls[room_id]['participants']:
+            active_calls[room_id]['participants'].remove(sid)
+        
+        # Notify others
+        await sio.emit('user_left', {'user_id': sid}, room=room_id)
+        
+        # Leave the room
+        await sio.leave_room(sid, room_id)
+        
+        # Clean up empty rooms
+        if len(active_calls[room_id]['participants']) == 0:
+            del active_calls[room_id]
+
+@sio.event
+async def webrtc_offer(sid, data):
+    """Handle WebRTC offer"""
+    room_id = data.get('room_id')
+    offer = data.get('offer')
+    target_sid = data.get('target_sid')
+    
+    if target_sid:
+        # Send offer to specific participant
+        await sio.emit('webrtc_offer', {
+            'offer': offer,
+            'from_sid': sid
+        }, room=target_sid)
+    else:
+        # Broadcast to room (excluding sender)
+        await sio.emit('webrtc_offer', {
+            'offer': offer,
+            'from_sid': sid
+        }, room=room_id, skip_sid=sid)
+
+@sio.event
+async def webrtc_answer(sid, data):
+    """Handle WebRTC answer"""
+    room_id = data.get('room_id')
+    answer = data.get('answer')
+    target_sid = data.get('target_sid')
+    
+    if target_sid:
+        # Send answer to specific participant
+        await sio.emit('webrtc_answer', {
+            'answer': answer,
+            'from_sid': sid
+        }, room=target_sid)
+    else:
+        # Broadcast to room (excluding sender)
+        await sio.emit('webrtc_answer', {
+            'answer': answer,
+            'from_sid': sid
+        }, room=room_id, skip_sid=sid)
+
+@sio.event
+async def webrtc_ice_candidate(sid, data):
+    """Handle ICE candidate exchange"""
+    room_id = data.get('room_id')
+    candidate = data.get('candidate')
+    target_sid = data.get('target_sid')
+    
+    if target_sid:
+        # Send ICE candidate to specific participant
+        await sio.emit('webrtc_ice_candidate', {
+            'candidate': candidate,
+            'from_sid': sid
+        }, room=target_sid)
+    else:
+        # Broadcast to room (excluding sender)
+        await sio.emit('webrtc_ice_candidate', {
+            'candidate': candidate,
+            'from_sid': sid
+        }, room=room_id, skip_sid=sid)
+
+@sio.event
+async def call_status(sid, data):
+    """Handle call status updates (started, ended, etc.)"""
+    room_id = data.get('room_id')
+    status = data.get('status')
+    
+    if room_id in active_calls:
+        active_calls[room_id]['status'] = status
+        
+        # Broadcast status to all participants
+        await sio.emit('call_status_update', {
+            'status': status,
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }, room=room_id)
+
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
