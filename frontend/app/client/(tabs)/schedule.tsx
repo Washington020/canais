@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import VideoCallModal from '../../../components/VideoCallModal';
+import VideoCallModal from '@/components/VideoCallModal';
 
 const API_URL = '/api';
 
