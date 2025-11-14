@@ -5697,8 +5697,8 @@ async def startup_event():
     # Create test professionals if they don't exist
     await create_test_professionals()
     
-    # Create test users if they don't exist
-    await create_test_users()
+    # Create test users if they don't exist - COMMENTED TO AVOID CONFLICTS
+    # await create_test_users()
     
     # Create test gym if it doesn't exist
     await create_test_gym()
