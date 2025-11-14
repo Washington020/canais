@@ -2893,7 +2893,11 @@ async def get_current_professional(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
     
-    professional = await db.professionals.find_one({"_id": ObjectId(professional_id)})
+    # Find professional in users collection
+    professional = await db.users.find_one({
+        "_id": ObjectId(professional_id),
+        "user_type": "professional"
+    })
     if professional is None:
         raise credentials_exception
     
