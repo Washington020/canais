@@ -107,9 +107,9 @@ class PlanService:
                 "Relatórios detalhados de progresso",
                 "Chat exclusivo com profissionais"
             ],
-            monthly_price=200.00,
-            activation_fee=70.00,
-            first_month_total=270.00
+            monthly_price=349.90,
+            activation_fee=0.00,
+            first_month_total=349.90
         )
     }
     
