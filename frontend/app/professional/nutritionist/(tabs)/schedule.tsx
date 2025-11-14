@@ -416,13 +416,37 @@ export default function PersonalTrainerSchedule() {
                 )}
                 
                 {appointment.status !== 'completed' && (
-                  <TouchableOpacity 
-                    style={styles.completeButton}
-                    onPress={() => markAppointmentComplete(appointment.id)}
-                  >
-                    <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
-                    <Text style={styles.completeButtonText}>Marcar como Concluído</Text>
-                  </TouchableOpacity>
+                  <View style={styles.appointmentActions}>
+                    <TouchableOpacity 
+                      style={styles.videoButton}
+                      onPress={async () => {
+                        try {
+                          const token = await AsyncStorage.getItem('professionalToken');
+                          const response = await axios.post(
+                            `${API_URL}/video/create-agora-channel`,
+                            { appointment_id: appointment.id },
+                            { headers: { Authorization: `Bearer ${token}` } }
+                          );
+                          setVideoChannelName(response.data.channel_name);
+                          setShowVideoCall(true);
+                        } catch (error) {
+                          console.error('Erro ao criar canal:', error);
+                          Alert.alert('Erro', 'Não foi possível iniciar a videochamada.');
+                        }
+                      }}
+                    >
+                      <Ionicons name="videocam" size={16} color="#FFFFFF" />
+                      <Text style={styles.videoButtonText}>Entrar em Consulta</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.completeButton}
+                      onPress={() => markAppointmentComplete(appointment.id)}
+                    >
+                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+                      <Text style={styles.completeButtonText}>Concluir</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
             ))
