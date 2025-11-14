@@ -433,28 +433,6 @@ export default function PersonalTrainerSchedule() {
                     
                     <TouchableOpacity 
                       style={styles.completeButton}
-                      onPress={async () => {
-                        try {
-                          const token = await AsyncStorage.getItem('professionalToken');
-                          await axios.put(
-                            `${API_URL}/appointments/${appointment.id}/complete`,
-                            {},
-                            { headers: { Authorization: `Bearer ${token}` } }
-                          );
-                          Alert.alert('Sucesso', 'Treino marcado como concluído!');
-                          loadAppointments();
-                        } catch (error) {
-                          console.error('Erro ao concluir:', error);
-                          Alert.alert('Erro', 'Não foi possível concluir o treino.');
-                        }
-                      }}
-                    >
-                      <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
-                      <Text style={styles.completeButtonText}>Concluir</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      style={styles.completeButton}
                       onPress={() => markAppointmentComplete(appointment.id)}
                     >
                       <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
