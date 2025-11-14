@@ -660,7 +660,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Unified Client Login and Plan Selection"
+    - "Client Schedule Plan Access Fix (VIP/Premium)"
+    - "Video Call Integration (Agora.io)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
