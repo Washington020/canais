@@ -675,9 +675,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Client Schedule Plan Access Fix (VIP/Premium)"
     - "Video Call Integration (Agora.io)"
-  stuck_tasks: []
+  stuck_tasks:
+    - "Video Call Integration (Agora.io)"
   test_all: false
   test_priority: "high_first"
 
