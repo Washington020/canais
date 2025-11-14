@@ -89,6 +89,15 @@ export default function AdminTabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="confirmed-appointments"
+        options={{
+          title: 'Atendimentos',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="checkmark-done" size={20} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
