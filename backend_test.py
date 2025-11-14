@@ -19,47 +19,34 @@ load_dotenv('/app/frontend/.env')
 BACKEND_URL = os.getenv('EXPO_PUBLIC_BACKEND_URL', 'https://gymvideos.preview.emergentagent.com')
 API_BASE = f"{BACKEND_URL}/api"
 
-class TestResult:
+class LuxePassTester:
     def __init__(self):
-        self.total_tests = 0
-        self.passed_tests = 0
-        self.failed_tests = 0
-        self.results = []
-    
-    def add_result(self, test_name: str, passed: bool, message: str, details: Dict = None):
-        self.total_tests += 1
-        if passed:
-            self.passed_tests += 1
-            status = "✅ PASS"
-        else:
-            self.failed_tests += 1
-            status = "❌ FAIL"
+        self.session = requests.Session()
+        self.session.headers.update({
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        })
+        self.tokens = {}
+        self.test_results = []
         
+    def log_test(self, test_name, success, details="", error=""):
+        """Log test results"""
         result = {
-            "test": test_name,
-            "status": status,
-            "message": message,
-            "details": details or {}
+            'test': test_name,
+            'success': success,
+            'details': details,
+            'error': error,
+            'timestamp': datetime.now().isoformat()
         }
-        self.results.append(result)
-        print(f"{status}: {test_name} - {message}")
-        if details:
-            print(f"   Details: {json.dumps(details, indent=2)}")
-    
-    def print_summary(self):
-        print(f"\n{'='*60}")
-        print(f"TEST SUMMARY")
-        print(f"{'='*60}")
-        print(f"Total Tests: {self.total_tests}")
-        print(f"Passed: {self.passed_tests}")
-        print(f"Failed: {self.failed_tests}")
-        print(f"Success Rate: {(self.passed_tests/self.total_tests*100):.1f}%")
+        self.test_results.append(result)
         
-        if self.failed_tests > 0:
-            print(f"\n❌ FAILED TESTS:")
-            for result in self.results:
-                if "❌" in result["status"]:
-                    print(f"  - {result['test']}: {result['message']}")
+        status = "✅" if success else "❌"
+        print(f"{status} {test_name}")
+        if details:
+            print(f"   Details: {details}")
+        if error:
+            print(f"   Error: {error}")
+        print()
 
 def test_integration_plans_endpoint():
     """Test the GET /api/integration/plans endpoint as requested in review"""
