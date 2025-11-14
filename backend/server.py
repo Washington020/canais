@@ -4332,7 +4332,8 @@ async def get_integration_plans():
             "fidelity_months": plan_data["fidelity_months"],
             "marketing_benefits": plan_data.get("marketing_benefits", []),
             "nutritionist_consultations": plan_data.get("nutritionist_consultations", 0),
-            "personal_consultations": plan_data.get("personal_consultations", 0)
+            "personal_consultations": plan_data.get("personal_consultations", 0),
+            "token_limit": plan_data.get("token_limit", 31)
         }
         plans.append(plan_info)
     
