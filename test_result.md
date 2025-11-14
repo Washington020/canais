@@ -721,9 +721,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Appointment Complete Endpoint"
-    - "Personal Trainer Complete Button Implementation"
-    - "Nutritionist Complete Button Implementation"
+    - "Video Call Integration (Agora.io)"
   stuck_tasks:
     - "Video Call Integration (Agora.io)"
   test_all: false
