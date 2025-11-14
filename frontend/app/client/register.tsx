@@ -129,10 +129,21 @@ export default function RegisterScreen() {
   };
 
   const handleNextStep = () => {
+    console.log('🔍 handleNextStep chamado, step atual:', step);
+    
     if (step === 1 && validateStep1()) {
+      console.log('✅ Step 1 validado, indo para step 2');
       setStep(2);
     } else if (step === 2 && validateStep2()) {
+      console.log('✅ Step 2 validado, chamando handleSubmit');
       handleSubmit();
+    } else {
+      console.log('❌ Validação falhou para step:', step);
+      if (step === 1) {
+        console.log('❌ Erro na validação step 1');
+      } else {
+        console.log('❌ Erro na validação step 2');
+      }
     }
   };
 
