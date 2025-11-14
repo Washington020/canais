@@ -219,9 +219,9 @@ export default function ClientSchedule() {
     }
 
     // Check monthly limits
-    if (appointmentLimits) {
+    if (appointmentLimits && appointmentLimits.remaining) {
       const remaining = appointmentLimits.remaining[professionalType as keyof typeof appointmentLimits.remaining];
-      if (remaining <= 0) {
+      if (remaining !== undefined && remaining <= 0) {
         const serviceType = professionalType === 'nutritionist' ? 'consultas nutricionais' : 'sessões de personal training';
         const planName = user.plan_type === 'vip' ? 'VIP' : 'Intermediário';
         Alert.alert(
