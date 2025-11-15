@@ -73,8 +73,9 @@ export default function WebRTCVideoCall({
     try {
       setIsConnecting(true);
       
-      // Connect to WebSocket
-      const socketConnection = io('ws://localhost:8001', {
+      // Connect to WebSocket - use the backend URL
+      const wsUrl = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+      const socketConnection = io(wsUrl, {
         transports: ['websocket'],
         forceNew: true,
       });
