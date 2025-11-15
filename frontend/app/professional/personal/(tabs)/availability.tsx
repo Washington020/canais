@@ -42,12 +42,12 @@ export default function AvailabilityScreen() {
   }, []);
 
   const loadAvailability = async () => {
-    setLoading(true);
     try {
       const token = await AsyncStorage.getItem('professionalToken');
       
       if (!token) {
         console.log('⚠️ Token não encontrado ao carregar disponibilidade');
+        setLoading(false);
         return;
       }
       
@@ -59,9 +59,9 @@ export default function AvailabilityScreen() {
         setAvailability(response.data.weekly_schedule);
         console.log('✅ Disponibilidade carregada:', response.data.weekly_schedule);
       }
+      setLoading(false);
     } catch (error) {
       console.error('❌ Erro ao carregar disponibilidade:', error);
-    } finally {
       setLoading(false);
     }
   };
