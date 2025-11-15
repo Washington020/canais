@@ -9,6 +9,7 @@ export default function ProfessionalLayout() {
         contentStyle: { backgroundColor: '#0B0D17' },
       }}
     >
+      <Stack.Screen name="luxecoach" />
       <Stack.Screen name="nutritionist" />
       <Stack.Screen name="personal" />
     </Stack>
