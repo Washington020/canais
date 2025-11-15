@@ -82,8 +82,8 @@ export default function NewClients() {
               const headers = { Authorization: `Bearer ${token}` };
               
               const response = await axios.post(
-                `${API_URL}/professionals/flag-client`,
-                { client_id: clientId },
+                `${API_URL}/professionals/claim-client/${clientId}`,
+                {},
                 { headers }
               );
               
