@@ -168,7 +168,7 @@ export default function LuxeCoachLogin() {
             <View style={styles.infoBox}>
               <Ionicons name="information-circle" size={20} color="#F59E0B" />
               <Text style={styles.infoText}>
-                Acesse com suas credenciais de profissional. O sistema identificará automaticamente se você é Nutricionista ou Personal Trainer.
+                Selecione seu tipo acima e acesse com suas credenciais profissionais.
               </Text>
             </View>
           </View>
