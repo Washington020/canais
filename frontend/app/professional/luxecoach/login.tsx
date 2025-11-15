@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, Link } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
@@ -26,6 +26,7 @@ export default function LuxeCoachLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedType, setSelectedType] = useState<'nutritionist' | 'personal'>('nutritionist');
+  const [loginSuccess, setLoginSuccess] = useState(false);
   const router = useRouter();
 
   const handleLogin = async () => {
@@ -46,15 +47,11 @@ export default function LuxeCoachLogin() {
         // Salvar token
         await AsyncStorage.setItem('professionalToken', response.data.access_token);
         await AsyncStorage.setItem('professionalType', selectedType);
+        await AsyncStorage.setItem('professionalEmail', email.toLowerCase().trim());
         
-        // NAVEGAÇÃO DIRETA baseada na ESCOLHA DO USUÁRIO
+        // Marcar login como sucesso e mostrar link
         setLoading(false);
-        
-        if (selectedType === 'personal') {
-          router.replace('/professional/personal/');
-        } else {
-          router.replace('/professional/nutritionist/');
-        }
+        setLoginSuccess(true);
       }
     } catch (error: any) {
       setLoading(false);
