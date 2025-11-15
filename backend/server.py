@@ -5251,14 +5251,30 @@ async def get_available_appointment_slots(
             weekly_schedule = availability.get("weekly_schedule", {})
             
             # Check if professional works on this day
-            if day_of_week not in weekly_schedule or not weekly_schedule[day_of_week].get("active", False):
-                logger.info(f"Profissional {professional_id} não trabalha em {day_of_week}")
+            if day_of_week not in weekly_schedule:
+                logger.info(f"Profissional {professional_id} não trabalha em {day_of_week} (dia não encontrado)")
                 continue
             
-            # Get time slots for this day
             day_schedule = weekly_schedule[day_of_week]
-            start_time = day_schedule.get("start_time", "08:00")
-            end_time = day_schedule.get("end_time", "18:00")
+            
+            # Handle both dict and bool formats
+            if isinstance(day_schedule, bool):
+                if not day_schedule:
+                    logger.info(f"Profissional {professional_id} não trabalha em {day_of_week} (day_schedule=False)")
+                    continue
+                # If True, use default times
+                start_time = "08:00"
+                end_time = "18:00"
+            elif isinstance(day_schedule, dict):
+                if not day_schedule.get("active", False):
+                    logger.info(f"Profissional {professional_id} não trabalha em {day_of_week} (active=False)")
+                    continue
+                start_time = day_schedule.get("start_time", "08:00")
+                end_time = day_schedule.get("end_time", "18:00")
+            else:
+                logger.warning(f"Formato inválido para {day_of_week}: {type(day_schedule)}")
+                continue
+            
             slot_duration = availability.get("slot_duration", 60)  # Default 60 minutes
             
             logger.info(f"Profissional {professional_id} trabalha {start_time}-{end_time} com slots de {slot_duration}min")
