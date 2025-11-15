@@ -220,13 +220,14 @@ export default function ClientSchedule() {
       console.log('✅ Resposta recebida:', response.data);
       
       // Verificar se é agendamento pendente ou confirmado
-      const isPending = response.data.status === 'pending';
+      const isConfirmed = response.data.status === 'confirmed';
+      const professionalName = response.data.professional_name || 'o profissional';
       
       Alert.alert(
-        isPending ? 'Solicitação Enviada!' : 'Agendamento Confirmado!',
-        isPending 
-          ? `Sua solicitação de ${slot.professional_type === 'nutritionist' ? 'consulta nutricional' : 'sessão de treino'} foi enviada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${slot.time}h.\n\n🟡 Aguardando profissional aceitar...`
-          : `Sua ${slot.professional_type === 'nutritionist' ? 'consulta nutricional' : 'sessão de treino'} foi agendada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${slot.time}h.`,
+        isConfirmed ? '✅ Agendamento Confirmado!' : 'Solicitação Enviada!',
+        isConfirmed 
+          ? `Sua ${slot.professional_type === 'nutritionist' ? 'consulta nutricional' : 'sessão de treino'} foi agendada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${slot.time}h com ${professionalName}!`
+          : `Sua solicitação de ${slot.professional_type === 'nutritionist' ? 'consulta nutricional' : 'sessão de treino'} foi enviada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${slot.time}h.\n\n🟡 Aguardando profissional aceitar...`,
         [{ text: 'OK', onPress: () => {
           setShowBookingModal(false);
           loadMyAppointments();
