@@ -5971,24 +5971,6 @@ async def get_my_workout(
         logger.error(f"Erro ao buscar treino: {e}")
         raise HTTPException(status_code=500, detail="Erro ao buscar treino")
 
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Erro ao aceitar cliente: {e}")
-        raise HTTPException(status_code=500, detail="Erro ao aceitar cliente")
-
-
-# Professional Appointment Management
-@api_router.get("/professionals/appointments")
-async def get_professional_appointments(
-    date: Optional[str] = None,
-    current_professional: dict = Depends(get_current_professional)
-):
-    """Get professional's appointments"""
-    try:
-        professional_id = str(current_professional["_id"])
-
 # Workout Session Tracking
 @api_router.post("/client/start-workout-session")
 async def start_workout_session(
