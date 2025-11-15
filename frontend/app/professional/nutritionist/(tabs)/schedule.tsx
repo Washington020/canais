@@ -238,18 +238,26 @@ export default function PersonalTrainerSchedule() {
     const dates = [];
     const today = new Date();
     
-    for (let i = 1; i <= 30; i++) {
+    // Gerar datas para os próximos 60 dias úteis (Segunda a Sexta)
+    for (let i = 1; i <= 90; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       
-      // Skip weekends
+      // Skip weekends (Sábado = 6, Domingo = 0)
       if (date.getDay() === 0 || date.getDay() === 6) continue;
       
       const dateString = date.toISOString().split('T')[0];
       dates.push({
         date: dateString,
-        label: date.toLocaleDateString('pt-BR')
+        label: date.toLocaleDateString('pt-BR', { 
+          weekday: 'short', 
+          day: '2-digit', 
+          month: '2-digit' 
+        })
       });
+      
+      // Limitar a 60 dias úteis
+      if (dates.length >= 60) break;
     }
     
     return dates;
