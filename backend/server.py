@@ -5213,17 +5213,85 @@ async def get_available_appointment_slots(
                 detail="Agendamentos disponíveis apenas para planos VIP, Premium e Intermediário. Faça upgrade para acessar."
             )
         
-        # Get available slots
-        available_slots = await db.appointment_slots.find({
-            "professional_type": professional_type,
-            "date": date,
-            "available": True
+        # Parse the date and get day of week
+        try:
+            target_date = datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD")
+        
+        # Get day of week in Portuguese (0=monday, 6=sunday)
+        day_names = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        day_of_week = day_names[target_date.weekday()]
+        
+        logger.info(f"Buscando horários para {professional_type} na data {date} (dia da semana: {day_of_week})")
+        
+        # Get all professionals of this type with availability for this day
+        professionals = await db.professionals.find({
+            "professional_type": professional_type
         }).to_list(100)
         
-        # Convert ObjectId to string for JSON serialization
-        for slot in available_slots:
-            slot["id"] = str(slot["_id"])
-            del slot["_id"]
+        logger.info(f"Encontrados {len(professionals)} profissionais do tipo {professional_type}")
+        
+        available_slots = []
+        
+        for professional in professionals:
+            professional_id = professional["_id"]
+            
+            # Get professional's weekly availability
+            availability = await db.professional_availability.find_one({
+                "professional_id": ObjectId(professional_id)
+            })
+            
+            if not availability:
+                logger.info(f"Profissional {professional_id} não tem disponibilidade configurada")
+                continue
+            
+            weekly_schedule = availability.get("weekly_schedule", {})
+            
+            # Check if professional works on this day
+            if day_of_week not in weekly_schedule or not weekly_schedule[day_of_week].get("active", False):
+                logger.info(f"Profissional {professional_id} não trabalha em {day_of_week}")
+                continue
+            
+            # Get time slots for this day
+            day_schedule = weekly_schedule[day_of_week]
+            start_time = day_schedule.get("start_time", "08:00")
+            end_time = day_schedule.get("end_time", "18:00")
+            slot_duration = availability.get("slot_duration", 60)  # Default 60 minutes
+            
+            logger.info(f"Profissional {professional_id} trabalha {start_time}-{end_time} com slots de {slot_duration}min")
+            
+            # Generate time slots
+            current_time = datetime.strptime(start_time, "%H:%M")
+            end_datetime = datetime.strptime(end_time, "%H:%M")
+            
+            while current_time < end_datetime:
+                time_str = current_time.strftime("%H:%M")
+                
+                # Check if this slot is already booked
+                existing_appointment = await db.appointments.find_one({
+                    "professional_id": ObjectId(professional_id),
+                    "appointment_date": date,
+                    "appointment_time": time_str,
+                    "status": {"$in": ["pending", "confirmed"]}
+                })
+                
+                if not existing_appointment:
+                    # Slot is available
+                    available_slots.append({
+                        "id": f"{professional_id}_{date}_{time_str}",
+                        "professional_id": str(professional_id),
+                        "professional_type": professional_type,
+                        "professional_name": professional.get("full_name", "Professional"),
+                        "date": date,
+                        "time": time_str,
+                        "available": True
+                    })
+                
+                # Move to next slot
+                current_time += timedelta(minutes=slot_duration)
+        
+        logger.info(f"Total de slots disponíveis: {len(available_slots)}")
         
         return {"available_slots": available_slots}
         
@@ -5231,6 +5299,9 @@ async def get_available_appointment_slots(
         raise
     except Exception as e:
         logger.error(f"Erro ao buscar horários disponíveis: {e}")
+        logger.error(f"Detalhes do erro: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Erro ao buscar horários disponíveis")
 
 @api_router.post("/appointments/book")
