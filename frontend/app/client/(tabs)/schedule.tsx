@@ -261,6 +261,9 @@ export default function ClientSchedule() {
     }
 
     setSelectedProfessionalType(professionalType);
+    setSelectedDate(''); // Reset selected date
+    setSelectedSlot(null); // Reset selected slot
+    setAvailableSlots([]); // Clear available slots
     setShowBookingModal(true);
   };
 
