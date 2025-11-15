@@ -5786,7 +5786,7 @@ async def get_professional_appointment_stats(
 ):
     """Get professional's appointment statistics"""
     try:
-        professional_id = str(current_professional.get("id"))
+        professional_id = str(current_professional.get("_id"))  # FIX: usar _id
         professional_type = current_professional.get("professional_type")
         
         # Count appointments for THIS professional and type
