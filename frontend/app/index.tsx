@@ -41,24 +41,14 @@ export default function LandingPage() {
       features: ['🏋️ +50 Academias', '📅 Agendamentos', '💪 Planos Personalizados']
     },
     {
-      id: 'nutritionist',
-      title: 'Nutricionista',
-      subtitle: 'Área Profissional',
-      description: 'Gerencie seus clientes, crie dietas personalizadas e acompanhe resultados',
-      icon: 'nutrition',
-      gradient: ['#10B981', '#059669'],
-      route: '/professional/nutritionist/login',
-      features: ['👥 Meus Clientes', '🍽️ Criar Dietas', '📊 Acompanhamento']
-    },
-    {
-      id: 'personal',
-      title: 'Personal Trainer',
-      subtitle: 'Área Profissional',
-      description: 'Gerencie treinos, acompanhe seus alunos e potencialize resultados',
-      icon: 'barbell',
+      id: 'luxecoach',
+      title: 'LuxeCoach',
+      subtitle: 'Plataforma Profissional',
+      description: 'Nutricionistas e Personal Trainers: Gerencie seus clientes e impulsione resultados',
+      icon: 'fitness',
       gradient: ['#F59E0B', '#D97706'],
-      route: '/professional/personal/login',
-      features: ['👥 Meus Alunos', '💪 Criar Treinos', '📈 Evolução']
+      route: '/professional/luxecoach/login',
+      features: ['👥 Gestão de Clientes', '📊 Acompanhamento', '🎯 Planos Personalizados']
     },
     {
       id: 'admin',
