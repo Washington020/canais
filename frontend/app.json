@@ -60,7 +60,7 @@
     "scheme": "luxepass",
     "extra": {
       "eas": {
-        "projectId": "luxepass-project"
+        "projectId": ""
       }
     }
   }
