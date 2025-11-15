@@ -26,7 +26,6 @@ export default function LuxeCoachLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedType, setSelectedType] = useState<'nutritionist' | 'personal'>('nutritionist');
-  const [loginSuccess, setLoginSuccess] = useState(false);
   const router = useRouter();
 
   const handleLogin = async () => {
