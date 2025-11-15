@@ -5837,7 +5837,7 @@ async def create_diet_for_client(
 ):
     """Nutritionist creates a personalized diet for their client"""
     try:
-        professional_id = current_professional.get("id")
+        professional_id = str(current_professional.get("_id"))  # FIX: usar _id
         professional_type = current_professional.get("professional_type")
         
         # Only nutritionists can create diets
