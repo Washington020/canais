@@ -59,6 +59,40 @@ export default function LuxeCoachLogin() {
     }
   };
 
+  // Se login foi bem-sucedido, mostrar link direto
+  if (loginSuccess) {
+    const targetPath = selectedType === 'personal' 
+      ? '/professional/personal/' 
+      : '/professional/nutritionist/';
+    
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.successContainer}>
+          <Ionicons name="checkmark-circle" size={80} color="#10B981" />
+          <Text style={styles.successTitle}>Login Realizado!</Text>
+          <Text style={styles.successSubtitle}>
+            {selectedType === 'personal' ? '🏋️ Personal Trainer' : '🥗 Nutricionista'}
+          </Text>
+          
+          <Link href={targetPath} asChild>
+            <TouchableOpacity style={styles.continueButton}>
+              <Text style={styles.continueButtonText}>Continuar</Text>
+              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </Link>
+
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => setLoginSuccess(false)}
+          >
+            <Text style={styles.backButtonText}>Voltar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
