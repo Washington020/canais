@@ -38,40 +38,38 @@ export default function LuxeCoachLogin() {
     setLoading(true);
     
     try {
-      // USAR O ENDPOINT CORRETO que os logins separados usam
+      // Usar endpoint correto
       const response = await axios.post(`${API_URL}/professionals/login`, {
-        email: email.toLowerCase().trim(),
-        password: password,
+        email: email.trim(),
+        password: password.trim(),
       });
 
-      console.log('Resposta do backend:', response.data);
+      // Destructuring como nos logins que funcionam
+      const { access_token, professional } = response.data;
 
-      if (response.data.access_token && response.data.professional) {
-        // Salvar token e dados completos do profissional
-        await AsyncStorage.setItem('professionalToken', response.data.access_token);
-        await AsyncStorage.setItem('professional', JSON.stringify(response.data.professional));
-        await AsyncStorage.setItem('professionalEmail', response.data.professional.email);
-        
-        // Determinar caminho baseado na seleção DO USUÁRIO
-        const targetPath = selectedType === 'personal' 
-          ? '/professional/personal/(tabs)/'
-          : '/professional/nutritionist/(tabs)/';
-        
-        console.log('✅ Login bem-sucedido!');
-        console.log('👤 Profissional:', response.data.professional.full_name);
-        console.log('🎯 Tipo selecionado pelo usuário:', selectedType);
-        console.log('🚀 Navegando para:', targetPath);
-        
-        // Desabilitar loading
-        setLoading(false);
-        
-        // Navegar IMEDIATAMENTE
-        router.replace(targetPath as any);
-      }
+      // Salvar token e dados completos
+      await AsyncStorage.setItem('professionalToken', access_token);
+      await AsyncStorage.setItem('professional', JSON.stringify(professional));
+
+      // Determinar caminho SEM BARRA FINAL baseado na seleção do usuário
+      const targetPath = selectedType === 'personal' 
+        ? '/professional/personal/(tabs)'
+        : '/professional/nutritionist/(tabs)';
+      
+      console.log('✅ Login bem-sucedido!');
+      console.log('👤 Profissional:', professional.full_name);
+      console.log('🎯 Tipo selecionado:', selectedType);
+      console.log('🚀 Navegando para:', targetPath);
+      
+      // Navegar SEM as any
+      router.replace(targetPath);
+      
     } catch (error: any) {
-      setLoading(false);
       console.error('Erro no login:', error);
       Alert.alert('Erro', error.response?.data?.detail || 'Email ou senha incorretos');
+    } finally {
+      // setLoading(false) no finally
+      setLoading(false);
     }
   };
 
