@@ -5731,6 +5731,242 @@ async def accept_client_appointment(
             }
         }
         
+
+# Diet Management (Nutritionist)
+@api_router.post("/professionals/create-diet")
+async def create_diet_for_client(
+    diet_data: dict,
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Nutritionist creates a personalized diet for their client"""
+    try:
+        professional_id = current_professional.get("id")
+        professional_type = current_professional.get("professional_type")
+        
+        # Only nutritionists can create diets
+        if professional_type != "nutritionist":
+            raise HTTPException(status_code=403, detail="Apenas nutricionistas podem criar dietas")
+        
+        client_id = diet_data.get("client_id")
+        
+        # Verify client is linked to this professional
+        relationship = await db.professional_clients.find_one({
+            "professional_id": professional_id,
+            "client_id": client_id,
+            "status": "active"
+        })
+        
+        if not relationship:
+            raise HTTPException(status_code=403, detail="Cliente não vinculado a você")
+        
+        # Create diet
+        diet = {
+            "client_id": client_id,
+            "client_name": relationship.get("client_name"),
+            "professional_id": professional_id,
+            "professional_name": current_professional.get("full_name"),
+            "title": diet_data.get("title", "Plano Alimentar"),
+            "description": diet_data.get("description", ""),
+            "goal": diet_data.get("goal", ""),
+            "total_calories": diet_data.get("total_calories", 0),
+            "macros": diet_data.get("macros", {}),  # protein, carbs, fats
+            "meals": diet_data.get("meals", []),  # breakfast, lunch, dinner, snacks
+            "instructions": diet_data.get("instructions", ""),
+            "duration_days": diet_data.get("duration_days", 30),
+            "status": "active",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+        
+        result = await db.diets.insert_one(diet)
+        
+        logger.info(f"Dieta criada por {current_professional.get('full_name')} para cliente {relationship.get('client_name')}")
+        
+        return {
+            "success": True,
+            "message": "Dieta criada com sucesso!",
+            "diet_id": str(result.inserted_id)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao criar dieta: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar dieta")
+
+@api_router.get("/professionals/my-clients-for-diet")
+async def get_my_clients_for_diet(
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Get list of clients linked to this nutritionist"""
+    try:
+        professional_id = current_professional.get("id")
+        
+        clients = await db.professional_clients.find({
+            "professional_id": professional_id,
+            "professional_type": "nutritionist",
+            "status": "active"
+        }).to_list(100)
+        
+        # For each client, check if they already have a diet
+        for client in clients:
+            existing_diet = await db.diets.find_one({
+                "client_id": client["client_id"],
+                "professional_id": professional_id,
+                "status": "active"
+            })
+            client["has_diet"] = existing_diet is not None
+            client["id"] = str(client["_id"])
+            del client["_id"]
+        
+        return {"clients": clients}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar clientes: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar clientes")
+
+# Workout Management (Personal Trainer)
+@api_router.post("/professionals/create-workout")
+async def create_workout_for_client(
+    workout_data: dict,
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Personal trainer creates a personalized workout for their client"""
+    try:
+        professional_id = current_professional.get("id")
+        professional_type = current_professional.get("professional_type")
+        
+        # Only personal trainers can create workouts
+        if professional_type != "personal":
+            raise HTTPException(status_code=403, detail="Apenas personal trainers podem criar treinos")
+        
+        client_id = workout_data.get("client_id")
+        
+        # Verify client is linked to this professional
+        relationship = await db.professional_clients.find_one({
+            "professional_id": professional_id,
+            "client_id": client_id,
+            "status": "active"
+        })
+        
+        if not relationship:
+            raise HTTPException(status_code=403, detail="Cliente não vinculado a você")
+        
+        # Create workout
+        workout = {
+            "client_id": client_id,
+            "client_name": relationship.get("client_name"),
+            "professional_id": professional_id,
+            "professional_name": current_professional.get("full_name"),
+            "title": workout_data.get("title", "Treino Personalizado"),
+            "description": workout_data.get("description", ""),
+            "goal": workout_data.get("goal", ""),
+            "level": workout_data.get("level", "intermediate"),  # beginner, intermediate, advanced
+            "frequency": workout_data.get("frequency", "3x por semana"),
+            "exercises": workout_data.get("exercises", []),  # List of exercises with sets, reps, rest
+            "schedule": workout_data.get("schedule", {}),  # Monday, Wednesday, Friday, etc.
+            "instructions": workout_data.get("instructions", ""),
+            "duration_weeks": workout_data.get("duration_weeks", 4),
+            "status": "active",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+        
+        result = await db.workouts.insert_one(workout)
+        
+        logger.info(f"Treino criado por {current_professional.get('full_name')} para cliente {relationship.get('client_name')}")
+        
+        return {
+            "success": True,
+            "message": "Treino criado com sucesso!",
+            "workout_id": str(result.inserted_id)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao criar treino: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao criar treino")
+
+@api_router.get("/professionals/my-clients-for-workout")
+async def get_my_clients_for_workout(
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Get list of clients linked to this personal trainer"""
+    try:
+        professional_id = current_professional.get("id")
+        
+        clients = await db.professional_clients.find({
+            "professional_id": professional_id,
+            "professional_type": "personal",
+            "status": "active"
+        }).to_list(100)
+        
+        # For each client, check if they already have a workout
+        for client in clients:
+            existing_workout = await db.workouts.find_one({
+                "client_id": client["client_id"],
+                "professional_id": professional_id,
+                "status": "active"
+            })
+            client["has_workout"] = existing_workout is not None
+            client["id"] = str(client["_id"])
+            del client["_id"]
+        
+        return {"clients": clients}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar clientes: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar clientes")
+
+# Client endpoints to view their diet and workout
+@api_router.get("/client/my-diet")
+async def get_my_diet(
+    current_user: User = Depends(get_current_user)
+):
+    """Client gets their active diet created by nutritionist"""
+    try:
+        diet = await db.diets.find_one({
+            "client_id": str(current_user.id),
+            "status": "active"
+        })
+        
+        if not diet:
+            return {"diet": None, "has_diet": False}
+        
+        diet["id"] = str(diet["_id"])
+        del diet["_id"]
+        
+        return {"diet": diet, "has_diet": True}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar dieta: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar dieta")
+
+@api_router.get("/client/my-workout")
+async def get_my_workout(
+    current_user: User = Depends(get_current_user)
+):
+    """Client gets their active workout created by personal trainer"""
+    try:
+        workout = await db.workouts.find_one({
+            "client_id": str(current_user.id),
+            "status": "active"
+        })
+        
+        if not workout:
+            return {"workout": None, "has_workout": False}
+        
+        workout["id"] = str(workout["_id"])
+        del workout["_id"]
+        
+        return {"workout": workout, "has_workout": True}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar treino: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar treino")
+
+
     except HTTPException:
         raise
     except Exception as e:
