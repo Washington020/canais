@@ -6777,11 +6777,11 @@ async def start_video_call(
             raise HTTPException(status_code=403, detail="Acesso negado à consulta")
         
         # Generate room ID
-        room_id = f"call_{appointment_id}_{int(datetime.now().timestamp())}"
+        room_id = f"call_{request.appointment_id}_{int(datetime.now().timestamp())}"
         
         # Update appointment with video call info
         await db.appointments.update_one(
-            {"_id": ObjectId(appointment_id)},
+            {"_id": ObjectId(request.appointment_id)},
             {
                 "$set": {
                     "video_call": {
@@ -6794,10 +6794,12 @@ async def start_video_call(
             }
         )
         
+        logger.info(f"✅ Videochamada iniciada com sucesso - Room: {room_id}")
+        
         return {
             "success": True,
             "room_id": room_id,
-            "appointment_id": appointment_id,
+            "appointment_id": request.appointment_id,
             "websocket_url": f"ws://localhost:8001/socket.io/",
             "message": "Videochamada iniciada com sucesso"
         }
