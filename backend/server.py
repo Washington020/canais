@@ -3854,33 +3854,56 @@ async def set_weekly_availability(request: Request):
     """Professional sets their weekly availability"""
     try:
         # Get professional from token
-        token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        token = request.headers.get("Authorization", "")
+        if not token:
+            raise HTTPException(status_code=401, detail="Token não fornecido")
+        
+        token = token.replace("Bearer ", "")
+        if not token or len(token) < 10:
+            raise HTTPException(status_code=401, detail="Token inválido")
+        
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except jwt.InvalidTokenError as e:
+            logger.error(f"Token inválido: {e}")
+            raise HTTPException(status_code=401, detail="Token inválido ou expirado")
+        
         professional_id = payload.get("sub")
+        if not professional_id:
+            raise HTTPException(status_code=401, detail="ID do profissional não encontrado no token")
         
         data = await request.json()
+        weekly_schedule = data.get("weekly_schedule", {})
+        
+        logger.info(f"Salvando disponibilidade para profissional {professional_id}")
+        logger.info(f"Weekly schedule: {weekly_schedule}")
         
         # Update or create weekly availability
-        await db.professional_availability.update_one(
+        result = await db.professional_availability.update_one(
             {"professional_id": ObjectId(professional_id)},
             {
                 "$set": {
                     "professional_id": ObjectId(professional_id),
-                    "weekly_schedule": data.get("weekly_schedule", {}),
-                    "slot_duration": 15,  # 15 minutes
-                    "start_time": "09:00",
-                    "end_time": "18:00",
+                    "weekly_schedule": weekly_schedule,
+                    "slot_duration": data.get("slot_duration", 15),
+                    "start_time": data.get("start_time", "09:00"),
+                    "end_time": data.get("end_time", "18:00"),
                     "updated_at": datetime.now(timezone.utc)
                 }
             },
             upsert=True
         )
         
+        logger.info(f"Disponibilidade salva com sucesso: {result.modified_count} modificados, {result.upserted_id}")
+        
         return {"success": True, "message": "Disponibilidade atualizada com sucesso"}
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Erro ao definir disponibilidade: {e}")
-        raise HTTPException(status_code=500, detail="Erro ao salvar disponibilidade")
+        logger.error(f"Tipo de erro: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar disponibilidade: {str(e)}")
 
 @api_router.get("/professionals/my-availability")
 async def get_my_availability(request: Request):
