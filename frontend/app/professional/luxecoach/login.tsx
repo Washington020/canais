@@ -74,9 +74,18 @@ export default function LuxeCoachLogin() {
           console.log('🥗 Redirecionando para Nutricionista:', redirectPath);
         }
         
-        console.log('🚀 Executando router.replace...');
-        router.replace(redirectPath);
-        console.log('✅ Router.replace executado com sucesso!');
+        console.log('🚀 Executando router.push com timeout...');
+        
+        // Usar setTimeout para garantir que o estado foi atualizado
+        setTimeout(() => {
+          try {
+            router.push(redirectPath);
+            console.log('✅ Router.push executado com sucesso!');
+          } catch (navError) {
+            console.error('❌ Erro ao navegar:', navError);
+            Alert.alert('Erro', 'Erro ao redirecionar. Tente novamente.');
+          }
+        }, 100);
       } else {
         console.error('❌ Resposta não contém access_token');
         Alert.alert('Erro', 'Resposta do servidor inválida. Tente novamente.');
