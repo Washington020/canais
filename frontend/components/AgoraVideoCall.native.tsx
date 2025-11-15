@@ -70,6 +70,21 @@ export default function AgoraVideoCall({
 
   const initAgora = async () => {
     try {
+      if (!AGORA_APP_ID) {
+        throw new Error('AGORA_APP_ID não configurado');
+      }
+
+      // Get Agora token from backend
+      const tokenResponse = await axios.get(`${API_URL}/agora/token`, {
+        params: {
+          channel_name: channelName,
+          uid: 0, // Dynamic UID
+          role: 1 // Publisher
+        }
+      });
+
+      const { token } = tokenResponse.data;
+
       // Initialize Agora engine
       const engine = await RtcEngine.create(AGORA_APP_ID);
       engineRef.current = engine;
@@ -97,12 +112,12 @@ export default function AgoraVideoCall({
         setIsJoined(true);
       });
 
-      // Join channel
-      await engine.joinChannel(null, channelName, null, 0);
+      // Join channel with token
+      await engine.joinChannel(token, channelName, null, 0);
 
     } catch (error) {
       console.error('Error initializing Agora:', error);
-      Alert.alert('Erro', 'Não foi possível iniciar a videochamada.');
+      Alert.alert('Erro', 'Não foi possível iniciar a videochamada. Verifique sua conexão.');
       onClose();
     }
   };
