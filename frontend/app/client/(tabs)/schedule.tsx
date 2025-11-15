@@ -197,8 +197,14 @@ export default function ClientSchedule() {
 
   const bookAppointment = async (slot: AvailableSlot, notes?: string) => {
     try {
+      console.log('📅 Iniciando booking do agendamento...');
+      console.log('📍 Slot selecionado:', slot);
+      
       const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        console.log('❌ Token não encontrado');
+        return;
+      }
 
       const headers = { Authorization: `Bearer ${token}` };
       const appointmentData = {
@@ -209,7 +215,9 @@ export default function ClientSchedule() {
         notes: notes || ''
       };
 
+      console.log('📤 Enviando dados:', appointmentData);
       const response = await axios.post(`${API_URL}/appointments/book`, appointmentData, { headers });
+      console.log('✅ Resposta recebida:', response.data);
       
       // Verificar se é agendamento pendente ou confirmado
       const isPending = response.data.status === 'pending';
