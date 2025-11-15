@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for LuxePass Token and Query Limits Corrections
-Testing the corrections implemented for query limits and tokens as requested.
+🎯 TESTE COMPLETO DO SISTEMA DE AGENDAMENTOS - CORREÇÕES CRÍTICAS
+Testa as correções implementadas para:
+1. Botão "Confirmar Agendamento" não funcionava no frontend do cliente
+2. Agendas de Nutricionista e Personal Trainer mostravam os mesmos agendamentos
 """
 
 import requests
 import json
+from datetime import datetime, timedelta
 import sys
-from datetime import datetime
 import os
 
-# Get backend URL from environment
-BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://fit-scheduler-11.preview.emergentagent.com')
-API_BASE = f"{BACKEND_URL}/api"
+# Backend URL from environment
+BACKEND_URL = "https://fit-scheduler-11.preview.emergentagent.com/api"
 
 class TestResults:
     def __init__(self):
