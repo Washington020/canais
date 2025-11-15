@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """
-🎯 TESTE COMPLETO DO SISTEMA DE AGENDAMENTOS - CORREÇÕES CRÍTICAS
-Testa as correções implementadas para:
-1. Botão "Confirmar Agendamento" não funcionava no frontend do cliente
-2. Agendas de Nutricionista e Personal Trainer mostravam os mesmos agendamentos
+🎯 TESTE DO NOVO FLUXO DE AGENDAMENTO AUTOMÁTICO
+Testa o novo sistema onde agendamentos são automaticamente atribuídos a profissionais
+e aparecem DIRETO na agenda do profissional (sem precisar aceitar na tab "Novos Clientes").
 """
 
-import requests
+import asyncio
+import aiohttp
 import json
-from datetime import datetime, timedelta
-import sys
 import os
+from datetime import datetime, timedelta
+from typing import Dict, Any, Optional
 
-# Backend URL from environment
-BACKEND_URL = "https://fit-scheduler-11.preview.emergentagent.com/api"
+# Get backend URL from environment
+BACKEND_URL = os.getenv('REACT_APP_BACKEND_URL', 'https://fit-scheduler-11.preview.emergentagent.com')
+API_BASE = f"{BACKEND_URL}/api"
 
-class LuxePassAppointmentTester:
+class LuxePassTester:
     def __init__(self):
         self.backend_url = BACKEND_URL
         self.client_token = None
