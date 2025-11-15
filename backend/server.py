@@ -3760,6 +3760,62 @@ async def approve_client(client_id: str):
         logger.error(f"Erro ao aprovar cliente: {e}")
         raise HTTPException(status_code=500, detail="Erro ao aprovar cliente")
 
+@api_router.post("/admin/release-client/{client_id}")
+async def release_client(
+    client_id: str,
+    professional_type: str = Query(..., description="Tipo: 'nutritionist' ou 'personal'")
+):
+    """Admin releases a client from their assigned professional"""
+    try:
+        # Validate professional type
+        if professional_type not in ["nutritionist", "personal"]:
+            raise HTTPException(status_code=400, detail="Tipo inválido. Use 'nutritionist' ou 'personal'")
+        
+        # Get client
+        client = await db.users.find_one({"_id": ObjectId(client_id)})
+        if not client:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        
+        # Check if client has this type of professional assigned
+        field_name = f"{professional_type}_id"
+        if not client.get(field_name):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cliente não tem {professional_type} atribuído"
+            )
+        
+        # Remove professional assignment
+        unset_fields = {
+            f"{professional_type}_id": "",
+            f"{professional_type}_name": "",
+            f"{professional_type}_cref": "",
+            f"{professional_type}_assigned_at": ""
+        }
+        
+        await db.users.update_one(
+            {"_id": ObjectId(client_id)},
+            {
+                "$unset": unset_fields,
+                "$set": {
+                    f"{professional_type}_released_at": datetime.now(timezone.utc),
+                    f"{professional_type}_released_by": "admin"
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "message": f"Cliente liberado com sucesso. Agora está disponível para outros profissionais.",
+            "client_name": client.get("full_name", "Cliente"),
+            "professional_type": professional_type
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao liberar cliente: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao liberar cliente")
+
 @api_router.post("/professionals/set-weekly-availability")
 async def set_weekly_availability(request: Request):
     """Professional sets their weekly availability"""
