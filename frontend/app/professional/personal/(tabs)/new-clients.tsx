@@ -162,7 +162,7 @@ export default function NewClients() {
             <Text style={styles.emptyTitle}>Nenhum agendamento pendente!</Text>
             <Text style={styles.emptyText}>
               No momento não há novos clientes aguardando.
-              Quando um cliente agendar uma consulta nutricional, ele aparecerá aqui.
+              Quando um cliente agendar um treino personalizado, ele aparecerá aqui.
             </Text>
           </View>
         ) : (
