@@ -3073,6 +3073,12 @@ async def login_professional(professional_login: ProfessionalLogin):
         logger.error(f"Erro no login do profissional: {e}")
         raise HTTPException(status_code=500, detail="Erro no login")
 
+# Alias para compatibilidade com o frontend
+@api_router.post("/auth/login-professional")
+async def login_professional_alias(professional_login: ProfessionalLogin):
+    """Professional login (alias for compatibility)"""
+    return await login_professional(professional_login)
+
 async def get_current_professional(token: str = Depends(oauth2_scheme)):
     """Get current professional from token"""
     credentials_exception = HTTPException(
