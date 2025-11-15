@@ -161,18 +161,27 @@ export default function ClientSchedule() {
 
   const loadAvailableSlots = async (professionalType: string, date: string) => {
     try {
+      console.log('🔍 loadAvailableSlots chamado:', { professionalType, date });
       const token = await AsyncStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        console.log('❌ Token não encontrado');
+        return;
+      }
 
+      console.log('✅ Token encontrado, fazendo chamada para API...');
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(
-        `${API_URL}/appointments/available-slots?professional_type=${professionalType}&date=${date}`,
-        { headers }
-      );
+      const url = `${API_URL}/appointments/available-slots?professional_type=${professionalType}&date=${date}`;
+      console.log('🌐 URL:', url);
+      
+      const response = await axios.get(url, { headers });
+      
+      console.log('✅ Resposta recebida:', response.data);
+      console.log('📊 Total de slots:', response.data.available_slots?.length || 0);
       
       setAvailableSlots(response.data.available_slots || []);
     } catch (error: any) {
-      console.error('Error loading available slots:', error);
+      console.error('❌ Error loading available slots:', error);
+      console.error('❌ Error details:', error.response?.data);
       if (error.response?.status === 403) {
         Alert.alert(
           'Acesso Restrito',
