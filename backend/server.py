@@ -5374,9 +5374,39 @@ async def book_appointment(
                 detail=f"Limite de {monthly_limit} consulta{'s' if monthly_limit > 1 else ''} por mês atingido para o plano {plan_name}. Aguarde o próximo mês ou cancele um agendamento existente."
             )
         
-        # Check if slot is available
+        # Check if slot is available (dynamic slot generation, not pre-created slots)
         appointment_date_str = appointment.appointment_date.strftime("%Y-%m-%d") if isinstance(appointment.appointment_date, datetime) else str(appointment.appointment_date)
         
+        # For new clients (no professional_id), create pending appointment
+        if not appointment.professional_id or appointment.professional_id == "":
+            logger.info(f"Criando agendamento pendente para cliente novo: {current_user.email}")
+            
+            # Create pending appointment (waiting for professional to accept)
+            appointment_data = {
+                "client_id": str(current_user.id),
+                "client_name": current_user.full_name,
+                "client_email": current_user.email,
+                "client_phone": getattr(current_user, 'phone', 'Não informado'),
+                "professional_id": None,  # No professional assigned yet
+                "professional_type": appointment.professional_type,
+                "appointment_date": appointment_date_str,
+                "appointment_time": appointment.appointment_time,
+                "duration_minutes": 60,
+                "status": "pending",  # Pending professional acceptance
+                "notes": appointment.notes or "",
+                "created_at": datetime.now(timezone.utc),
+                "can_cancel_until": datetime.now(timezone.utc) + timedelta(hours=24)
+            }
+            
+            result = await db.appointments.insert_one(appointment_data)
+            
+            return {
+                "appointment_id": str(result.inserted_id),
+                "status": "pending",
+                "message": "Agendamento criado! Aguardando um profissional aceitar sua solicitação."
+            }
+        
+        # For existing clients with specific professional
         available_slot = await db.appointment_slots.find_one({
             "professional_id": appointment.professional_id,
             "professional_type": appointment.professional_type,
@@ -5391,7 +5421,7 @@ async def book_appointment(
                 detail="Horário não disponível"
             )
         
-        # Create appointment
+        # Create appointment with assigned professional
         appointment_data = {
             "client_id": str(current_user.id),
             "client_name": current_user.full_name,
@@ -5399,13 +5429,13 @@ async def book_appointment(
             "client_phone": getattr(current_user, 'phone', 'Não informado'),
             "professional_id": appointment.professional_id,
             "professional_type": appointment.professional_type,
-            "appointment_date": appointment.appointment_date,
+            "appointment_date": appointment_date_str,
             "appointment_time": appointment.appointment_time,
             "duration_minutes": 60,
             "status": "scheduled",
             "notes": appointment.notes or "",
             "created_at": datetime.now(timezone.utc),
-            "can_cancel_until": datetime.now(timezone.utc) + timedelta(hours=24)  # Can cancel up to 24h before
+            "can_cancel_until": datetime.now(timezone.utc) + timedelta(hours=24)
         }
         
         result = await db.appointments.insert_one(appointment_data)
