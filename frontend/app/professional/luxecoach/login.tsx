@@ -289,45 +289,43 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 16,
   },
-  // Success screen styles
-  successContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
+  // Type selector styles
+  typeSelectorContainer: {
+    marginBottom: 24,
   },
-  successTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
+  typeSelectorLabel: {
     color: '#FFFFFF',
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  successSubtitle: {
-    fontSize: 24,
-    color: '#F59E0B',
-    marginBottom: 16,
-  },
-  successMessage: {
     fontSize: 16,
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 24,
+    fontWeight: '600',
+    marginBottom: 12,
   },
-  continueButton: {
+  typeButtons: {
     flexDirection: 'row',
-    backgroundColor: '#F59E0B',
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderRadius: 12,
-    alignItems: 'center',
     gap: 12,
-    marginBottom: 16,
   },
-  continueButtonText: {
+  typeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+    borderWidth: 2,
+    borderColor: 'rgba(148, 163, 184, 0.3)',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  typeButtonActive: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B',
+  },
+  typeButtonText: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  typeButtonTextActive: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });
