@@ -30,80 +30,48 @@ export default function LuxeCoachLogin() {
   const router = useRouter();
 
   const handleLogin = async () => {
+    console.log('=== INÍCIO DO LOGIN ===');
+    
     if (!email || !password) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos');
       return;
     }
 
     setLoading(true);
-    console.log('🔐 Iniciando login LuxeCoach...');
-    console.log('📧 Email:', email.toLowerCase().trim());
-    console.log('🌐 API URL:', API_URL);
     
     try {
       const loginUrl = `${API_URL}/auth/login-professional`;
-      console.log('🔗 URL completa:', loginUrl);
+      console.log('1. URL:', loginUrl);
+      console.log('2. Email:', email.toLowerCase().trim());
       
       const response = await axios.post(loginUrl, {
         email: email.toLowerCase().trim(),
         password: password,
       });
 
-      console.log('✅ Resposta recebida:', JSON.stringify(response.data, null, 2));
+      console.log('3. Status resposta:', response.status);
+      console.log('4. Tem token?', !!response.data.access_token);
 
       if (response.data.access_token) {
-        const professionalType = response.data.professional?.professional_type || response.data.professional_type;
-        console.log('👤 Tipo de profissional detectado:', professionalType);
-        
-        // Salvar token e informações do profissional
+        // Salvar dados
         await AsyncStorage.setItem('professionalToken', response.data.access_token);
-        await AsyncStorage.setItem('professionalEmail', email.toLowerCase().trim());
-        await AsyncStorage.setItem('professionalType', professionalType || 'nutritionist');
         
-        if (response.data.professional) {
-          await AsyncStorage.setItem('professionalInfo', JSON.stringify(response.data.professional));
-          console.log('💾 Informações salvas no AsyncStorage');
-        }
+        const detectedType = response.data.professional?.professional_type || 'nutritionist';
+        console.log('5. Tipo detectado:', detectedType);
         
-        // Salvar tipo do profissional e mostrar tela de sucesso
-        const detectedType = response.data.professional?.professional_type || response.data.professional_type;
-        console.log('✅ Login bem-sucedido!');
-        console.log(`👤 Tipo detectado: ${detectedType}`);
+        await AsyncStorage.setItem('professionalType', detectedType);
         
+        console.log('6. Ativando tela de sucesso...');
         setProfessionalType(detectedType);
         setLoginSuccess(true);
-        setLoading(false);
-        
-        console.log('🎯 Tela de sucesso ativada. Aguardando clique no botão "Continuar"...');
-      } else {
-        console.error('❌ Resposta não contém access_token');
-        Alert.alert('Erro', 'Resposta do servidor inválida. Tente novamente.');
+        console.log('7. Estados atualizados: loginSuccess=true, professionalType=', detectedType);
       }
     } catch (error: any) {
-      console.error('❌ Erro no login:', error);
-      console.error('❌ Detalhes do erro:', JSON.stringify(error, null, 2));
-      
-      if (error.response) {
-        console.error('❌ Status da resposta:', error.response.status);
-        console.error('❌ Dados da resposta:', error.response.data);
-        
-        if (error.response.status === 401) {
-          Alert.alert('Erro', 'Email ou senha incorretos');
-        } else if (error.response.status === 404) {
-          Alert.alert('Erro', 'Endpoint não encontrado. Verifique a configuração.');
-        } else {
-          Alert.alert('Erro', `Erro ${error.response.status}: ${error.response.data?.detail || 'Erro desconhecido'}`);
-        }
-      } else if (error.request) {
-        console.error('❌ Nenhuma resposta do servidor');
-        Alert.alert('Erro', 'Não foi possível conectar ao servidor. Verifique sua conexão.');
-      } else {
-        console.error('❌ Erro ao configurar requisição:', error.message);
-        Alert.alert('Erro', `Erro: ${error.message}`);
-      }
+      console.error('ERRO NO LOGIN:', error.message);
+      Alert.alert('Erro', error.response?.data?.detail || 'Erro ao fazer login');
     } finally {
       setLoading(false);
-      console.log('🔚 Finalizando processo de login');
+      console.log('=== FIM DO LOGIN ===');
     }
   };
 
