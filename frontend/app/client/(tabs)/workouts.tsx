@@ -227,4 +227,12 @@ const styles = StyleSheet.create({
   exerciseDetails: { flexDirection: 'row', gap: 12 },
   exerciseDetail: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: 6, padding: 8 },
   exerciseDetailText: { color: '#FFFFFF', fontSize: 12, marginLeft: 6 },
+  progressInfo: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  progressText: { color: '#FFFFFF', fontSize: 14 },
+  progressPercentage: { color: '#F59E0B', fontSize: 20, fontWeight: 'bold' },
+  progressBarContainer: { height: 12, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 6, overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: '#F59E0B', borderRadius: 6 },
+  progressRemaining: { color: '#94A3B8', fontSize: 12, marginTop: 8 },
+  startWorkoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F59E0B', paddingVertical: 18, borderRadius: 12, marginHorizontal: 16, marginTop: 16 },
+  startWorkoutText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold', marginLeft: 12 },
 });
