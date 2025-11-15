@@ -237,6 +237,10 @@ class AppointmentStats(BaseModel):
     total_clients_served: int
     monthly_hours: float
 
+# Video Call Models
+class VideoCallStartRequest(BaseModel):
+    appointment_id: str
+
 # Supplement System Models  
 class SupplementPlan(BaseModel):
     id: Optional[str] = None
