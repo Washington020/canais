@@ -5991,7 +5991,7 @@ async def get_my_clients_for_workout(
 ):
     """Get list of clients linked to this personal trainer"""
     try:
-        professional_id = current_professional.get("id")
+        professional_id = str(current_professional.get("_id"))  # FIX: usar _id
         
         clients = await db.professional_clients.find({
             "professional_id": professional_id,
