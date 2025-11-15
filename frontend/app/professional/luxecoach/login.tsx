@@ -41,13 +41,20 @@ export default function LuxeCoachLogin() {
       });
 
       if (response.data.access_token) {
+        const professionalType = response.data.professional_type;
+        
         // Salvar token
         await AsyncStorage.setItem('professionalToken', response.data.access_token);
         await AsyncStorage.setItem('professionalEmail', email.toLowerCase().trim());
-        await AsyncStorage.setItem('professionalType', response.data.professional_type || 'luxecoach');
+        await AsyncStorage.setItem('professionalType', professionalType || 'nutritionist');
         
-        // Redirecionar para seleção de modo
-        router.replace('/professional/luxecoach/mode-selection');
+        // Redirecionar automaticamente para a interface correta
+        if (professionalType === 'personal' || professionalType === 'personal_trainer') {
+          router.replace('/professional/personal/(tabs)/');
+        } else {
+          // Default para nutricionista
+          router.replace('/professional/nutritionist/(tabs)/');
+        }
       }
     } catch (error: any) {
       console.error('Login error:', error);
