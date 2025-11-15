@@ -5930,7 +5930,7 @@ async def create_workout_for_client(
 ):
     """Personal trainer creates a personalized workout for their client"""
     try:
-        professional_id = current_professional.get("id")
+        professional_id = str(current_professional.get("_id"))  # FIX: usar _id
         professional_type = current_professional.get("professional_type")
         
         # Only personal trainers can create workouts
