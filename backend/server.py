@@ -5988,6 +5988,110 @@ async def get_professional_appointments(
     """Get professional's appointments"""
     try:
         professional_id = str(current_professional["_id"])
+
+# Workout Session Tracking
+@api_router.post("/client/start-workout-session")
+async def start_workout_session(
+    workout_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Client starts a workout session"""
+    try:
+        # Create workout session
+        session = {
+            "client_id": str(current_user.id),
+            "workout_id": workout_id,
+            "started_at": datetime.now(timezone.utc),
+            "status": "in_progress",
+            "exercises_completed": [],
+            "current_exercise_index": 0
+        }
+        
+        result = await db.workout_sessions.insert_one(session)
+        
+        return {
+            "success": True,
+            "session_id": str(result.inserted_id)
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao iniciar sessão de treino: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao iniciar treino")
+
+@api_router.post("/client/complete-workout-session/{session_id}")
+async def complete_workout_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Client completes a workout session"""
+    try:
+        # Update session
+        await db.workout_sessions.update_one(
+            {"_id": ObjectId(session_id)},
+            {
+                "$set": {
+                    "completed_at": datetime.now(timezone.utc),
+                    "status": "completed"
+                }
+            }
+        )
+        
+        return {"success": True, "message": "Treino concluído com sucesso!"}
+        
+    except Exception as e:
+        logger.error(f"Erro ao concluir treino: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao concluir treino")
+
+@api_router.get("/client/workout-progress/{workout_id}")
+async def get_workout_progress(
+    workout_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get client's progress on a specific workout"""
+    try:
+        # Get workout details
+        workout = await db.workouts.find_one({"_id": ObjectId(workout_id)})
+        if not workout:
+            raise HTTPException(status_code=404, detail="Treino não encontrado")
+        
+        # Calculate expected sessions based on frequency and duration
+        frequency_str = workout.get("frequency", "3x por semana")
+        duration_weeks = workout.get("duration_weeks", 8)
+        
+        # Extract number from frequency (e.g., "3x por semana" -> 3)
+        import re
+        freq_match = re.search(r'(\d+)', frequency_str)
+        sessions_per_week = int(freq_match.group(1)) if freq_match else 3
+        
+        total_expected_sessions = sessions_per_week * duration_weeks
+        
+        # Count completed sessions
+        completed_sessions = await db.workout_sessions.count_documents({
+            "workout_id": workout_id,
+            "client_id": str(current_user.id),
+            "status": "completed"
+        })
+        
+        # Calculate progress percentage
+        progress_percentage = (completed_sessions / total_expected_sessions * 100) if total_expected_sessions > 0 else 0
+        
+        return {
+            "workout_id": workout_id,
+            "total_expected_sessions": total_expected_sessions,
+            "completed_sessions": completed_sessions,
+            "remaining_sessions": max(0, total_expected_sessions - completed_sessions),
+            "progress_percentage": round(progress_percentage, 1),
+            "sessions_per_week": sessions_per_week,
+            "duration_weeks": duration_weeks
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao buscar progresso: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar progresso")
+
+
         
         # Build query
         query = {"professional_id": professional_id}
