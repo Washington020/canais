@@ -311,6 +311,7 @@ export default function ClientSchedule() {
 
   const onDateSelect = (dateString: string) => {
     setSelectedDate(dateString);
+    setSelectedSlot(null); // Clear selected slot when changing date
     setAvailableSlots([]); // Clear previous slots
     loadAvailableSlots(selectedProfessionalType, dateString);
   };
