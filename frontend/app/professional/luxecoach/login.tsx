@@ -64,53 +64,6 @@ export default function LuxeCoachLogin() {
     }
   };
 
-  // Se login foi bem-sucedido, mostrar tela de sucesso com botões manuais
-  console.log('RENDER - loginSuccess:', loginSuccess, 'professionalType:', professionalType);
-  
-  if (loginSuccess) {
-    console.log('RENDERIZANDO TELA DE SUCESSO!');
-    const isPersonal = professionalType === 'personal' || professionalType === 'personal_trainer';
-    return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar style="light" />
-        <View style={styles.successContainer}>
-          <Ionicons name="checkmark-circle" size={80} color="#10B981" />
-          <Text style={styles.successTitle}>Login Realizado!</Text>
-          <Text style={styles.successSubtitle}>
-            {isPersonal ? '🏋️ Personal Trainer' : '🥗 Nutricionista'}
-          </Text>
-          <Text style={styles.successMessage}>
-            Clique no botão abaixo para acessar sua área profissional
-          </Text>
-          
-          <TouchableOpacity
-            style={styles.continueButton}
-            onPress={() => {
-              const path = isPersonal 
-                ? '/professional/personal/' 
-                : '/professional/nutritionist/';
-              console.log('🚀 Navegando para:', path);
-              router.push(path);
-            }}
-          >
-            <Text style={styles.continueButtonText}>Continuar</Text>
-            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              setLoginSuccess(false);
-              setProfessionalType('');
-            }}
-          >
-            <Text style={styles.backButtonText}>Voltar</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
