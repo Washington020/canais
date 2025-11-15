@@ -63,29 +63,52 @@ export default function LuxeCoachLogin() {
           console.log('💾 Informações salvas no AsyncStorage');
         }
         
-        // Redirecionar automaticamente para a interface correta
-        let redirectPath = '';
-        if (professionalType === 'personal' || professionalType === 'personal_trainer') {
-          redirectPath = '/professional/personal/(tabs)/';
-          console.log('🏋️ Redirecionando para Personal Trainer:', redirectPath);
-        } else {
-          // Default para nutricionista
-          redirectPath = '/professional/nutritionist/(tabs)/';
-          console.log('🥗 Redirecionando para Nutricionista:', redirectPath);
+        // Mostrar sucesso e forçar navegação direta
+        console.log('✅ Login bem-sucedido! Redirecionando...');
+        
+        // Desabilitar loading imediatamente
+        setLoading(false);
+        
+        // Determinar caminho baseado no tipo
+        const isPersonal = professionalType === 'personal' || professionalType === 'personal_trainer';
+        const targetPath = isPersonal 
+          ? '/professional/personal/(tabs)/' 
+          : '/professional/nutritionist/(tabs)/';
+        
+        console.log(`🎯 Tipo: ${professionalType}, Caminho: ${targetPath}`);
+        
+        // Tentar múltiplas formas de navegação
+        try {
+          // Forma 1: href direto
+          if (router.push) {
+            console.log('Tentando router.push...');
+            router.push(targetPath);
+          }
+        } catch (e1) {
+          console.error('router.push falhou:', e1);
+          try {
+            // Forma 2: replace
+            console.log('Tentando router.replace...');
+            router.replace(targetPath);
+          } catch (e2) {
+            console.error('router.replace falhou:', e2);
+            // Forma 3: Alert com botão manual
+            Alert.alert(
+              'Login Realizado!',
+              `Você está logado como ${isPersonal ? 'Personal Trainer' : 'Nutricionista'}. Clique OK para continuar.`,
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    router.push(targetPath);
+                  }
+                }
+              ]
+            );
+          }
         }
         
-        console.log('🚀 Executando router.push com timeout...');
-        
-        // Usar setTimeout para garantir que o estado foi atualizado
-        setTimeout(() => {
-          try {
-            router.push(redirectPath);
-            console.log('✅ Router.push executado com sucesso!');
-          } catch (navError) {
-            console.error('❌ Erro ao navegar:', navError);
-            Alert.alert('Erro', 'Erro ao redirecionar. Tente novamente.');
-          }
-        }, 100);
+        return; // Sair da função para não executar setLoading(false) novamente
       } else {
         console.error('❌ Resposta não contém access_token');
         Alert.alert('Erro', 'Resposta do servidor inválida. Tente novamente.');
