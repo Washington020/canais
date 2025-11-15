@@ -5250,6 +5250,7 @@ async def get_available_appointment_slots(
                 continue
             
             logger.info(f"Disponibilidade encontrada para {professional_id}")
+            logger.info(f"Documento RAW: {json.dumps(availability, default=str)}")
             
             weekly_schedule = availability.get("weekly_schedule", {})
             logger.info(f"Weekly schedule para {professional_id}: {weekly_schedule}")
