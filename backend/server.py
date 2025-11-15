@@ -5731,6 +5731,11 @@ async def accept_client_appointment(
             }
         }
         
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao aceitar cliente: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao aceitar cliente")
 
 # Diet Management (Nutritionist)
 @api_router.post("/professionals/create-diet")
