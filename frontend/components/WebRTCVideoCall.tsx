@@ -11,8 +11,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { io, Socket } from 'socket.io-client';
+import Constants from 'expo-constants';
 
 const { width, height } = Dimensions.get('window');
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 'https://gymaccess-1.preview.emergentagent.com';
 
 interface WebRTCVideoCallProps {
   visible: boolean;
