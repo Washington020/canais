@@ -79,6 +79,40 @@ export default function LuxeCoachLogin() {
           </View>
 
           <View style={styles.form}>
+            {/* Seletor de Tipo */}
+            <View style={styles.typeSelectorContainer}>
+              <Text style={styles.typeSelectorLabel}>Você é:</Text>
+              <View style={styles.typeButtons}>
+                <TouchableOpacity
+                  style={[styles.typeButton, selectedType === 'nutritionist' && styles.typeButtonActive]}
+                  onPress={() => setSelectedType('nutritionist')}
+                >
+                  <Ionicons 
+                    name="nutrition" 
+                    size={24} 
+                    color={selectedType === 'nutritionist' ? '#FFFFFF' : '#94A3B8'} 
+                  />
+                  <Text style={[styles.typeButtonText, selectedType === 'nutritionist' && styles.typeButtonTextActive]}>
+                    Nutricionista
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.typeButton, selectedType === 'personal' && styles.typeButtonActive]}
+                  onPress={() => setSelectedType('personal')}
+                >
+                  <Ionicons 
+                    name="barbell" 
+                    size={24} 
+                    color={selectedType === 'personal' ? '#FFFFFF' : '#94A3B8'} 
+                  />
+                  <Text style={[styles.typeButtonText, selectedType === 'personal' && styles.typeButtonTextActive]}>
+                    Personal Trainer
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             <View style={styles.inputContainer}>
               <Ionicons name="mail-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
               <TextInput
