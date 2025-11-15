@@ -75,7 +75,7 @@
 ## 🎯 COMO USAR
 
 ### Acessar App:
-1. Abra: https://apptbook-2.preview.emergentagent.com
+1. Abra: https://fit-scheduler-11.preview.emergentagent.com
 2. Escolha qual interface quer acessar
 3. Use um dos logins acima
 

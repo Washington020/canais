@@ -15,7 +15,7 @@ def main():
     tester = FitPassTester()
     
     print("🚀 Starting LuxePass Payment Plans Pricing Tests")
-    print(f"Testing against: https://apptbook-2.preview.emergentagent.com/api")
+    print(f"Testing against: https://fit-scheduler-11.preview.emergentagent.com/api")
     print("Testing the updated payment plans pricing that was just changed...")
     
     # Run the payment plans tests

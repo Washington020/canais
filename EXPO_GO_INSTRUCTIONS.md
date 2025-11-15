@@ -99,7 +99,7 @@ python3 /app/generate_qr.py
 
 ## 🔗 Links Úteis
 
-- **Preview Web**: https://apptbook-2.preview.emergentagent.com
+- **Preview Web**: https://fit-scheduler-11.preview.emergentagent.com
 - **QR Code HTML**: /app/frontend/EXPO_QR.html
 - **QR Code PNG**: /app/frontend/expo_qr_code.png
 

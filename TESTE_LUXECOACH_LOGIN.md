@@ -150,8 +150,8 @@ sudo supervisorctl tail -f expo
 # Você verá algo como:
 LOG  🔐 Iniciando login LuxeCoach...
 LOG  📧 Email: nutri@luxepass.com
-LOG  🌐 API URL: https://apptbook-2.preview.emergentagent.com
-LOG  🔗 URL completa: https://apptbook-2.preview.emergentagent.com/api/auth/login-professional
+LOG  🌐 API URL: https://fit-scheduler-11.preview.emergentagent.com
+LOG  🔗 URL completa: https://fit-scheduler-11.preview.emergentagent.com/api/auth/login-professional
 LOG  ✅ Resposta recebida: {...}
 LOG  👤 Tipo de profissional detectado: nutritionist
 LOG  🥗 Redirecionando para Nutricionista: /professional/nutritionist/(tabs)/
