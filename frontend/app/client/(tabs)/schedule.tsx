@@ -219,15 +219,13 @@ export default function ClientSchedule() {
       const response = await axios.post(`${API_URL}/appointments/book`, appointmentData, { headers });
       console.log('✅ Resposta recebida:', response.data);
       
-      // Verificar se é agendamento pendente ou confirmado
-      const isConfirmed = response.data.status === 'confirmed';
-      const professionalName = response.data.professional_name || 'o profissional';
+      // Agendamento sempre fica pending aguardando profissional aceitar
+      const isPending = response.data.status === 'pending';
+      const professionalTypeText = slot.professional_type === 'nutritionist' ? 'nutricionista' : 'personal trainer';
       
       Alert.alert(
-        isConfirmed ? '✅ Agendamento Confirmado!' : 'Solicitação Enviada!',
-        isConfirmed 
-          ? `Sua ${slot.professional_type === 'nutritionist' ? 'consulta nutricional' : 'sessão de treino'} foi agendada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${slot.time}h com ${professionalName}!`
-          : `Sua solicitação de ${slot.professional_type === 'nutritionist' ? 'consulta nutricional' : 'sessão de treino'} foi enviada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${slot.time}h.\n\n🟡 Aguardando profissional aceitar...`,
+        '📋 Solicitação Enviada!',
+        `Sua solicitação de ${slot.professional_type === 'nutritionist' ? 'consulta nutricional' : 'sessão de treino'} foi enviada para ${new Date(slot.date).toLocaleDateString('pt-BR')} às ${slot.time}h.\n\n🟡 Aguardando ${professionalTypeText} aceitar...`,
         [{ text: 'OK', onPress: () => {
           setShowBookingModal(false);
           loadMyAppointments();
