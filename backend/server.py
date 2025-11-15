@@ -3909,9 +3909,23 @@ async def set_weekly_availability(request: Request):
 async def get_my_availability(request: Request):
     """Get professional's weekly availability"""
     try:
-        token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        token = request.headers.get("Authorization", "")
+        if not token:
+            raise HTTPException(status_code=401, detail="Token não fornecido")
+        
+        token = token.replace("Bearer ", "")
+        if not token or len(token) < 10:
+            raise HTTPException(status_code=401, detail="Token inválido")
+        
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except jwt.InvalidTokenError as e:
+            logger.error(f"Token inválido ao buscar disponibilidade: {e}")
+            raise HTTPException(status_code=401, detail="Token inválido ou expirado")
+        
         professional_id = payload.get("sub")
+        if not professional_id:
+            raise HTTPException(status_code=401, detail="ID do profissional não encontrado no token")
         
         availability = await db.professional_availability.find_one({
             "professional_id": ObjectId(professional_id)
@@ -3939,6 +3953,8 @@ async def get_my_availability(request: Request):
             "slot_duration": availability.get("slot_duration", 15)
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Erro ao buscar disponibilidade: {e}")
         raise HTTPException(status_code=500, detail="Erro ao carregar disponibilidade")
