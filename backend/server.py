@@ -5738,6 +5738,93 @@ async def accept_client_appointment(
         raise HTTPException(status_code=500, detail="Erro ao aceitar cliente")
 
 # Diet Management (Nutritionist)
+
+# Professional Appointments (filtered by type)
+@api_router.get("/professionals/appointments")
+async def get_professional_appointments(
+    date: Optional[str] = None,
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Get professional's appointments - FILTERED BY PROFESSIONAL TYPE"""
+    try:
+        professional_id = str(current_professional.get("id"))
+        professional_type = current_professional.get("professional_type")
+        
+        # Build query - IMPORTANT: Only appointments assigned to THIS professional AND matching type
+        query = {
+            "professional_id": professional_id,
+            "professional_type": professional_type,  # FILTER BY TYPE!
+            "status": {"$in": ["scheduled", "confirmed"]}  # Only scheduled, not pending
+        }
+        
+        if date:
+            query["appointment_date"] = date
+        
+        appointments = await db.appointments.find(query).sort("appointment_date", 1).to_list(100)
+        
+        # Format appointments
+        for apt in appointments:
+            apt["id"] = str(apt["_id"])
+            del apt["_id"]
+        
+        logger.info(f"Profissional {current_professional.get('email')} ({professional_type}) buscou {len(appointments)} agendamentos")
+        
+        return {"appointments": appointments}
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar agendamentos do profissional: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar agendamentos")
+
+@api_router.get("/professionals/appointments/stats")
+async def get_professional_appointment_stats(
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Get professional's appointment statistics"""
+    try:
+        professional_id = str(current_professional.get("id"))
+        professional_type = current_professional.get("professional_type")
+        
+        # Count appointments for THIS professional and type
+        total_month = await db.appointments.count_documents({
+            "professional_id": professional_id,
+            "professional_type": professional_type,
+            "created_at": {"$gte": datetime.now(timezone.utc).replace(day=1)}
+        })
+        
+        completed = await db.appointments.count_documents({
+            "professional_id": professional_id,
+            "professional_type": professional_type,
+            "status": "completed"
+        })
+        
+        scheduled = await db.appointments.count_documents({
+            "professional_id": professional_id,
+            "professional_type": professional_type,
+            "status": {"$in": ["scheduled", "confirmed"]}
+        })
+        
+        # Count unique clients
+        pipeline = [
+            {"$match": {"professional_id": professional_id, "professional_type": professional_type}},
+            {"$group": {"_id": "$client_id"}},
+            {"$count": "total"}
+        ]
+        unique_clients_result = await db.appointments.aggregate(pipeline).to_list(1)
+        unique_clients = unique_clients_result[0]["total"] if unique_clients_result else 0
+        
+        return {
+            "total_appointments_month": total_month,
+            "completed_appointments": completed,
+            "scheduled_appointments": scheduled,
+            "total_clients_served": unique_clients,
+            "monthly_hours": completed * 1  # Assuming 1h per appointment
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar estatísticas: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar estatísticas")
+
+
 @api_router.post("/professionals/create-diet")
 async def create_diet_for_client(
     diet_data: dict,
