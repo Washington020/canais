@@ -18,500 +18,361 @@ API_BASE = f"{BACKEND_URL}/api"
 
 class LuxePassTester:
     def __init__(self):
-        self.backend_url = BACKEND_URL
-        self.client_token = None
-        self.nutritionist_token = None
-        self.personal_token = None
+        self.session = None
         self.test_results = []
         
-    def log_test(self, test_name, success, details="", error=""):
-        """Log test results"""
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        return self
+        
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self.session:
+            await self.session.close()
+    
+    def log_test(self, test_name: str, success: bool, details: str = "", response_data: Any = None):
+        """Log test result"""
         status = "✅ PASS" if success else "❌ FAIL"
-        result = {
+        print(f"{status} - {test_name}")
+        if details:
+            print(f"   Details: {details}")
+        if response_data and not success:
+            print(f"   Response: {response_data}")
+        
+        self.test_results.append({
             "test": test_name,
-            "status": status,
             "success": success,
             "details": details,
-            "error": error
-        }
-        self.test_results.append(result)
-        print(f"{status}: {test_name}")
-        if details:
-            print(f"   📋 {details}")
-        if error:
-            print(f"   🚨 {error}")
-        print()
-
-    def authenticate_client(self):
-        """Authenticate client user"""
-        try:
-            response = requests.post(f"{self.backend_url}/auth/login", json={
-                "email": "cliente@luxepass.com",
-                "password": "cliente123"
-            })
-            
-            if response.status_code == 200:
-                data = response.json()
-                self.client_token = data["access_token"]
-                self.log_test("Client Authentication", True, 
-                            f"Cliente logged in successfully, token: {self.client_token[:20]}...")
-                return True
-            else:
-                self.log_test("Client Authentication", False, 
-                            error=f"Status {response.status_code}: {response.text}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Client Authentication", False, error=str(e))
-            return False
-
-    def authenticate_nutritionist(self):
-        """Authenticate nutritionist"""
-        try:
-            response = requests.post(f"{self.backend_url}/professionals/login", json={
-                "email": "nutri@luxepass.com",
-                "password": "nutri123"
-            })
-            
-            if response.status_code == 200:
-                data = response.json()
-                self.nutritionist_token = data["access_token"]
-                professional_info = data.get("professional_info", {})
-                self.log_test("Nutritionist Authentication", True, 
-                            f"Nutritionist logged in: {professional_info.get('full_name', 'Unknown')}, Type: {professional_info.get('professional_type', 'Unknown')}")
-                return True
-            else:
-                self.log_test("Nutritionist Authentication", False, 
-                            error=f"Status {response.status_code}: {response.text}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Nutritionist Authentication", False, error=str(e))
-            return False
-
-    def authenticate_personal_trainer(self):
-        """Authenticate personal trainer"""
-        try:
-            response = requests.post(f"{self.backend_url}/professionals/login", json={
-                "email": "personal@luxepass.com",
-                "password": "personal123"
-            })
-            
-            if response.status_code == 200:
-                data = response.json()
-                self.personal_token = data["access_token"]
-                professional_info = data.get("professional_info", {})
-                self.log_test("Personal Trainer Authentication", True, 
-                            f"Personal Trainer logged in: {professional_info.get('full_name', 'Unknown')}, Type: {professional_info.get('professional_type', 'Unknown')}")
-                return True
-            else:
-                self.log_test("Personal Trainer Authentication", False, 
-                            error=f"Status {response.status_code}: {response.text}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Personal Trainer Authentication", False, error=str(e))
-            return False
-
-    def test_available_slots_client(self):
-        """Test client can get available slots for nutritionist"""
-        try:
-            headers = {"Authorization": f"Bearer {self.client_token}"}
-            params = {
-                "professional_type": "nutritionist",
-                "date": "2025-11-20"
-            }
-            
-            response = requests.get(f"{self.backend_url}/appointments/available-slots", 
-                                  headers=headers, params=params)
-            
-            if response.status_code == 200:
-                data = response.json()
-                slots = data.get("available_slots", [])
-                self.log_test("Client Available Slots - Nutritionist", True, 
-                            f"Found {len(slots)} available slots for 2025-11-20")
-                return True
-            else:
-                self.log_test("Client Available Slots - Nutritionist", False, 
-                            error=f"Status {response.status_code}: {response.text}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Client Available Slots - Nutritionist", False, error=str(e))
-            return False
-
-    def test_book_appointment_with_null_professional_id(self):
-        """Test client can book appointment with professional_id: null"""
-        try:
-            headers = {"Authorization": f"Bearer {self.client_token}"}
-            booking_data = {
-                "professional_id": None,
-                "professional_type": "nutritionist",
-                "appointment_date": "2025-11-20",
-                "appointment_time": "10:00",
-                "notes": "Primeira consulta - Teste de agendamento"
-            }
-            
-            response = requests.post(f"{self.backend_url}/appointments/book", 
-                                   headers=headers, json=booking_data)
-            
-            if response.status_code == 200:
-                data = response.json()
-                appointment_id = data.get("appointment_id")
-                status = data.get("status", "unknown")
-                self.log_test("Client Book Appointment (professional_id: null)", True, 
-                            f"Appointment created with ID: {appointment_id}, Status: {status}")
-                return appointment_id
-            else:
-                self.log_test("Client Book Appointment (professional_id: null)", False, 
-                            error=f"Status {response.status_code}: {response.text}")
-                return None
-                
-        except Exception as e:
-            self.log_test("Client Book Appointment (professional_id: null)", False, error=str(e))
-            return None
-
-    def test_nutritionist_appointments_filter(self):
-        """Test nutritionist only sees nutritionist appointments"""
-        try:
-            headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
-            
-            response = requests.get(f"{self.backend_url}/professionals/appointments", 
-                                  headers=headers)
-            
-            if response.status_code == 200:
-                data = response.json()
-                appointments = data.get("appointments", [])
-                
-                # Check all appointments are for nutritionist
-                nutritionist_only = True
-                non_nutritionist_count = 0
-                
-                for appointment in appointments:
-                    prof_type = appointment.get("professional_type")
-                    if prof_type != "nutritionist":
-                        nutritionist_only = False
-                        non_nutritionist_count += 1
-                
-                if nutritionist_only:
-                    self.log_test("Nutritionist Appointments Filter", True, 
-                                f"Found {len(appointments)} appointments, ALL are nutritionist type ✅")
-                else:
-                    self.log_test("Nutritionist Appointments Filter", False, 
-                                error=f"Found {non_nutritionist_count} non-nutritionist appointments in nutritionist's list")
-                
-                return appointments
-            else:
-                self.log_test("Nutritionist Appointments Filter", False, 
-                            error=f"Status {response.status_code}: {response.text}")
-                return []
-                
-        except Exception as e:
-            self.log_test("Nutritionist Appointments Filter", False, error=str(e))
-            return []
-
-    def test_personal_trainer_appointments_filter(self):
-        """Test personal trainer only sees personal trainer appointments"""
-        try:
-            headers = {"Authorization": f"Bearer {self.personal_token}"}
-            
-            response = requests.get(f"{self.backend_url}/professionals/appointments", 
-                                  headers=headers)
-            
-            if response.status_code == 200:
-                data = response.json()
-                appointments = data.get("appointments", [])
-                
-                # Check all appointments are for personal trainer
-                personal_only = True
-                non_personal_count = 0
-                
-                for appointment in appointments:
-                    prof_type = appointment.get("professional_type")
-                    if prof_type != "personal":
-                        personal_only = False
-                        non_personal_count += 1
-                
-                if personal_only:
-                    self.log_test("Personal Trainer Appointments Filter", True, 
-                                f"Found {len(appointments)} appointments, ALL are personal trainer type ✅")
-                else:
-                    self.log_test("Personal Trainer Appointments Filter", False, 
-                                error=f"Found {non_personal_count} non-personal appointments in personal trainer's list")
-                
-                return appointments
-            else:
-                self.log_test("Personal Trainer Appointments Filter", False, 
-                            error=f"Status {response.status_code}: {response.text}")
-                return []
-                
-        except Exception as e:
-            self.log_test("Personal Trainer Appointments Filter", False, error=str(e))
-            return []
-
-    def test_nutritionist_pending_appointments(self):
-        """Test nutritionist can see pending appointments for nutritionist type"""
-        try:
-            headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
-            
-            response = requests.get(f"{self.backend_url}/professionals/pending-appointments", 
-                                  headers=headers)
-            
-            if response.status_code == 200:
-                data = response.json()
-                pending_appointments = data.get("pending_appointments", [])
-                
-                # Check all pending appointments are for nutritionist
-                nutritionist_only = True
-                non_nutritionist_count = 0
-                
-                for appointment in pending_appointments:
-                    prof_type = appointment.get("professional_type")
-                    if prof_type != "nutritionist":
-                        nutritionist_only = False
-                        non_nutritionist_count += 1
-                
-                if nutritionist_only:
-                    self.log_test("Nutritionist Pending Appointments", True, 
-                                f"Found {len(pending_appointments)} pending appointments, ALL are nutritionist type ✅")
-                else:
-                    self.log_test("Nutritionist Pending Appointments", False, 
-                                error=f"Found {non_nutritionist_count} non-nutritionist pending appointments")
-                
-                return pending_appointments
-            else:
-                self.log_test("Nutritionist Pending Appointments", False, 
-                            error=f"Status {response.status_code}: {response.text}")
-                return []
-                
-        except Exception as e:
-            self.log_test("Nutritionist Pending Appointments", False, error=str(e))
-            return []
-
-    def test_personal_trainer_pending_appointments(self):
-        """Test personal trainer can see pending appointments for personal trainer type"""
-        try:
-            headers = {"Authorization": f"Bearer {self.personal_token}"}
-            
-            response = requests.get(f"{self.backend_url}/professionals/pending-appointments", 
-                                  headers=headers)
-            
-            if response.status_code == 200:
-                data = response.json()
-                pending_appointments = data.get("pending_appointments", [])
-                
-                # Check all pending appointments are for personal trainer
-                personal_only = True
-                non_personal_count = 0
-                
-                for appointment in pending_appointments:
-                    prof_type = appointment.get("professional_type")
-                    if prof_type != "personal":
-                        personal_only = False
-                        non_personal_count += 1
-                
-                if personal_only:
-                    self.log_test("Personal Trainer Pending Appointments", True, 
-                                f"Found {len(pending_appointments)} pending appointments, ALL are personal trainer type ✅")
-                else:
-                    self.log_test("Personal Trainer Pending Appointments", False, 
-                                error=f"Found {non_personal_count} non-personal pending appointments")
-                
-                return pending_appointments
-            else:
-                self.log_test("Personal Trainer Pending Appointments", False, 
-                            error=f"Status {response.status_code}: {response.text}")
-                return []
-                
-        except Exception as e:
-            self.log_test("Personal Trainer Pending Appointments", False, error=str(e))
-            return []
-
-    def test_accept_client_workflow(self, pending_appointments):
-        """Test nutritionist can accept a pending appointment"""
-        if not pending_appointments:
-            self.log_test("Accept Client Workflow", False, 
-                        error="No pending appointments available to test accept workflow")
-            return False
-            
-        try:
-            headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
-            appointment_id = pending_appointments[0].get("id")
-            
-            if not appointment_id:
-                self.log_test("Accept Client Workflow", False, 
-                            error="No appointment ID found in pending appointments")
-                return False
-            
-            response = requests.post(f"{self.backend_url}/professionals/accept-client/{appointment_id}", 
-                                   headers=headers)
-            
-            if response.status_code == 200:
-                data = response.json()
-                message = data.get("message", "")
-                self.log_test("Accept Client Workflow", True, 
-                            f"Appointment {appointment_id} accepted successfully: {message}")
-                return True
-            else:
-                self.log_test("Accept Client Workflow", False, 
-                            error=f"Status {response.status_code}: {response.text}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Accept Client Workflow", False, error=str(e))
-            return False
-
-    def test_appointment_isolation_verification(self):
-        """Verify appointments appear only in correct professional's agenda after acceptance"""
-        try:
-            # Get nutritionist appointments
-            nutritionist_headers = {"Authorization": f"Bearer {self.nutritionist_token}"}
-            nutritionist_response = requests.get(f"{self.backend_url}/professionals/appointments", 
-                                               headers=nutritionist_headers)
-            
-            # Get personal trainer appointments  
-            personal_headers = {"Authorization": f"Bearer {self.personal_token}"}
-            personal_response = requests.get(f"{self.backend_url}/professionals/appointments", 
-                                           headers=personal_headers)
-            
-            if nutritionist_response.status_code == 200 and personal_response.status_code == 200:
-                nutritionist_appointments = nutritionist_response.json().get("appointments", [])
-                personal_appointments = personal_response.json().get("appointments", [])
-                
-                # Check for appointment ID overlap
-                nutritionist_ids = {apt.get("id") for apt in nutritionist_appointments}
-                personal_ids = {apt.get("id") for apt in personal_appointments}
-                
-                overlap = nutritionist_ids.intersection(personal_ids)
-                
-                if not overlap:
-                    self.log_test("Appointment Isolation Verification", True, 
-                                f"✅ NO OVERLAP: Nutritionist has {len(nutritionist_ids)} appointments, Personal Trainer has {len(personal_ids)} appointments, NO shared IDs")
-                else:
-                    self.log_test("Appointment Isolation Verification", False, 
-                                error=f"Found {len(overlap)} overlapping appointment IDs: {overlap}")
-                
-                return len(overlap) == 0
-            else:
-                self.log_test("Appointment Isolation Verification", False, 
-                            error=f"Failed to get appointments - Nutritionist: {nutritionist_response.status_code}, Personal: {personal_response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Appointment Isolation Verification", False, error=str(e))
-            return False
-
-    def check_backend_logs(self):
-        """Check if debug logs are appearing correctly"""
-        try:
-            # This is a placeholder - in real implementation we'd check actual logs
-            # For now, we'll just verify the endpoints are responding with expected structure
-            self.log_test("Backend Debug Logs Check", True, 
-                        "Debug logs should show: '🔍 Buscando agendamentos para profissional {email} ({type}) com ID {id}' and '✅ Encontrados {count} agendamentos'")
-            return True
-        except Exception as e:
-            self.log_test("Backend Debug Logs Check", False, error=str(e))
-            return False
-
-    def run_all_tests(self):
-        """Run all appointment system tests"""
-        print("🎯 INICIANDO TESTE COMPLETO DO SISTEMA DE AGENDAMENTOS - CORREÇÕES CRÍTICAS")
-        print("=" * 80)
-        print()
-        
-        # Authentication tests
-        print("📋 FASE 1: AUTENTICAÇÃO DOS USUÁRIOS")
-        print("-" * 40)
-        client_auth = self.authenticate_client()
-        nutritionist_auth = self.authenticate_nutritionist()
-        personal_auth = self.authenticate_personal_trainer()
-        
-        if not all([client_auth, nutritionist_auth, personal_auth]):
-            print("❌ FALHA NA AUTENTICAÇÃO - Interrompendo testes")
-            return False
-        
-        print("\n📋 FASE 2: SISTEMA DE AGENDAMENTOS DO CLIENTE")
-        print("-" * 40)
-        self.test_available_slots_client()
-        appointment_id = self.test_book_appointment_with_null_professional_id()
-        
-        print("\n📋 FASE 3: FILTRO POR TIPO DE PROFISSIONAL")
-        print("-" * 40)
-        nutritionist_appointments = self.test_nutritionist_appointments_filter()
-        personal_appointments = self.test_personal_trainer_appointments_filter()
-        
-        print("\n📋 FASE 4: SISTEMA DE ACEITAR NOVOS CLIENTES")
-        print("-" * 40)
-        nutritionist_pending = self.test_nutritionist_pending_appointments()
-        personal_pending = self.test_personal_trainer_pending_appointments()
-        
-        # Test accept workflow if we have pending appointments
-        if nutritionist_pending:
-            self.test_accept_client_workflow(nutritionist_pending)
-        
-        print("\n📋 FASE 5: VERIFICAÇÃO DE ISOLAMENTO ENTRE PROFISSIONAIS")
-        print("-" * 40)
-        self.test_appointment_isolation_verification()
-        
-        print("\n📋 FASE 6: VERIFICAÇÃO DE LOGS")
-        print("-" * 40)
-        self.check_backend_logs()
-        
-        # Summary
-        print("\n" + "=" * 80)
-        print("📊 RESUMO DOS TESTES")
-        print("=" * 80)
-        
-        passed = sum(1 for result in self.test_results if result["success"])
-        total = len(self.test_results)
-        success_rate = (passed / total) * 100 if total > 0 else 0
-        
-        print(f"✅ Testes Aprovados: {passed}/{total} ({success_rate:.1f}%)")
-        print(f"❌ Testes Falharam: {total - passed}/{total}")
-        print()
-        
-        # Show failed tests
-        failed_tests = [result for result in self.test_results if not result["success"]]
-        if failed_tests:
-            print("🚨 TESTES QUE FALHARAM:")
-            for test in failed_tests:
-                print(f"   ❌ {test['test']}: {test['error']}")
-            print()
-        
-        # Show critical success indicators
-        critical_tests = [
-            "Client Book Appointment (professional_id: null)",
-            "Nutritionist Appointments Filter", 
-            "Personal Trainer Appointments Filter",
-            "Appointment Isolation Verification"
-        ]
-        
-        critical_passed = sum(1 for result in self.test_results 
-                            if result["test"] in critical_tests and result["success"])
-        
-        print("🎯 TESTES CRÍTICOS:")
-        for test_name in critical_tests:
-            test_result = next((r for r in self.test_results if r["test"] == test_name), None)
-            if test_result:
-                status = "✅" if test_result["success"] else "❌"
-                print(f"   {status} {test_name}")
-        
-        print(f"\n🏆 RESULTADO FINAL: {critical_passed}/{len(critical_tests)} testes críticos aprovados")
-        
-        if critical_passed == len(critical_tests):
-            print("🎉 SISTEMA DE AGENDAMENTOS FUNCIONANDO CORRETAMENTE!")
-        else:
-            print("⚠️  SISTEMA PRECISA DE CORREÇÕES ANTES DO DEPLOY")
-        
-        return critical_passed == len(critical_tests)
-
-def main():
-    """Main test execution"""
-    tester = LuxePassAppointmentTester()
-    success = tester.run_all_tests()
+            "response": response_data
+        })
     
-    # Exit with appropriate code
-    sys.exit(0 if success else 1)
+    async def login_user(self, email: str, password: str) -> Optional[str]:
+        """Login user and return JWT token"""
+        try:
+            login_data = {
+                "email": email,
+                "password": password
+            }
+            
+            async with self.session.post(f"{API_BASE}/auth/login", json=login_data) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    token = data.get("access_token")
+                    self.log_test(f"Login {email}", True, f"Token received: {len(token)} chars")
+                    return token
+                else:
+                    error_text = await response.text()
+                    self.log_test(f"Login {email}", False, f"Status {response.status}", error_text)
+                    return None
+        except Exception as e:
+            self.log_test(f"Login {email}", False, f"Exception: {str(e)}")
+            return None
+    
+    async def login_professional(self, email: str, password: str) -> Optional[str]:
+        """Login professional and return JWT token"""
+        try:
+            login_data = {
+                "email": email,
+                "password": password
+            }
+            
+            async with self.session.post(f"{API_BASE}/professionals/login", json=login_data) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    token = data.get("access_token")
+                    professional_info = data.get("professional", {})
+                    self.log_test(f"Professional Login {email}", True, 
+                                f"Token: {len(token)} chars, Name: {professional_info.get('full_name', 'N/A')}")
+                    return token
+                else:
+                    error_text = await response.text()
+                    self.log_test(f"Professional Login {email}", False, f"Status {response.status}", error_text)
+                    return None
+        except Exception as e:
+            self.log_test(f"Professional Login {email}", False, f"Exception: {str(e)}")
+            return None
+    
+    async def book_appointment_auto_assign(self, token: str, professional_type: str, 
+                                         appointment_date: str, appointment_time: str, 
+                                         notes: str = "") -> Dict[str, Any]:
+        """Book appointment with automatic professional assignment"""
+        try:
+            headers = {"Authorization": f"Bearer {token}"}
+            booking_data = {
+                "professional_id": None,  # This triggers auto-assignment
+                "professional_type": professional_type,
+                "appointment_date": appointment_date,
+                "appointment_time": appointment_time,
+                "notes": notes
+            }
+            
+            async with self.session.post(f"{API_BASE}/appointments/book", 
+                                       json=booking_data, headers=headers) as response:
+                response_data = await response.json()
+                
+                if response.status == 200:
+                    status = response_data.get("status")
+                    professional_name = response_data.get("professional_name")
+                    message = response_data.get("message", "")
+                    
+                    success = (status == "confirmed" and 
+                             professional_name is not None and 
+                             professional_name != "")
+                    
+                    self.log_test(f"Book Appointment Auto-Assign ({professional_type})", success,
+                                f"Status: {status}, Professional: {professional_name}, Message: {message}")
+                    
+                    return {
+                        "success": success,
+                        "appointment_id": response_data.get("appointment_id"),
+                        "status": status,
+                        "professional_name": professional_name,
+                        "message": message,
+                        "response": response_data
+                    }
+                else:
+                    self.log_test(f"Book Appointment Auto-Assign ({professional_type})", False,
+                                f"Status {response.status}", response_data)
+                    return {"success": False, "response": response_data}
+                    
+        except Exception as e:
+            self.log_test(f"Book Appointment Auto-Assign ({professional_type})", False, f"Exception: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    async def get_professional_appointments(self, token: str, professional_email: str) -> Dict[str, Any]:
+        """Get professional's appointments"""
+        try:
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            async with self.session.get(f"{API_BASE}/professionals/appointments", headers=headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    appointments = data.get("appointments", [])
+                    
+                    self.log_test(f"Get Appointments ({professional_email})", True,
+                                f"Found {len(appointments)} appointments")
+                    
+                    return {
+                        "success": True,
+                        "appointments": appointments,
+                        "count": len(appointments)
+                    }
+                else:
+                    error_data = await response.json()
+                    self.log_test(f"Get Appointments ({professional_email})", False,
+                                f"Status {response.status}", error_data)
+                    return {"success": False, "response": error_data}
+                    
+        except Exception as e:
+            self.log_test(f"Get Appointments ({professional_email})", False, f"Exception: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    async def verify_appointment_in_schedule(self, appointments: list, expected_appointment_id: str,
+                                           professional_type: str) -> bool:
+        """Verify that the appointment appears in professional's schedule with correct status"""
+        try:
+            found_appointment = None
+            for apt in appointments:
+                if apt.get("id") == expected_appointment_id:
+                    found_appointment = apt
+                    break
+            
+            if not found_appointment:
+                self.log_test(f"Verify Appointment in Schedule ({professional_type})", False,
+                            f"Appointment {expected_appointment_id} not found in schedule")
+                return False
+            
+            # Check appointment details
+            status = found_appointment.get("status")
+            prof_id = found_appointment.get("professional_id")
+            prof_name = found_appointment.get("professional_name")
+            prof_type = found_appointment.get("professional_type")
+            
+            success = (status == "confirmed" and 
+                      prof_id is not None and 
+                      prof_name is not None and 
+                      prof_type == professional_type)
+            
+            details = (f"Status: {status}, Professional ID: {prof_id}, "
+                      f"Professional Name: {prof_name}, Type: {prof_type}")
+            
+            self.log_test(f"Verify Appointment in Schedule ({professional_type})", success, details)
+            
+            return success
+            
+        except Exception as e:
+            self.log_test(f"Verify Appointment in Schedule ({professional_type})", False, f"Exception: {str(e)}")
+            return False
+    
+    async def verify_professional_isolation(self, nutritionist_appointments: list, 
+                                          personal_appointments: list) -> bool:
+        """Verify that nutritionist and personal trainer see only their own appointments"""
+        try:
+            # Check that nutritionist appointments are all nutritionist type
+            nutritionist_isolation = True
+            for apt in nutritionist_appointments:
+                if apt.get("professional_type") != "nutritionist":
+                    nutritionist_isolation = False
+                    break
+            
+            # Check that personal trainer appointments are all personal type
+            personal_isolation = True
+            for apt in personal_appointments:
+                if apt.get("professional_type") != "personal":
+                    personal_isolation = False
+                    break
+            
+            # Check for ID overlap (should be none)
+            nutritionist_ids = {apt.get("id") for apt in nutritionist_appointments}
+            personal_ids = {apt.get("id") for apt in personal_appointments}
+            id_overlap = nutritionist_ids.intersection(personal_ids)
+            
+            success = nutritionist_isolation and personal_isolation and len(id_overlap) == 0
+            
+            details = (f"Nutritionist isolation: {nutritionist_isolation}, "
+                      f"Personal isolation: {personal_isolation}, "
+                      f"ID overlap: {len(id_overlap)} appointments")
+            
+            self.log_test("Verify Professional Isolation", success, details)
+            
+            return success
+            
+        except Exception as e:
+            self.log_test("Verify Professional Isolation", False, f"Exception: {str(e)}")
+            return False
+    
+    def print_summary(self):
+        """Print test summary"""
+        total_tests = len(self.test_results)
+        passed_tests = sum(1 for result in self.test_results if result["success"])
+        
+        print(f"\n{'='*60}")
+        print(f"🎯 TESTE DO NOVO FLUXO DE AGENDAMENTO AUTOMÁTICO - RESULTADOS")
+        print(f"{'='*60}")
+        print(f"Total de testes: {total_tests}")
+        print(f"Testes aprovados: {passed_tests}")
+        print(f"Taxa de sucesso: {(passed_tests/total_tests)*100:.1f}%")
+        
+        if passed_tests < total_tests:
+            print(f"\n❌ TESTES FALHARAM:")
+            for result in self.test_results:
+                if not result["success"]:
+                    print(f"   - {result['test']}: {result['details']}")
+        else:
+            print(f"\n✅ TODOS OS TESTES APROVADOS!")
+        
+        return passed_tests, total_tests
+
+async def main():
+    """Main test execution"""
+    print("🎯 INICIANDO TESTE DO NOVO FLUXO DE AGENDAMENTO AUTOMÁTICO")
+    print("="*60)
+    
+    async with LuxePassTester() as tester:
+        
+        # Test credentials from review request
+        client_email = "cliente@luxepass.com"
+        client_password = "cliente123"
+        nutritionist_email = "nutri@luxepass.com"
+        nutritionist_password = "nutri123"
+        personal_email = "personal@luxepass.com"
+        personal_password = "personal123"
+        
+        # Step 1: Login client
+        print("\n📋 STEP 1: Client Authentication")
+        client_token = await tester.login_user(client_email, client_password)
+        if not client_token:
+            print("❌ Client login failed - aborting tests")
+            return
+        
+        # Step 2: Login professionals
+        print("\n📋 STEP 2: Professional Authentication")
+        nutritionist_token = await tester.login_professional(nutritionist_email, nutritionist_password)
+        personal_token = await tester.login_professional(personal_email, personal_password)
+        
+        if not nutritionist_token or not personal_token:
+            print("❌ Professional login failed - aborting tests")
+            return
+        
+        # Step 3: Test automatic assignment for nutritionist
+        print("\n📋 STEP 3: Test Nutritionist Auto-Assignment")
+        nutritionist_booking = await tester.book_appointment_auto_assign(
+            client_token, 
+            "nutritionist", 
+            "2025-11-25", 
+            "14:00", 
+            "Teste de agendamento automático"
+        )
+        
+        if not nutritionist_booking.get("success"):
+            print("❌ Nutritionist booking failed")
+            return
+        
+        # Step 4: Test automatic assignment for personal trainer
+        print("\n📋 STEP 4: Test Personal Trainer Auto-Assignment")
+        personal_booking = await tester.book_appointment_auto_assign(
+            client_token, 
+            "personal", 
+            "2025-11-26", 
+            "15:00", 
+            "Teste personal trainer automático"
+        )
+        
+        if not personal_booking.get("success"):
+            print("❌ Personal trainer booking failed")
+            return
+        
+        # Step 5: Verify appointments appear in professional schedules
+        print("\n📋 STEP 5: Verify Appointments in Professional Schedules")
+        
+        # Get nutritionist appointments
+        nutritionist_appointments_result = await tester.get_professional_appointments(
+            nutritionist_token, nutritionist_email
+        )
+        
+        # Get personal trainer appointments
+        personal_appointments_result = await tester.get_professional_appointments(
+            personal_token, personal_email
+        )
+        
+        if not nutritionist_appointments_result.get("success") or not personal_appointments_result.get("success"):
+            print("❌ Failed to retrieve professional appointments")
+            return
+        
+        # Step 6: Verify appointment details
+        print("\n📋 STEP 6: Verify Appointment Details")
+        
+        nutritionist_appointments = nutritionist_appointments_result.get("appointments", [])
+        personal_appointments = personal_appointments_result.get("appointments", [])
+        
+        # Verify nutritionist appointment
+        nutritionist_apt_id = nutritionist_booking.get("appointment_id")
+        if nutritionist_apt_id:
+            await tester.verify_appointment_in_schedule(
+                nutritionist_appointments, nutritionist_apt_id, "nutritionist"
+            )
+        
+        # Verify personal trainer appointment
+        personal_apt_id = personal_booking.get("appointment_id")
+        if personal_apt_id:
+            await tester.verify_appointment_in_schedule(
+                personal_appointments, personal_apt_id, "personal"
+            )
+        
+        # Step 7: Verify professional isolation
+        print("\n📋 STEP 7: Verify Professional Isolation")
+        await tester.verify_professional_isolation(nutritionist_appointments, personal_appointments)
+        
+        # Print final summary
+        passed, total = tester.print_summary()
+        
+        # Expected logs verification
+        print(f"\n📋 LOGS IMPORTANTES A PROCURAR:")
+        print(f"   - 'Buscando profissional disponível do tipo...'")
+        print(f"   - 'Atribuindo profissional...'")
+        print(f"   - 'Agendamento criado e confirmado automaticamente...'")
+        
+        return passed == total
 
 if __name__ == "__main__":
-    main()
+    success = asyncio.run(main())
+    exit(0 if success else 1)
