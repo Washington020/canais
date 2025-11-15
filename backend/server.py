@@ -5252,6 +5252,7 @@ async def get_available_appointment_slots(
             logger.info(f"Disponibilidade encontrada para {professional_id}")
             
             weekly_schedule = availability.get("weekly_schedule", {})
+            logger.info(f"Weekly schedule para {professional_id}: {weekly_schedule}")
             
             # Check if professional works on this day
             if day_of_week not in weekly_schedule:
