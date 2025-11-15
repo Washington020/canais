@@ -19,14 +19,17 @@ import Constants from 'expo-constants';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
 
-interface AvailableClient {
+interface PendingAppointment {
   id: string;
-  full_name: string;
-  email: string;
-  plan_type: string;
+  client_name: string;
+  client_email: string;
+  client_phone: string;
+  client_plan: string;
+  appointment_date: string;
+  appointment_time: string;
+  professional_type: string;
+  notes: string;
   created_at: string;
-  subscription_end?: string;
-  tokens_available: number;
 }
 
 export default function NewClients() {
