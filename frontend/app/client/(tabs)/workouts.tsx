@@ -22,8 +22,18 @@ interface Workout {
   duration_weeks: number;
 }
 
+interface WorkoutProgress {
+  total_expected_sessions: number;
+  completed_sessions: number;
+  remaining_sessions: number;
+  progress_percentage: number;
+  sessions_per_week: number;
+  duration_weeks: number;
+}
+
 export default function Workouts() {
   const [workout, setWorkout] = useState<Workout | null>(null);
+  const [progress, setProgress] = useState<WorkoutProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
@@ -36,12 +46,26 @@ export default function Workouts() {
       if (!token) { router.replace('/'); return; }
       const headers = { Authorization: `Bearer ${token}` };
       const response = await axios.get(`${API_URL}/client/my-workout`, { headers });
-      if (response.data.has_workout) setWorkout(response.data.workout);
+      if (response.data.has_workout) {
+        setWorkout(response.data.workout);
+        loadProgress(response.data.workout.id);
+      }
     } catch (error: any) {
       console.error('Erro ao carregar treino:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const loadProgress = async (workoutId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API_URL}/client/workout-progress/${workoutId}`, { headers });
+      setProgress(response.data);
+    } catch (error: any) {
+      console.error('Erro ao carregar progresso:', error);
     }
   };
 
