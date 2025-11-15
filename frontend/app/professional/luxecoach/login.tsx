@@ -25,13 +25,9 @@ export default function LuxeCoachLogin() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loginSuccess, setLoginSuccess] = useState(false);
-  const [professionalType, setProfessionalType] = useState<string>('');
   const router = useRouter();
 
   const handleLogin = async () => {
-    console.log('=== INÍCIO DO LOGIN ===');
-    
     if (!email || !password) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos');
       return;
@@ -40,38 +36,31 @@ export default function LuxeCoachLogin() {
     setLoading(true);
     
     try {
-      const loginUrl = `${API_URL}/auth/login-professional`;
-      console.log('1. URL:', loginUrl);
-      console.log('2. Email:', email.toLowerCase().trim());
-      
-      const response = await axios.post(loginUrl, {
+      const response = await axios.post(`${API_URL}/auth/login-professional`, {
         email: email.toLowerCase().trim(),
         password: password,
       });
 
-      console.log('3. Status resposta:', response.status);
-      console.log('4. Tem token?', !!response.data.access_token);
-
       if (response.data.access_token) {
-        // Salvar dados
+        // Salvar token
         await AsyncStorage.setItem('professionalToken', response.data.access_token);
         
+        // Detectar tipo
         const detectedType = response.data.professional?.professional_type || 'nutritionist';
-        console.log('5. Tipo detectado:', detectedType);
-        
         await AsyncStorage.setItem('professionalType', detectedType);
         
-        console.log('6. Ativando tela de sucesso...');
-        setProfessionalType(detectedType);
-        setLoginSuccess(true);
-        console.log('7. Estados atualizados: loginSuccess=true, professionalType=', detectedType);
+        // NAVEGAÇÃO DIRETA E IMEDIATA
+        setLoading(false); // Desativar loading ANTES de navegar
+        
+        if (detectedType === 'personal' || detectedType === 'personal_trainer') {
+          router.replace('/professional/personal/');
+        } else {
+          router.replace('/professional/nutritionist/');
+        }
       }
     } catch (error: any) {
-      console.error('ERRO NO LOGIN:', error.message);
-      Alert.alert('Erro', error.response?.data?.detail || 'Erro ao fazer login');
-    } finally {
       setLoading(false);
-      console.log('=== FIM DO LOGIN ===');
+      Alert.alert('Erro', error.response?.data?.detail || 'Email ou senha incorretos');
     }
   };
 
