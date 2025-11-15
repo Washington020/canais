@@ -1,20 +1,33 @@
 #!/usr/bin/env python3
 """
-🎯 TESTE DO NOVO FLUXO DE AGENDAMENTO AUTOMÁTICO
-Testa o novo sistema onde agendamentos são automaticamente atribuídos a profissionais
-e aparecem DIRETO na agenda do profissional (sem precisar aceitar na tab "Novos Clientes").
+🎯 TESTE DO FLUXO MANUAL DE AGENDAMENTO (PENDING → ACEITAR → SCHEDULED)
+
+Sistema REVERTIDO para fluxo manual conforme solicitado pelo usuário:
+1. Cliente agenda → Status "PENDING" (sem profissional atribuído)
+2. Aparece na aba "Novos Clientes" do profissional correto
+3. Profissional ACEITA manualmente
+4. Status muda para "SCHEDULED"
+5. Agendamento aparece na "Agenda" principal com botão "Entrar em Consulta"
+
+Testes obrigatórios conforme especificação da revisão.
 """
 
-import asyncio
-import aiohttp
+import requests
 import json
+import sys
 import os
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
 
 # Get backend URL from environment
-BACKEND_URL = os.getenv('REACT_APP_BACKEND_URL', 'https://fit-scheduler-11.preview.emergentagent.com')
+BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fit-scheduler-11.preview.emergentagent.com')
 API_BASE = f"{BACKEND_URL}/api"
+
+# Test credentials
+CREDENTIALS = {
+    "client": {"email": "cliente@luxepass.com", "password": "cliente123"},
+    "nutritionist": {"email": "nutri@luxepass.com", "password": "nutri123"},
+    "personal": {"email": "personal@luxepass.com", "password": "personal123"}
+}
 
 class LuxePassTester:
     def __init__(self):
