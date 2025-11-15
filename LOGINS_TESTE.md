@@ -75,7 +75,7 @@
 ## 🎯 COMO USAR
 
 ### Acessar App:
-1. Abra: https://trainconnect-1.preview.emergentagent.com
+1. Abra: https://gymaccess-1.preview.emergentagent.com
 2. Escolha qual interface quer acessar
 3. Use um dos logins acima
 

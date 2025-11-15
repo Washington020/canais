@@ -99,7 +99,7 @@ python3 /app/generate_qr.py
 
 ## 🔗 Links Úteis
 
-- **Preview Web**: https://trainconnect-1.preview.emergentagent.com
+- **Preview Web**: https://gymaccess-1.preview.emergentagent.com
 - **QR Code HTML**: /app/frontend/EXPO_QR.html
 - **QR Code PNG**: /app/frontend/expo_qr_code.png
 
