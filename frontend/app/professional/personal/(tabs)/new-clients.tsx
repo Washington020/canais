@@ -59,7 +59,7 @@ export default function NewClients() {
     } catch (error: any) {
       console.error('❌ Erro ao carregar agendamentos pendentes:', error);
       if (error.response?.status === 401) {
-        router.replace('/professional/nutritionist/login');
+        router.replace('/professional/personal/login');
       }
     } finally {
       setLoading(false);
