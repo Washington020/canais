@@ -3946,12 +3946,70 @@ async def create_agora_channel(request: Request):
         
         return {
             "channel_name": channel_name,
-            "app_id": "luxepass-app-id"  # You'll need to configure this
+            "app_id": os.environ.get("AGORA_APP_ID", "")
         }
         
     except Exception as e:
         logger.error(f"Erro ao criar canal de vídeo: {e}")
         raise HTTPException(status_code=500, detail="Erro ao criar canal de vídeo")
+
+@api_router.get("/agora/token")
+async def generate_agora_token(
+    channel_name: str = Query(..., description="Nome do canal Agora"),
+    uid: int = Query(0, description="User ID (0 para geração dinâmica)"),
+    role: int = Query(1, description="Role: 1=Publisher, 2=Subscriber")
+):
+    """
+    Gera token de acesso para Agora.io
+    Role: 1 = Publisher (pode transmitir), 2 = Subscriber (só visualiza)
+    """
+    try:
+        from agora_token_builder import RtcTokenBuilder, Role_Publisher, Role_Subscriber
+        
+        app_id = os.environ.get("AGORA_APP_ID")
+        app_certificate = os.environ.get("AGORA_APP_CERTIFICATE")
+        
+        if not app_id or not app_certificate:
+            raise HTTPException(
+                status_code=500, 
+                detail="Agora.io não configurado. Configure AGORA_APP_ID e AGORA_APP_CERTIFICATE"
+            )
+        
+        # Token expira em 24 horas
+        expiration_time_in_seconds = 24 * 3600
+        current_timestamp = int(datetime.now(timezone.utc).timestamp())
+        privilege_expired_ts = current_timestamp + expiration_time_in_seconds
+        
+        # Definir role
+        agora_role = Role_Publisher if role == 1 else Role_Subscriber
+        
+        # Gerar token
+        token = RtcTokenBuilder.buildTokenWithUid(
+            app_id, 
+            app_certificate, 
+            channel_name, 
+            uid, 
+            agora_role, 
+            privilege_expired_ts
+        )
+        
+        return {
+            "token": token,
+            "app_id": app_id,
+            "channel_name": channel_name,
+            "uid": uid,
+            "expires_at": privilege_expired_ts,
+            "role": "publisher" if role == 1 else "subscriber"
+        }
+        
+    except ImportError:
+        raise HTTPException(
+            status_code=500, 
+            detail="Biblioteca agora-token-builder não instalada. Execute: pip install agora-token-builder"
+        )
+    except Exception as e:
+        logger.error(f"Erro ao gerar token Agora: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar token: {str(e)}")
 
 @api_router.get("/admin/confirmed-appointments")
 async def get_confirmed_appointments(
