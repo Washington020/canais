@@ -359,4 +359,38 @@ const styles = StyleSheet.create({
   typeButtonTextActive: {
     color: '#FFFFFF',
   },
+  // Success screen styles
+  successContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  successTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  successSubtitle: {
+    fontSize: 24,
+    color: '#F59E0B',
+    marginBottom: 32,
+  },
+  continueButton: {
+    flexDirection: 'row',
+    backgroundColor: '#F59E0B',
+    paddingVertical: 16,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  continueButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
 });
