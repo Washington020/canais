@@ -25,6 +25,7 @@ export default function LuxeCoachLogin() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedType, setSelectedType] = useState<'nutritionist' | 'personal'>('nutritionist');
   const router = useRouter();
 
   const handleLogin = async () => {
@@ -44,15 +45,12 @@ export default function LuxeCoachLogin() {
       if (response.data.access_token) {
         // Salvar token
         await AsyncStorage.setItem('professionalToken', response.data.access_token);
+        await AsyncStorage.setItem('professionalType', selectedType);
         
-        // Detectar tipo
-        const detectedType = response.data.professional?.professional_type || 'nutritionist';
-        await AsyncStorage.setItem('professionalType', detectedType);
+        // NAVEGAÇÃO DIRETA baseada na ESCOLHA DO USUÁRIO
+        setLoading(false);
         
-        // NAVEGAÇÃO DIRETA E IMEDIATA
-        setLoading(false); // Desativar loading ANTES de navegar
-        
-        if (detectedType === 'personal' || detectedType === 'personal_trainer') {
+        if (selectedType === 'personal') {
           router.replace('/professional/personal/');
         } else {
           router.replace('/professional/nutritionist/');
