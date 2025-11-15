@@ -428,7 +428,7 @@ backend:
     implemented: true
     working: true
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
@@ -438,6 +438,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "✅ APPOINTMENT SYSTEM FIXES VERIFIED (2025-10-06): Successfully completed verification test of the fixed appointment system endpoints with 100% pass rate (6/6 tests). ALL MAJOR BUGS RESOLVED: 1) PREMIUM PLAN SUPPORT FIXED ✅ - Premium users (cliente@luxepass.com/cliente123) now get proper monthly limits of 2 consultations/month for both nutritionist and personal trainer, matching VIP access levels, 2) DATE FORMAT ERROR FIXED ✅ - No more 500 Internal Server Error in GET /api/appointments/my-appointments endpoint for intermediario users (intermediario@luxepass.com/inter123), now returns appointments correctly, 3) AVAILABLE SLOTS ACCESS FIXED ✅ - Premium users can now access GET /api/appointments/available-slots endpoint without 403 Forbidden errors, proper authorization implemented. VERIFICATION RESULTS: Authentication working for both test users ✅, Monthly limits endpoint returns correct limits for premium plan ✅, My appointments endpoint no longer crashes with date format errors ✅, Available slots endpoint allows premium user access ✅. CONCLUSION: All critical appointment system issues identified in previous testing have been successfully resolved. The appointment system is now fully functional for premium and intermediario users with proper plan support, error-free date handling, and correct access permissions."
+        - working: true
+          agent: "testing"
+          comment: "🎯 SISTEMA DE AGENDAMENTOS - CORREÇÕES CRÍTICAS TESTADAS COM SUCESSO (2025-11-15): Executei teste completo do sistema de agendamentos conforme solicitado na revisão, focando nas correções implementadas para os bugs críticos reportados pelo usuário. RESULTADOS EXCELENTES: 100% de aprovação (12/12 testes) com TODAS as correções funcionando perfeitamente. ✅ CORREÇÃO 1 - BOTÃO 'CONFIRMAR AGENDAMENTO' FUNCIONANDO: Cliente consegue fazer booking com professional_id: null, agendamentos são criados com status 'pending' corretamente, sistema aceita dados de agendamento sem professional_id específico ✅. ✅ CORREÇÃO 2 - ISOLAMENTO ENTRE PROFISSIONAIS FUNCIONANDO PERFEITAMENTE: Nutricionista vê APENAS agendamentos com professional_type: 'nutritionist' (1 agendamento encontrado), Personal Trainer vê APENAS agendamentos com professional_type: 'personal' (1 agendamento encontrado), ZERO sobreposição de IDs entre as agendas - isolamento total confirmado ✅. ✅ SISTEMA DE ACEITAR NOVOS CLIENTES OPERACIONAL: GET /api/professionals/pending-appointments retorna agendamentos pending filtrados por tipo profissional, POST /api/professionals/accept-client/{appointment_id} funciona corretamente mudando status de 'pending' para 'scheduled', agendamentos aceitos aparecem corretamente na agenda do profissional que aceitou ✅. ✅ LOGS DE DEBUG CONFIRMADOS: Backend mostra logs esperados '🔍 Buscando agendamentos para profissional {email} ({type}) com ID {id}' e '✅ Encontrados {count} agendamentos' com informações corretas nos logs do sistema ✅. TESTES CRÍTICOS APROVADOS: Client Book Appointment (professional_id: null) ✅, Nutritionist Appointments Filter ✅, Personal Trainer Appointments Filter ✅, Appointment Isolation Verification ✅. CONCLUSÃO: TODAS as correções críticas foram implementadas com sucesso. O sistema de agendamentos está funcionando exatamente como especificado na revisão, com isolamento perfeito entre tipos de profissionais e funcionalidade de booking com professional_id: null operacional."
 
   - task: "Payment Plans API"
     implemented: true
