@@ -5238,6 +5238,7 @@ async def get_available_appointment_slots(
         
         for professional in professionals:
             professional_id = professional["_id"]
+            logger.info(f"Processando profissional: {professional_id} ({professional.get('email', 'sem email')})")
             
             # Get professional's weekly availability
             availability = await db.professional_availability.find_one({
@@ -5247,6 +5248,8 @@ async def get_available_appointment_slots(
             if not availability:
                 logger.info(f"Profissional {professional_id} não tem disponibilidade configurada")
                 continue
+            
+            logger.info(f"Disponibilidade encontrada para {professional_id}")
             
             weekly_schedule = availability.get("weekly_schedule", {})
             
