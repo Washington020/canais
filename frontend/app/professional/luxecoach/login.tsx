@@ -34,14 +34,24 @@ export default function LuxeCoachLogin() {
     }
 
     setLoading(true);
+    console.log('🔐 Iniciando login LuxeCoach...');
+    console.log('📧 Email:', email.toLowerCase().trim());
+    console.log('🌐 API URL:', API_URL);
+    
     try {
-      const response = await axios.post(`${API_URL}/auth/login-professional`, {
+      const loginUrl = `${API_URL}/auth/login-professional`;
+      console.log('🔗 URL completa:', loginUrl);
+      
+      const response = await axios.post(loginUrl, {
         email: email.toLowerCase().trim(),
         password: password,
       });
 
+      console.log('✅ Resposta recebida:', JSON.stringify(response.data, null, 2));
+
       if (response.data.access_token) {
         const professionalType = response.data.professional?.professional_type || response.data.professional_type;
+        console.log('👤 Tipo de profissional detectado:', professionalType);
         
         // Salvar token e informações do profissional
         await AsyncStorage.setItem('professionalToken', response.data.access_token);
@@ -50,25 +60,52 @@ export default function LuxeCoachLogin() {
         
         if (response.data.professional) {
           await AsyncStorage.setItem('professionalInfo', JSON.stringify(response.data.professional));
+          console.log('💾 Informações salvas no AsyncStorage');
         }
         
         // Redirecionar automaticamente para a interface correta
+        let redirectPath = '';
         if (professionalType === 'personal' || professionalType === 'personal_trainer') {
-          router.replace('/professional/personal/(tabs)/');
+          redirectPath = '/professional/personal/(tabs)/';
+          console.log('🏋️ Redirecionando para Personal Trainer:', redirectPath);
         } else {
           // Default para nutricionista
-          router.replace('/professional/nutritionist/(tabs)/');
+          redirectPath = '/professional/nutritionist/(tabs)/';
+          console.log('🥗 Redirecionando para Nutricionista:', redirectPath);
         }
+        
+        console.log('🚀 Executando router.replace...');
+        router.replace(redirectPath);
+        console.log('✅ Router.replace executado com sucesso!');
+      } else {
+        console.error('❌ Resposta não contém access_token');
+        Alert.alert('Erro', 'Resposta do servidor inválida. Tente novamente.');
       }
     } catch (error: any) {
-      console.error('Login error:', error);
-      if (error.response?.status === 401) {
-        Alert.alert('Erro', 'Email ou senha incorretos');
+      console.error('❌ Erro no login:', error);
+      console.error('❌ Detalhes do erro:', JSON.stringify(error, null, 2));
+      
+      if (error.response) {
+        console.error('❌ Status da resposta:', error.response.status);
+        console.error('❌ Dados da resposta:', error.response.data);
+        
+        if (error.response.status === 401) {
+          Alert.alert('Erro', 'Email ou senha incorretos');
+        } else if (error.response.status === 404) {
+          Alert.alert('Erro', 'Endpoint não encontrado. Verifique a configuração.');
+        } else {
+          Alert.alert('Erro', `Erro ${error.response.status}: ${error.response.data?.detail || 'Erro desconhecido'}`);
+        }
+      } else if (error.request) {
+        console.error('❌ Nenhuma resposta do servidor');
+        Alert.alert('Erro', 'Não foi possível conectar ao servidor. Verifique sua conexão.');
       } else {
-        Alert.alert('Erro', 'Não foi possível fazer login. Tente novamente.');
+        console.error('❌ Erro ao configurar requisição:', error.message);
+        Alert.alert('Erro', `Erro: ${error.message}`);
       }
     } finally {
       setLoading(false);
+      console.log('🔚 Finalizando processo de login');
     }
   };
 
