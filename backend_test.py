@@ -29,363 +29,450 @@ CREDENTIALS = {
     "personal": {"email": "personal@luxepass.com", "password": "personal123"}
 }
 
-class LuxePassTester:
+class TestResults:
     def __init__(self):
-        self.session = None
-        self.test_results = []
-        
-    async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
-        return self
-        
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.session:
-            await self.session.close()
+        self.tests = []
+        self.passed = 0
+        self.failed = 0
     
-    def log_test(self, test_name: str, success: bool, details: str = "", response_data: Any = None):
-        """Log test result"""
-        status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status} - {test_name}")
-        if details:
-            print(f"   Details: {details}")
-        if response_data and not success:
-            print(f"   Response: {response_data}")
-        
-        self.test_results.append({
-            "test": test_name,
-            "success": success,
-            "details": details,
-            "response": response_data
+    def add_test(self, name, passed, details=""):
+        self.tests.append({
+            "name": name,
+            "passed": passed,
+            "details": details
         })
-    
-    async def login_user(self, email: str, password: str) -> Optional[str]:
-        """Login user and return JWT token"""
-        try:
-            login_data = {
-                "email": email,
-                "password": password
-            }
-            
-            async with self.session.post(f"{API_BASE}/auth/login", json=login_data) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    token = data.get("access_token")
-                    self.log_test(f"Login {email}", True, f"Token received: {len(token)} chars")
-                    return token
-                else:
-                    error_text = await response.text()
-                    self.log_test(f"Login {email}", False, f"Status {response.status}", error_text)
-                    return None
-        except Exception as e:
-            self.log_test(f"Login {email}", False, f"Exception: {str(e)}")
-            return None
-    
-    async def login_professional(self, email: str, password: str) -> Optional[str]:
-        """Login professional and return JWT token"""
-        try:
-            login_data = {
-                "email": email,
-                "password": password
-            }
-            
-            async with self.session.post(f"{API_BASE}/professionals/login", json=login_data) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    token = data.get("access_token")
-                    professional_info = data.get("professional", {})
-                    self.log_test(f"Professional Login {email}", True, 
-                                f"Token: {len(token)} chars, Name: {professional_info.get('full_name', 'N/A')}")
-                    return token
-                else:
-                    error_text = await response.text()
-                    self.log_test(f"Professional Login {email}", False, f"Status {response.status}", error_text)
-                    return None
-        except Exception as e:
-            self.log_test(f"Professional Login {email}", False, f"Exception: {str(e)}")
-            return None
-    
-    async def book_appointment_auto_assign(self, token: str, professional_type: str, 
-                                         appointment_date: str, appointment_time: str, 
-                                         notes: str = "") -> Dict[str, Any]:
-        """Book appointment with automatic professional assignment"""
-        try:
-            headers = {"Authorization": f"Bearer {token}"}
-            booking_data = {
-                "professional_id": None,  # This triggers auto-assignment
-                "professional_type": professional_type,
-                "appointment_date": appointment_date,
-                "appointment_time": appointment_time,
-                "notes": notes
-            }
-            
-            async with self.session.post(f"{API_BASE}/appointments/book", 
-                                       json=booking_data, headers=headers) as response:
-                response_data = await response.json()
-                
-                if response.status == 200:
-                    status = response_data.get("status")
-                    professional_name = response_data.get("professional_name")
-                    message = response_data.get("message", "")
-                    
-                    success = (status == "confirmed" and 
-                             professional_name is not None and 
-                             professional_name != "")
-                    
-                    self.log_test(f"Book Appointment Auto-Assign ({professional_type})", success,
-                                f"Status: {status}, Professional: {professional_name}, Message: {message}")
-                    
-                    return {
-                        "success": success,
-                        "appointment_id": response_data.get("appointment_id"),
-                        "status": status,
-                        "professional_name": professional_name,
-                        "message": message,
-                        "response": response_data
-                    }
-                else:
-                    self.log_test(f"Book Appointment Auto-Assign ({professional_type})", False,
-                                f"Status {response.status}", response_data)
-                    return {"success": False, "response": response_data}
-                    
-        except Exception as e:
-            self.log_test(f"Book Appointment Auto-Assign ({professional_type})", False, f"Exception: {str(e)}")
-            return {"success": False, "error": str(e)}
-    
-    async def get_professional_appointments(self, token: str, professional_email: str) -> Dict[str, Any]:
-        """Get professional's appointments"""
-        try:
-            headers = {"Authorization": f"Bearer {token}"}
-            
-            async with self.session.get(f"{API_BASE}/professionals/appointments", headers=headers) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    appointments = data.get("appointments", [])
-                    
-                    self.log_test(f"Get Appointments ({professional_email})", True,
-                                f"Found {len(appointments)} appointments")
-                    
-                    return {
-                        "success": True,
-                        "appointments": appointments,
-                        "count": len(appointments)
-                    }
-                else:
-                    error_data = await response.json()
-                    self.log_test(f"Get Appointments ({professional_email})", False,
-                                f"Status {response.status}", error_data)
-                    return {"success": False, "response": error_data}
-                    
-        except Exception as e:
-            self.log_test(f"Get Appointments ({professional_email})", False, f"Exception: {str(e)}")
-            return {"success": False, "error": str(e)}
-    
-    async def verify_appointment_in_schedule(self, appointments: list, expected_appointment_id: str,
-                                           professional_type: str) -> bool:
-        """Verify that the appointment appears in professional's schedule with correct status"""
-        try:
-            found_appointment = None
-            for apt in appointments:
-                if apt.get("id") == expected_appointment_id:
-                    found_appointment = apt
-                    break
-            
-            if not found_appointment:
-                self.log_test(f"Verify Appointment in Schedule ({professional_type})", False,
-                            f"Appointment {expected_appointment_id} not found in schedule")
-                return False
-            
-            # Check appointment details
-            status = found_appointment.get("status")
-            prof_id = found_appointment.get("professional_id")
-            prof_name = found_appointment.get("professional_name")
-            prof_type = found_appointment.get("professional_type")
-            
-            success = (status == "confirmed" and 
-                      prof_id is not None and 
-                      prof_name is not None and 
-                      prof_type == professional_type)
-            
-            details = (f"Status: {status}, Professional ID: {prof_id}, "
-                      f"Professional Name: {prof_name}, Type: {prof_type}")
-            
-            self.log_test(f"Verify Appointment in Schedule ({professional_type})", success, details)
-            
-            return success
-            
-        except Exception as e:
-            self.log_test(f"Verify Appointment in Schedule ({professional_type})", False, f"Exception: {str(e)}")
-            return False
-    
-    async def verify_professional_isolation(self, nutritionist_appointments: list, 
-                                          personal_appointments: list) -> bool:
-        """Verify that nutritionist and personal trainer see only their own appointments"""
-        try:
-            # Check that nutritionist appointments are all nutritionist type
-            nutritionist_isolation = True
-            for apt in nutritionist_appointments:
-                if apt.get("professional_type") != "nutritionist":
-                    nutritionist_isolation = False
-                    break
-            
-            # Check that personal trainer appointments are all personal type
-            personal_isolation = True
-            for apt in personal_appointments:
-                if apt.get("professional_type") != "personal":
-                    personal_isolation = False
-                    break
-            
-            # Check for ID overlap (should be none)
-            nutritionist_ids = {apt.get("id") for apt in nutritionist_appointments}
-            personal_ids = {apt.get("id") for apt in personal_appointments}
-            id_overlap = nutritionist_ids.intersection(personal_ids)
-            
-            success = nutritionist_isolation and personal_isolation and len(id_overlap) == 0
-            
-            details = (f"Nutritionist isolation: {nutritionist_isolation}, "
-                      f"Personal isolation: {personal_isolation}, "
-                      f"ID overlap: {len(id_overlap)} appointments")
-            
-            self.log_test("Verify Professional Isolation", success, details)
-            
-            return success
-            
-        except Exception as e:
-            self.log_test("Verify Professional Isolation", False, f"Exception: {str(e)}")
-            return False
+        if passed:
+            self.passed += 1
+        else:
+            self.failed += 1
     
     def print_summary(self):
-        """Print test summary"""
-        total_tests = len(self.test_results)
-        passed_tests = sum(1 for result in self.test_results if result["success"])
+        print(f"\n{'='*80}")
+        print(f"🎯 TESTE DO FLUXO MANUAL DE AGENDAMENTO - RESULTADOS FINAIS")
+        print(f"{'='*80}")
+        print(f"✅ TESTES APROVADOS: {self.passed}")
+        print(f"❌ TESTES FALHARAM: {self.failed}")
+        print(f"📊 TAXA DE SUCESSO: {(self.passed/(self.passed+self.failed)*100):.1f}%")
+        print(f"{'='*80}")
         
-        print(f"\n{'='*60}")
-        print(f"🎯 TESTE DO NOVO FLUXO DE AGENDAMENTO AUTOMÁTICO - RESULTADOS")
-        print(f"{'='*60}")
-        print(f"Total de testes: {total_tests}")
-        print(f"Testes aprovados: {passed_tests}")
-        print(f"Taxa de sucesso: {(passed_tests/total_tests)*100:.1f}%")
+        for test in self.tests:
+            status = "✅" if test["passed"] else "❌"
+            print(f"{status} {test['name']}")
+            if test["details"]:
+                print(f"   {test['details']}")
         
-        if passed_tests < total_tests:
-            print(f"\n❌ TESTES FALHARAM:")
-            for result in self.test_results:
-                if not result["success"]:
-                    print(f"   - {result['test']}: {result['details']}")
-        else:
-            print(f"\n✅ TODOS OS TESTES APROVADOS!")
-        
-        return passed_tests, total_tests
+        return self.passed, self.failed
 
-async def main():
-    """Main test execution"""
-    print("🎯 INICIANDO TESTE DO NOVO FLUXO DE AGENDAMENTO AUTOMÁTICO")
-    print("="*60)
+def authenticate_user(user_type):
+    """Authenticate user and return token"""
+    try:
+        if user_type in ["nutritionist", "personal"]:
+            # Professional login
+            response = requests.post(
+                f"{API_BASE}/professionals/login",
+                json=CREDENTIALS[user_type],
+                timeout=10
+            )
+        else:
+            # Client login
+            response = requests.post(
+                f"{API_BASE}/auth/login",
+                json=CREDENTIALS[user_type],
+                timeout=10
+            )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("access_token")
+        else:
+            print(f"❌ Falha na autenticação {user_type}: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"❌ Erro na autenticação {user_type}: {e}")
+        return None
+
+def make_authenticated_request(method, endpoint, token, data=None):
+    """Make authenticated request"""
+    headers = {"Authorization": f"Bearer {token}"}
     
-    async with LuxePassTester() as tester:
+    try:
+        if method.upper() == "GET":
+            response = requests.get(f"{API_BASE}{endpoint}", headers=headers, timeout=10)
+        elif method.upper() == "POST":
+            response = requests.post(f"{API_BASE}{endpoint}", headers=headers, json=data, timeout=10)
+        elif method.upper() == "PUT":
+            response = requests.put(f"{API_BASE}{endpoint}", headers=headers, json=data, timeout=10)
         
-        # Test credentials from review request
-        client_email = "cliente@luxepass.com"
-        client_password = "cliente123"
-        nutritionist_email = "nutri@luxepass.com"
-        nutritionist_password = "nutri123"
-        personal_email = "personal@luxepass.com"
-        personal_password = "personal123"
-        
-        # Step 1: Login client
-        print("\n📋 STEP 1: Client Authentication")
-        client_token = await tester.login_user(client_email, client_password)
-        if not client_token:
-            print("❌ Client login failed - aborting tests")
-            return
-        
-        # Step 2: Login professionals
-        print("\n📋 STEP 2: Professional Authentication")
-        nutritionist_token = await tester.login_professional(nutritionist_email, nutritionist_password)
-        personal_token = await tester.login_professional(personal_email, personal_password)
-        
-        if not nutritionist_token or not personal_token:
-            print("❌ Professional login failed - aborting tests")
-            return
-        
-        # Step 3: Test automatic assignment for nutritionist
-        print("\n📋 STEP 3: Test Nutritionist Auto-Assignment")
-        nutritionist_booking = await tester.book_appointment_auto_assign(
-            client_token, 
-            "nutritionist", 
-            "2025-11-25", 
-            "14:00", 
-            "Teste de agendamento automático"
-        )
-        
-        if not nutritionist_booking.get("success"):
-            print("❌ Nutritionist booking failed")
-            return
-        
-        # Step 4: Test automatic assignment for personal trainer
-        print("\n📋 STEP 4: Test Personal Trainer Auto-Assignment")
-        personal_booking = await tester.book_appointment_auto_assign(
-            client_token, 
-            "personal", 
-            "2025-11-26", 
-            "15:00", 
-            "Teste personal trainer automático"
-        )
-        
-        if not personal_booking.get("success"):
-            print("❌ Personal trainer booking failed")
-            return
-        
-        # Step 5: Verify appointments appear in professional schedules
-        print("\n📋 STEP 5: Verify Appointments in Professional Schedules")
-        
-        # Get nutritionist appointments
-        nutritionist_appointments_result = await tester.get_professional_appointments(
-            nutritionist_token, nutritionist_email
-        )
-        
-        # Get personal trainer appointments
-        personal_appointments_result = await tester.get_professional_appointments(
-            personal_token, personal_email
-        )
-        
-        if not nutritionist_appointments_result.get("success") or not personal_appointments_result.get("success"):
-            print("❌ Failed to retrieve professional appointments")
-            return
-        
-        # Step 6: Verify appointment details
-        print("\n📋 STEP 6: Verify Appointment Details")
-        
-        nutritionist_appointments = nutritionist_appointments_result.get("appointments", [])
-        personal_appointments = personal_appointments_result.get("appointments", [])
-        
-        # Verify nutritionist appointment
-        nutritionist_apt_id = nutritionist_booking.get("appointment_id")
-        if nutritionist_apt_id:
-            await tester.verify_appointment_in_schedule(
-                nutritionist_appointments, nutritionist_apt_id, "nutritionist"
+        return response
+    except Exception as e:
+        print(f"❌ Erro na requisição {method} {endpoint}: {e}")
+        return None
+
+def test_manual_appointment_flow():
+    """Test complete manual appointment flow"""
+    results = TestResults()
+    
+    print(f"🎯 INICIANDO TESTE DO FLUXO MANUAL DE AGENDAMENTO")
+    print(f"Backend URL: {BACKEND_URL}")
+    print(f"{'='*80}")
+    
+    # Authenticate all users
+    print("🔐 AUTENTICANDO USUÁRIOS...")
+    client_token = authenticate_user("client")
+    nutritionist_token = authenticate_user("nutritionist")
+    personal_token = authenticate_user("personal")
+    
+    if not all([client_token, nutritionist_token, personal_token]):
+        print("❌ FALHA CRÍTICA: Não foi possível autenticar todos os usuários")
+        return results
+    
+    print("✅ Todos os usuários autenticados com sucesso")
+    
+    # TESTE 1: Cliente Cria Agendamento PENDING para Nutricionista
+    print(f"\n{'='*60}")
+    print("🧪 TESTE 1: Cliente Cria Agendamento PENDING (Nutricionista)")
+    print(f"{'='*60}")
+    
+    appointment_data = {
+        "professional_id": None,
+        "professional_type": "nutritionist",
+        "appointment_date": "2025-11-28",
+        "appointment_time": "10:00",
+        "notes": "Teste fluxo manual - Nutricionista"
+    }
+    
+    response = make_authenticated_request("POST", "/appointments/book", client_token, appointment_data)
+    
+    if response and response.status_code == 200:
+        data = response.json()
+        if data.get("status") == "pending":
+            nutritionist_appointment_id = data.get("appointment_id")
+            results.add_test(
+                "TESTE 1: Cliente cria agendamento PENDING (Nutricionista)",
+                True,
+                f"Status: {data.get('status')}, ID: {nutritionist_appointment_id}, Mensagem: {data.get('message')}"
             )
-        
-        # Verify personal trainer appointment
-        personal_apt_id = personal_booking.get("appointment_id")
-        if personal_apt_id:
-            await tester.verify_appointment_in_schedule(
-                personal_appointments, personal_apt_id, "personal"
+            print(f"✅ Agendamento PENDING criado: {nutritionist_appointment_id}")
+            print(f"📝 Mensagem: {data.get('message')}")
+        else:
+            results.add_test(
+                "TESTE 1: Cliente cria agendamento PENDING (Nutricionista)",
+                False,
+                f"Status incorreto: {data.get('status')} (esperado: pending)"
             )
+            nutritionist_appointment_id = None
+    else:
+        results.add_test(
+            "TESTE 1: Cliente cria agendamento PENDING (Nutricionista)",
+            False,
+            f"Falha na requisição: {response.status_code if response else 'Timeout'}"
+        )
+        nutritionist_appointment_id = None
+    
+    # TESTE 2: Agendamento Aparece em "Novos Clientes" do Nutricionista
+    print(f"\n{'='*60}")
+    print("🧪 TESTE 2: Agendamento em 'Novos Clientes' (Nutricionista)")
+    print(f"{'='*60}")
+    
+    response = make_authenticated_request("GET", "/professionals/pending-appointments", nutritionist_token)
+    
+    if response and response.status_code == 200:
+        data = response.json()
+        pending_appointments = data.get("pending_appointments", [])
         
-        # Step 7: Verify professional isolation
-        print("\n📋 STEP 7: Verify Professional Isolation")
-        await tester.verify_professional_isolation(nutritionist_appointments, personal_appointments)
+        # Find our appointment
+        found_appointment = None
+        for apt in pending_appointments:
+            if apt.get("professional_type") == "nutritionist" and apt.get("status") == "pending":
+                found_appointment = apt
+                break
         
-        # Print final summary
-        passed, total = tester.print_summary()
+        if found_appointment:
+            results.add_test(
+                "TESTE 2: Agendamento em 'Novos Clientes' (Nutricionista)",
+                True,
+                f"Encontrado agendamento ID: {found_appointment.get('id')}, Tipo: {found_appointment.get('professional_type')}"
+            )
+            print(f"✅ Agendamento encontrado na lista de novos clientes")
+            print(f"📋 ID: {found_appointment.get('id')}")
+            print(f"👤 Cliente: {found_appointment.get('client_name')}")
+            print(f"📅 Data/Hora: {found_appointment.get('appointment_date')} às {found_appointment.get('appointment_time')}")
+            
+            # Use this ID for acceptance test
+            if not nutritionist_appointment_id:
+                nutritionist_appointment_id = found_appointment.get('id')
+        else:
+            results.add_test(
+                "TESTE 2: Agendamento em 'Novos Clientes' (Nutricionista)",
+                False,
+                f"Agendamento não encontrado. Total pendentes: {len(pending_appointments)}"
+            )
+    else:
+        results.add_test(
+            "TESTE 2: Agendamento em 'Novos Clientes' (Nutricionista)",
+            False,
+            f"Falha na requisição: {response.status_code if response else 'Timeout'}"
+        )
+    
+    # TESTE 3: Nutricionista ACEITA o Cliente
+    print(f"\n{'='*60}")
+    print("🧪 TESTE 3: Nutricionista ACEITA Cliente")
+    print(f"{'='*60}")
+    
+    if nutritionist_appointment_id:
+        response = make_authenticated_request("POST", f"/professionals/accept-client/{nutritionist_appointment_id}", nutritionist_token)
         
-        # Expected logs verification
-        print(f"\n📋 LOGS IMPORTANTES A PROCURAR:")
-        print(f"   - 'Buscando profissional disponível do tipo...'")
-        print(f"   - 'Atribuindo profissional...'")
-        print(f"   - 'Agendamento criado e confirmado automaticamente...'")
+        if response and response.status_code == 200:
+            data = response.json()
+            if data.get("success") and data.get("appointment", {}).get("status") == "scheduled":
+                results.add_test(
+                    "TESTE 3: Nutricionista aceita cliente",
+                    True,
+                    f"Sucesso: {data.get('success')}, Status: {data.get('appointment', {}).get('status')}, Mensagem: {data.get('message')}"
+                )
+                print(f"✅ Cliente aceito com sucesso!")
+                print(f"📝 Mensagem: {data.get('message')}")
+                print(f"📊 Status do agendamento: {data.get('appointment', {}).get('status')}")
+            else:
+                results.add_test(
+                    "TESTE 3: Nutricionista aceita cliente",
+                    False,
+                    f"Resposta inesperada: {data}"
+                )
+        else:
+            results.add_test(
+                "TESTE 3: Nutricionista aceita cliente",
+                False,
+                f"Falha na requisição: {response.status_code if response else 'Timeout'} - {response.text if response else 'N/A'}"
+            )
+    else:
+        results.add_test(
+            "TESTE 3: Nutricionista aceita cliente",
+            False,
+            "ID do agendamento não disponível dos testes anteriores"
+        )
+    
+    # TESTE 4: Agendamento APARECE na Agenda Principal do Nutricionista
+    print(f"\n{'='*60}")
+    print("🧪 TESTE 4: Agendamento na Agenda Principal (Nutricionista)")
+    print(f"{'='*60}")
+    
+    response = make_authenticated_request("GET", "/professionals/appointments", nutritionist_token)
+    
+    if response and response.status_code == 200:
+        data = response.json()
+        appointments = data.get("appointments", [])
         
-        return passed == total
+        # Find our scheduled appointment
+        found_scheduled = None
+        for apt in appointments:
+            if apt.get("id") == nutritionist_appointment_id or (
+                apt.get("professional_type") == "nutritionist" and 
+                apt.get("status") in ["scheduled", "confirmed"] and
+                apt.get("professional_id") is not None
+            ):
+                found_scheduled = apt
+                break
+        
+        if found_scheduled:
+            results.add_test(
+                "TESTE 4: Agendamento na Agenda Principal (Nutricionista)",
+                True,
+                f"Agendamento encontrado - ID: {found_scheduled.get('id')}, Status: {found_scheduled.get('status')}, Professional ID: {found_scheduled.get('professional_id')}"
+            )
+            print(f"✅ Agendamento encontrado na agenda principal")
+            print(f"📋 ID: {found_scheduled.get('id')}")
+            print(f"📊 Status: {found_scheduled.get('status')}")
+            print(f"👨‍⚕️ Professional ID: {found_scheduled.get('professional_id')}")
+        else:
+            results.add_test(
+                "TESTE 4: Agendamento na Agenda Principal (Nutricionista)",
+                False,
+                f"Agendamento não encontrado na agenda. Total agendamentos: {len(appointments)}"
+            )
+    else:
+        results.add_test(
+            "TESTE 4: Agendamento na Agenda Principal (Nutricionista)",
+            False,
+            f"Falha na requisição: {response.status_code if response else 'Timeout'}"
+        )
+    
+    # TESTE 5: Agendamento NÃO Aparece Mais em "Novos Clientes"
+    print(f"\n{'='*60}")
+    print("🧪 TESTE 5: Agendamento NÃO está mais em 'Novos Clientes'")
+    print(f"{'='*60}")
+    
+    response = make_authenticated_request("GET", "/professionals/pending-appointments", nutritionist_token)
+    
+    if response and response.status_code == 200:
+        data = response.json()
+        pending_appointments = data.get("pending_appointments", [])
+        
+        # Check if our appointment is still in pending list
+        still_pending = False
+        for apt in pending_appointments:
+            if apt.get("id") == nutritionist_appointment_id:
+                still_pending = True
+                break
+        
+        if not still_pending:
+            results.add_test(
+                "TESTE 5: Agendamento NÃO está mais em 'Novos Clientes'",
+                True,
+                f"Agendamento removido da lista de pendentes. Total pendentes: {len(pending_appointments)}"
+            )
+            print(f"✅ Agendamento não está mais na lista de novos clientes")
+            print(f"📊 Total agendamentos pendentes: {len(pending_appointments)}")
+        else:
+            results.add_test(
+                "TESTE 5: Agendamento NÃO está mais em 'Novos Clientes'",
+                False,
+                "Agendamento ainda aparece na lista de pendentes"
+            )
+    else:
+        results.add_test(
+            "TESTE 5: Agendamento NÃO está mais em 'Novos Clientes'",
+            False,
+            f"Falha na requisição: {response.status_code if response else 'Timeout'}"
+        )
+    
+    # TESTE 6: Mesmo Fluxo para Personal Trainer
+    print(f"\n{'='*60}")
+    print("🧪 TESTE 6: Fluxo Completo para Personal Trainer")
+    print(f"{'='*60}")
+    
+    # 6A: Cliente cria agendamento para Personal
+    appointment_data_personal = {
+        "professional_id": None,
+        "professional_type": "personal",
+        "appointment_date": "2025-11-29",
+        "appointment_time": "15:00",
+        "notes": "Teste fluxo manual - Personal"
+    }
+    
+    response = make_authenticated_request("POST", "/appointments/book", client_token, appointment_data_personal)
+    
+    if response and response.status_code == 200:
+        data = response.json()
+        if data.get("status") == "pending":
+            personal_appointment_id = data.get("appointment_id")
+            print(f"✅ 6A: Agendamento PENDING criado para Personal: {personal_appointment_id}")
+        else:
+            personal_appointment_id = None
+            print(f"❌ 6A: Status incorreto: {data.get('status')}")
+    else:
+        personal_appointment_id = None
+        print(f"❌ 6A: Falha na criação do agendamento para Personal")
+    
+    # 6B: Personal vê o agendamento em pending
+    response = make_authenticated_request("GET", "/professionals/pending-appointments", personal_token)
+    
+    personal_found = False
+    if response and response.status_code == 200:
+        data = response.json()
+        pending_appointments = data.get("pending_appointments", [])
+        
+        for apt in pending_appointments:
+            if apt.get("professional_type") == "personal" and apt.get("status") == "pending":
+                personal_found = True
+                if not personal_appointment_id:
+                    personal_appointment_id = apt.get('id')
+                print(f"✅ 6B: Personal encontrou agendamento pendente: {apt.get('id')}")
+                break
+    
+    if not personal_found:
+        print(f"❌ 6B: Personal não encontrou agendamento pendente")
+    
+    # 6C: Personal aceita o cliente
+    if personal_appointment_id:
+        response = make_authenticated_request("POST", f"/professionals/accept-client/{personal_appointment_id}", personal_token)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if data.get("success"):
+                print(f"✅ 6C: Personal aceitou cliente com sucesso")
+            else:
+                print(f"❌ 6C: Falha na aceitação do cliente pelo Personal")
+        else:
+            print(f"❌ 6C: Erro na requisição de aceitação do Personal")
+    
+    # 6D: Agendamento aparece na agenda do Personal
+    response = make_authenticated_request("GET", "/professionals/appointments", personal_token)
+    
+    personal_scheduled_found = False
+    if response and response.status_code == 200:
+        data = response.json()
+        appointments = data.get("appointments", [])
+        
+        for apt in appointments:
+            if apt.get("professional_type") == "personal" and apt.get("status") in ["scheduled", "confirmed"]:
+                personal_scheduled_found = True
+                print(f"✅ 6D: Agendamento encontrado na agenda do Personal: {apt.get('id')}")
+                break
+    
+    if not personal_scheduled_found:
+        print(f"❌ 6D: Agendamento não encontrado na agenda do Personal")
+    
+    # Consolidate Personal Trainer test result
+    personal_success = personal_appointment_id and personal_found and personal_scheduled_found
+    results.add_test(
+        "TESTE 6: Fluxo completo Personal Trainer",
+        personal_success,
+        f"Criação: {'✅' if personal_appointment_id else '❌'}, Pending: {'✅' if personal_found else '❌'}, Agenda: {'✅' if personal_scheduled_found else '❌'}"
+    )
+    
+    # TESTE 7: Isolamento Entre Profissionais
+    print(f"\n{'='*60}")
+    print("🧪 TESTE 7: Isolamento Entre Profissionais")
+    print(f"{'='*60}")
+    
+    # Nutritionist should not see Personal appointments
+    response = make_authenticated_request("GET", "/professionals/pending-appointments", nutritionist_token)
+    nutritionist_isolation = True
+    
+    if response and response.status_code == 200:
+        data = response.json()
+        pending_appointments = data.get("pending_appointments", [])
+        
+        for apt in pending_appointments:
+            if apt.get("professional_type") == "personal":
+                nutritionist_isolation = False
+                break
+    
+    # Personal should not see Nutritionist appointments
+    response = make_authenticated_request("GET", "/professionals/pending-appointments", personal_token)
+    personal_isolation = True
+    
+    if response and response.status_code == 200:
+        data = response.json()
+        pending_appointments = data.get("pending_appointments", [])
+        
+        for apt in pending_appointments:
+            if apt.get("professional_type") == "nutritionist":
+                personal_isolation = False
+                break
+    
+    isolation_success = nutritionist_isolation and personal_isolation
+    results.add_test(
+        "TESTE 7: Isolamento entre profissionais",
+        isolation_success,
+        f"Nutricionista não vê Personal: {'✅' if nutritionist_isolation else '❌'}, Personal não vê Nutricionista: {'✅' if personal_isolation else '❌'}"
+    )
+    
+    if isolation_success:
+        print(f"✅ Isolamento perfeito entre tipos de profissionais")
+    else:
+        print(f"❌ Falha no isolamento entre profissionais")
+    
+    return results
 
 if __name__ == "__main__":
-    success = asyncio.run(main())
-    exit(0 if success else 1)
+    print("🎯 TESTE DO FLUXO MANUAL DE AGENDAMENTO (PENDING → ACEITAR → SCHEDULED)")
+    print("Sistema REVERTIDO para fluxo manual conforme solicitado pelo usuário")
+    print(f"Testando contra: {BACKEND_URL}")
+    
+    results = test_manual_appointment_flow()
+    passed, failed = results.print_summary()
+    
+    # Exit with appropriate code
+    sys.exit(0 if failed == 0 else 1)
