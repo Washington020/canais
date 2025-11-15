@@ -10,6 +10,9 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import axios from 'axios';
+
 // Conditional import for mobile only
 let RtcEngine: any;
 let RtcLocalView: any;
@@ -30,8 +33,9 @@ if (Platform.OS !== 'web') {
 
 const { width, height } = Dimensions.get('window');
 
-// Agora App ID - você precisará configurar isso
-const AGORA_APP_ID = 'luxepass-app-id';
+// Get Agora App ID from environment
+const AGORA_APP_ID = process.env.EXPO_PUBLIC_AGORA_APP_ID || Constants.expoConfig?.extra?.EXPO_PUBLIC_AGORA_APP_ID || '';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '/api';
 
 interface AgoraVideoCallProps {
   visible: boolean;
