@@ -47,7 +47,7 @@ export default function NewClients() {
     try {
       const token = await AsyncStorage.getItem('professionalToken');
       if (!token) {
-        router.replace('/professional/nutritionist/login');
+        router.replace('/professional/personal/login');
         return;
       }
 
