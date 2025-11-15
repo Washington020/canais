@@ -65,52 +65,16 @@ export default function LuxeCoachLogin() {
           console.log('💾 Informações salvas no AsyncStorage');
         }
         
-        // Mostrar sucesso e forçar navegação direta
-        console.log('✅ Login bem-sucedido! Redirecionando...');
+        // Salvar tipo do profissional e mostrar tela de sucesso
+        const detectedType = response.data.professional?.professional_type || response.data.professional_type;
+        console.log('✅ Login bem-sucedido!');
+        console.log(`👤 Tipo detectado: ${detectedType}`);
         
-        // Desabilitar loading imediatamente
+        setProfessionalType(detectedType);
+        setLoginSuccess(true);
         setLoading(false);
         
-        // Determinar caminho baseado no tipo
-        const isPersonal = professionalType === 'personal' || professionalType === 'personal_trainer';
-        const targetPath = isPersonal 
-          ? '/professional/personal/(tabs)/' 
-          : '/professional/nutritionist/(tabs)/';
-        
-        console.log(`🎯 Tipo: ${professionalType}, Caminho: ${targetPath}`);
-        
-        // Tentar múltiplas formas de navegação
-        try {
-          // Forma 1: href direto
-          if (router.push) {
-            console.log('Tentando router.push...');
-            router.push(targetPath);
-          }
-        } catch (e1) {
-          console.error('router.push falhou:', e1);
-          try {
-            // Forma 2: replace
-            console.log('Tentando router.replace...');
-            router.replace(targetPath);
-          } catch (e2) {
-            console.error('router.replace falhou:', e2);
-            // Forma 3: Alert com botão manual
-            Alert.alert(
-              'Login Realizado!',
-              `Você está logado como ${isPersonal ? 'Personal Trainer' : 'Nutricionista'}. Clique OK para continuar.`,
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    router.push(targetPath);
-                  }
-                }
-              ]
-            );
-          }
-        }
-        
-        return; // Sair da função para não executar setLoading(false) novamente
+        console.log('🎯 Tela de sucesso ativada. Aguardando clique no botão "Continuar"...');
       } else {
         console.error('❌ Resposta não contém access_token');
         Alert.alert('Erro', 'Resposta do servidor inválida. Tente novamente.');
