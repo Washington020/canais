@@ -25,7 +25,8 @@
         "backgroundColor": "#0B0D17"
       },
       "package": "com.luxepass.app",
-      "versionCode": 1
+      "versionCode": 1,
+      "jsEngine": "jsc"
     },
     "web": {
       "favicon": "./assets/images/favicon.png",
