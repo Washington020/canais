@@ -119,7 +119,7 @@ Data de configuração: 15/11/2025
 
 ### **1. Testar Geração de Token:**
 ```bash
-curl "https://gymaccess-1.preview.emergentagent.com/api/agora/token?channel_name=test_channel&uid=0&role=1"
+curl "https://apptbook-2.preview.emergentagent.com/api/agora/token?channel_name=test_channel&uid=0&role=1"
 ```
 
 **Resposta esperada:**
@@ -136,7 +136,7 @@ curl "https://gymaccess-1.preview.emergentagent.com/api/agora/token?channel_name
 
 ### **2. Testar Login Profissional:**
 ```bash
-curl -X POST "https://gymaccess-1.preview.emergentagent.com/api/auth/login-professional" \
+curl -X POST "https://apptbook-2.preview.emergentagent.com/api/auth/login-professional" \
   -H "Content-Type: application/json" \
   -d '{"email":"nutri@luxepass.com","password":"nutri123"}'
 ```
