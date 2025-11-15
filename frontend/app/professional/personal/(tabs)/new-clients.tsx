@@ -47,45 +47,23 @@ export default function NewClients() {
         return;
       }
 
-      const response = await axios.get(`${API_URL}/professionals/unassigned-clients`, {
+      const response = await axios.get(`${API_URL}/professionals/available-clients`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Simulate new clients data for personal trainer
-      const mockNewClients: NewClient[] = [
-        {
-          id: '4',
-          full_name: 'Pedro Costa Premium',
-          email: 'pedro@luxepass.com',
-          plan: 'premium',
-          status: 'active',
-          registration_date: '2025-01-13',
-          fitness_goals: ['Perda de peso', 'Ganho muscular', 'Condicionamento'],
-          experience_level: 'iniciante'
-        },
-        {
-          id: '5', 
-          full_name: 'Julia Santos VIP',
-          email: 'julia@luxepass.com',
-          plan: 'vip',
-          status: 'active',
-          registration_date: '2025-01-12',
-          fitness_goals: ['Tonificação', 'Flexibilidade', 'Força'],
-          experience_level: 'intermediario'
-        },
-        {
-          id: '6',
-          full_name: 'Roberto Silva Premium',
-          email: 'roberto@luxepass.com',
-          plan: 'premium',
-          status: 'active',
-          registration_date: '2025-01-11',
-          fitness_goals: ['Hipertrofia', 'Definição'],
-          experience_level: 'avancado'
-        }
-      ];
+      const availableClients = response.data.available_clients || [];
+      const formattedClients: NewClient[] = availableClients.map((client: any) => ({
+        id: client.id,
+        full_name: client.full_name,
+        email: client.email,
+        plan: client.plan_type,
+        status: 'active',
+        registration_date: client.created_at ? new Date(client.created_at).toISOString().split('T')[0] : '',
+        fitness_goals: [],
+        experience_level: 'iniciante'
+      }));
 
-      setNewClients(mockNewClients);
+      setNewClients(formattedClients);
     } catch (error: any) {
       console.error('Error loading new clients:', error);
       if (error.response?.status === 401) {
