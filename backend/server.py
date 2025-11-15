@@ -5747,7 +5747,7 @@ async def get_professional_appointments(
 ):
     """Get professional's appointments - FILTERED BY PROFESSIONAL TYPE"""
     try:
-        professional_id = str(current_professional.get("id"))
+        professional_id = str(current_professional.get("_id"))  # FIX: usar _id em vez de id
         professional_type = current_professional.get("professional_type")
         
         # Build query - IMPORTANT: Only appointments assigned to THIS professional AND matching type
@@ -5760,7 +5760,12 @@ async def get_professional_appointments(
         if date:
             query["appointment_date"] = date
         
+        logger.info(f"🔍 Buscando agendamentos para profissional {current_professional.get('email')} ({professional_type}) com ID {professional_id}")
+        logger.info(f"🔍 Query: {query}")
+        
         appointments = await db.appointments.find(query).sort("appointment_date", 1).to_list(100)
+        
+        logger.info(f"✅ Encontrados {len(appointments)} agendamentos")
         
         # Format appointments
         for apt in appointments:
