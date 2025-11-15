@@ -6748,18 +6748,30 @@ async def get_notification_stats():
 # Video Call API Endpoints
 @api_router.post("/video-call/start")
 async def start_video_call(
-    appointment_id: str,
-    current_user = Depends(get_current_user)
+    request: VideoCallStartRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """Start a video call for an appointment"""
+    """Start a video call for an appointment - works for both clients and professionals"""
     try:
+        # Extract token
+        token = credentials.credentials
+        
+        # Try to decode as professional or client
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("sub")
+            token_type = payload.get("type")
+        except JWTError:
+            raise HTTPException(status_code=401, detail="Token inválido")
+        
+        logger.info(f"🎥 Iniciando videochamada - User ID: {user_id}, Type: {token_type}, Appointment: {request.appointment_id}")
+        
         # Verify appointment exists and user has access
-        appointment = await db.appointments.find_one({"_id": ObjectId(appointment_id)})
+        appointment = await db.appointments.find_one({"_id": ObjectId(request.appointment_id)})
         if not appointment:
             raise HTTPException(status_code=404, detail="Consulta não encontrada")
         
         # Check if user is participant (client or professional)
-        user_id = str(current_user.id)
         if (appointment.get("client_id") != user_id and 
             appointment.get("professional_id") != user_id):
             raise HTTPException(status_code=403, detail="Acesso negado à consulta")
