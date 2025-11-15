@@ -1459,6 +1459,33 @@ async def get_gyms(lat: Optional[float] = None, lng: Optional[float] = None):
     
     return gyms
 
+@api_router.get("/gyms/list")
+async def list_gyms(current_user: User = Depends(get_current_user)):
+    """List all available gyms with their details"""
+    try:
+        gyms_list = []
+        gyms_cursor = db.gyms.find({"status": "active"})
+        
+        for gym_doc in gyms_cursor:
+            gym_data = {
+                "id": str(gym_doc["_id"]),
+                "name": gym_doc.get("name", ""),
+                "full_address": gym_doc.get("full_address", ""),
+                "phone": gym_doc.get("phone"),
+                "opening_hours": gym_doc.get("opening_hours"),
+                "latitude": gym_doc.get("latitude"),
+                "longitude": gym_doc.get("longitude"),
+                "type": gym_doc.get("type", "fitness"),
+                "capacity": gym_doc.get("capacity", 0),
+                "amenities": gym_doc.get("amenities", [])
+            }
+            gyms_list.append(gym_data)
+        
+        return {"gyms": gyms_list, "total": len(gyms_list)}
+    except Exception as e:
+        logger.error(f"Error listing gyms: {e}")
+        raise HTTPException(status_code=500, detail="Error loading gyms")
+
 @api_router.post("/gyms", response_model=Gym)
 async def create_gym(gym: Gym):
     gym_dict = gym.dict()
