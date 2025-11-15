@@ -38,24 +38,28 @@ export default function LuxeCoachLogin() {
     setLoading(true);
     
     try {
-      const response = await axios.post(`${API_URL}/auth/login-professional`, {
+      // USAR O ENDPOINT CORRETO que os logins separados usam
+      const response = await axios.post(`${API_URL}/professionals/login`, {
         email: email.toLowerCase().trim(),
         password: password,
       });
 
-      if (response.data.access_token) {
-        // Salvar token
+      console.log('Resposta do backend:', response.data);
+
+      if (response.data.access_token && response.data.professional) {
+        // Salvar token e dados completos do profissional
         await AsyncStorage.setItem('professionalToken', response.data.access_token);
-        await AsyncStorage.setItem('professionalType', selectedType);
-        await AsyncStorage.setItem('professionalEmail', email.toLowerCase().trim());
+        await AsyncStorage.setItem('professional', JSON.stringify(response.data.professional));
+        await AsyncStorage.setItem('professionalEmail', response.data.professional.email);
         
-        // Determinar caminho baseado na seleção
+        // Determinar caminho baseado na seleção DO USUÁRIO
         const targetPath = selectedType === 'personal' 
           ? '/professional/personal/(tabs)/'
           : '/professional/nutritionist/(tabs)/';
         
         console.log('✅ Login bem-sucedido!');
-        console.log('🎯 Tipo selecionado:', selectedType);
+        console.log('👤 Profissional:', response.data.professional.full_name);
+        console.log('🎯 Tipo selecionado pelo usuário:', selectedType);
         console.log('🚀 Navegando para:', targetPath);
         
         // Desabilitar loading
@@ -66,6 +70,7 @@ export default function LuxeCoachLogin() {
       }
     } catch (error: any) {
       setLoading(false);
+      console.error('Erro no login:', error);
       Alert.alert('Erro', error.response?.data?.detail || 'Email ou senha incorretos');
     }
   };
