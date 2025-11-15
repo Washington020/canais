@@ -5226,7 +5226,9 @@ async def get_available_appointment_slots(
         logger.info(f"Buscando horários para {professional_type} na data {date} (dia da semana: {day_of_week})")
         
         # Get all professionals of this type with availability for this day
-        professionals = await db.professionals.find({
+        # Professionals are stored in users collection with user_type="professional"
+        professionals = await db.users.find({
+            "user_type": "professional",
             "professional_type": professional_type
         }).to_list(100)
         
