@@ -41,12 +41,16 @@ export default function LuxeCoachLogin() {
       });
 
       if (response.data.access_token) {
-        const professionalType = response.data.professional_type;
+        const professionalType = response.data.professional?.professional_type || response.data.professional_type;
         
-        // Salvar token
+        // Salvar token e informações do profissional
         await AsyncStorage.setItem('professionalToken', response.data.access_token);
         await AsyncStorage.setItem('professionalEmail', email.toLowerCase().trim());
         await AsyncStorage.setItem('professionalType', professionalType || 'nutritionist');
+        
+        if (response.data.professional) {
+          await AsyncStorage.setItem('professionalInfo', JSON.stringify(response.data.professional));
+        }
         
         // Redirecionar automaticamente para a interface correta
         if (professionalType === 'personal' || professionalType === 'personal_trainer') {
