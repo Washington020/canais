@@ -49,31 +49,26 @@ export default function LuxeCoachLogin() {
         await AsyncStorage.setItem('professionalType', selectedType);
         await AsyncStorage.setItem('professionalEmail', email.toLowerCase().trim());
         
-        // Marcar login como sucesso e mostrar link
+        // Determinar caminho baseado na seleção
+        const targetPath = selectedType === 'personal' 
+          ? '/professional/personal/(tabs)/'
+          : '/professional/nutritionist/(tabs)/';
+        
+        console.log('✅ Login bem-sucedido!');
+        console.log('🎯 Tipo selecionado:', selectedType);
+        console.log('🚀 Navegando para:', targetPath);
+        
+        // Desabilitar loading
         setLoading(false);
-        setLoginSuccess(true);
+        
+        // Navegar IMEDIATAMENTE
+        router.replace(targetPath as any);
       }
     } catch (error: any) {
       setLoading(false);
       Alert.alert('Erro', error.response?.data?.detail || 'Email ou senha incorretos');
     }
   };
-
-  // Redirecionar automaticamente após login bem-sucedido
-  React.useEffect(() => {
-    if (loginSuccess && selectedType) {
-      const targetPath = selectedType === 'personal' 
-        ? '/professional/personal/(tabs)/'
-        : '/professional/nutritionist/(tabs)/';
-      
-      // Usar setTimeout para garantir que o estado foi salvo
-      const timer = setTimeout(() => {
-        router.replace(targetPath as any);
-      }, 300);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [loginSuccess, selectedType]);
 
   return (
     <SafeAreaView style={styles.container}>
