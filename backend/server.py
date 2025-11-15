@@ -5618,6 +5618,126 @@ async def get_monthly_appointment_limits(current_user: User = Depends(get_curren
         logger.error(f"Erro ao buscar limites: {e}")
         raise HTTPException(status_code=500, detail="Erro ao buscar limites")
 
+# New Clients Queue - Pending Appointments
+@api_router.get("/professionals/pending-appointments")
+async def get_pending_appointments(
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Get pending appointments waiting for professional acceptance"""
+    try:
+        professional_type = current_professional.get("professional_type")
+        
+        # Find all pending appointments for this professional type
+        pending_appointments = await db.appointments.find({
+            "professional_type": professional_type,
+            "status": "pending",
+            "professional_id": None  # Not yet assigned to any professional
+        }).sort("created_at", 1).to_list(100)
+        
+        # Format appointments
+        for apt in pending_appointments:
+            apt["id"] = str(apt["_id"])
+            del apt["_id"]
+            
+            # Get client details
+            if "client_id" in apt:
+                client = await db.users.find_one({"_id": ObjectId(apt["client_id"])})
+                if client:
+                    apt["client_plan"] = client.get("plan_type", "basico")
+        
+        logger.info(f"Profissional {current_professional.get('email')} buscou {len(pending_appointments)} agendamentos pendentes")
+        
+        return {
+            "pending_appointments": pending_appointments,
+            "count": len(pending_appointments)
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar agendamentos pendentes: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar agendamentos pendentes")
+
+@api_router.post("/professionals/accept-client/{appointment_id}")
+async def accept_client_appointment(
+    appointment_id: str,
+    current_professional: dict = Depends(get_current_professional)
+):
+    """Professional accepts a pending appointment and becomes the client's professional"""
+    try:
+        professional_id = current_professional.get("id")
+        professional_type = current_professional.get("professional_type")
+        professional_name = current_professional.get("full_name", "Profissional")
+        
+        # Find pending appointment
+        appointment = await db.appointments.find_one({
+            "_id": ObjectId(appointment_id),
+            "status": "pending",
+            "professional_type": professional_type,
+            "professional_id": None
+        })
+        
+        if not appointment:
+            raise HTTPException(
+                status_code=404,
+                detail="Agendamento não encontrado ou já foi aceito por outro profissional"
+            )
+        
+        # Update appointment: assign professional and change status to scheduled
+        await db.appointments.update_one(
+            {"_id": ObjectId(appointment_id)},
+            {
+                "$set": {
+                    "professional_id": professional_id,
+                    "professional_name": professional_name,
+                    "status": "scheduled",
+                    "accepted_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        # Create professional-client relationship if doesn't exist
+        client_id = appointment["client_id"]
+        
+        existing_relationship = await db.professional_clients.find_one({
+            "professional_id": professional_id,
+            "client_id": client_id
+        })
+        
+        if not existing_relationship:
+            await db.professional_clients.insert_one({
+                "professional_id": professional_id,
+                "professional_type": professional_type,
+                "professional_name": professional_name,
+                "client_id": client_id,
+                "client_name": appointment.get("client_name", "Cliente"),
+                "client_email": appointment.get("client_email", ""),
+                "client_phone": appointment.get("client_phone", ""),
+                "first_appointment_date": appointment["appointment_date"],
+                "created_at": datetime.now(timezone.utc),
+                "status": "active"
+            })
+        
+        logger.info(f"Profissional {professional_name} aceitou cliente {appointment.get('client_name')} - Agendamento: {appointment_id}")
+        
+        return {
+            "success": True,
+            "message": f"Cliente {appointment.get('client_name')} aceito com sucesso!",
+            "appointment": {
+                "id": appointment_id,
+                "client_name": appointment.get("client_name"),
+                "date": appointment["appointment_date"],
+                "time": appointment["appointment_time"],
+                "status": "scheduled"
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao aceitar cliente: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao aceitar cliente")
+
+
 # Professional Appointment Management
 @api_router.get("/professionals/appointments")
 async def get_professional_appointments(
