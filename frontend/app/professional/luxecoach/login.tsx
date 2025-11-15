@@ -76,7 +76,10 @@ export default function LuxeCoachLogin() {
   };
 
   // Se login foi bem-sucedido, mostrar tela de sucesso com botões manuais
+  console.log('RENDER - loginSuccess:', loginSuccess, 'professionalType:', professionalType);
+  
   if (loginSuccess) {
+    console.log('RENDERIZANDO TELA DE SUCESSO!');
     const isPersonal = professionalType === 'personal' || professionalType === 'personal_trainer';
     return (
       <SafeAreaView style={styles.container}>
