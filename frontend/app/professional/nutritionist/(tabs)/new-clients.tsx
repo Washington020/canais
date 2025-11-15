@@ -49,9 +49,9 @@ export default function NewClients() {
       }
 
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_URL}/professionals/unassigned-clients`, { headers });
+      const response = await axios.get(`${API_URL}/professionals/available-clients`, { headers });
       
-      setAvailableClients(response.data.clients || []);
+      setAvailableClients(response.data.available_clients || []);
     } catch (error: any) {
       console.error('Error loading available clients:', error);
       if (error.response?.status === 401) {
