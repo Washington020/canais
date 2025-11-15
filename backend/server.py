@@ -5377,43 +5377,22 @@ async def book_appointment(
         # Check if slot is available (dynamic slot generation, not pre-created slots)
         appointment_date_str = appointment.appointment_date.strftime("%Y-%m-%d") if isinstance(appointment.appointment_date, datetime) else str(appointment.appointment_date)
         
-        # For new clients (no professional_id), auto-assign a professional
+        # For new clients (no professional_id), create pending appointment
         if not appointment.professional_id or appointment.professional_id == "":
-            logger.info(f"Buscando profissional disponível do tipo {appointment.professional_type} para cliente: {current_user.email}")
+            logger.info(f"🟡 Criando agendamento PENDING para cliente {current_user.email} - Tipo: {appointment.professional_type}")
             
-            # Find professionals of this type with availability
-            professionals = await db.users.find({
-                "user_type": "professional",
-                "professional_type": appointment.professional_type
-            }).to_list(100)
-            
-            if not professionals:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Nenhum {('nutricionista' if appointment.professional_type == 'nutritionist' else 'personal trainer')} disponível no momento."
-                )
-            
-            # For simplicity, assign to first available professional
-            # You could add more logic here (round-robin, least busy, etc.)
-            selected_professional = professionals[0]
-            professional_id = str(selected_professional["_id"])
-            professional_name = selected_professional.get("full_name", "Profissional")
-            
-            logger.info(f"Atribuindo profissional {professional_name} (ID: {professional_id}) ao agendamento")
-            
-            # Create confirmed appointment with assigned professional
+            # Create pending appointment (waiting for professional to accept)
             appointment_data = {
                 "client_id": str(current_user.id),
                 "client_name": current_user.full_name,
                 "client_email": current_user.email,
                 "client_phone": getattr(current_user, 'phone', 'Não informado'),
-                "professional_id": professional_id,  # Auto-assigned professional
-                "professional_name": professional_name,
+                "professional_id": None,  # No professional assigned yet - will be set when accepted
                 "professional_type": appointment.professional_type,
                 "appointment_date": appointment_date_str,
                 "appointment_time": appointment.appointment_time,
                 "duration_minutes": 60,
-                "status": "confirmed",  # Directly confirmed, not pending
+                "status": "pending",  # PENDING - waiting for professional acceptance
                 "notes": appointment.notes or "",
                 "created_at": datetime.now(timezone.utc),
                 "can_cancel_until": datetime.now(timezone.utc) + timedelta(hours=24)
@@ -5421,33 +5400,13 @@ async def book_appointment(
             
             result = await db.appointments.insert_one(appointment_data)
             
-            # Create professional-client relationship if doesn't exist
-            existing_relationship = await db.professional_clients.find_one({
-                "professional_id": professional_id,
-                "client_id": str(current_user.id)
-            })
-            
-            if not existing_relationship:
-                await db.professional_clients.insert_one({
-                    "professional_id": professional_id,
-                    "professional_type": appointment.professional_type,
-                    "professional_name": professional_name,
-                    "client_id": str(current_user.id),
-                    "client_name": current_user.full_name,
-                    "client_email": current_user.email,
-                    "client_phone": getattr(current_user, 'phone', 'Não informado'),
-                    "first_appointment_date": appointment_date_str,
-                    "created_at": datetime.now(timezone.utc),
-                    "status": "active"
-                })
-            
-            logger.info(f"✅ Agendamento criado e confirmado automaticamente com {professional_name}")
+            logger.info(f"✅ Agendamento PENDING criado com ID: {result.inserted_id}")
+            logger.info(f"📋 Este agendamento deve aparecer na aba 'Novos Clientes' para profissionais do tipo '{appointment.professional_type}'")
             
             return {
                 "appointment_id": str(result.inserted_id),
-                "status": "confirmed",
-                "professional_name": professional_name,
-                "message": f"Agendamento confirmado com {professional_name}!"
+                "status": "pending",
+                "message": "Solicitação enviada! Aguardando um profissional aceitar sua consulta."
             }
         
         # For existing clients with specific professional
