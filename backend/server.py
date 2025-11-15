@@ -5663,7 +5663,7 @@ async def accept_client_appointment(
 ):
     """Professional accepts a pending appointment and becomes the client's professional"""
     try:
-        professional_id = current_professional.get("id")
+        professional_id = str(current_professional.get("_id"))  # FIX: usar _id
         professional_type = current_professional.get("professional_type")
         professional_name = current_professional.get("full_name", "Profissional")
         
