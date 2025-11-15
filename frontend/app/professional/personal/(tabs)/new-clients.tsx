@@ -75,7 +75,7 @@ export default function NewClients() {
   const acceptClient = async (appointmentId: string, clientName: string, date: string, time: string) => {
     Alert.alert(
       'Assumir Cliente',
-      `Deseja assumir ${clientName} como seu cliente?\n\n📅 Data: ${new Date(date).toLocaleDateString('pt-BR')}\n🕐 Horário: ${time}h\n\nVocê será responsável pelo acompanhamento nutricional deste cliente.`,
+      `Deseja assumir ${clientName} como seu cliente?\n\n📅 Data: ${new Date(date).toLocaleDateString('pt-BR')}\n🕐 Horário: ${time}h\n\nVocê será responsável pelo treino personalizado deste cliente.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
