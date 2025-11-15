@@ -312,7 +312,7 @@ export default function WebRTCVideoCall({
   const handleCallEnd = async () => {
     try {
       // End call via API
-      const response = await fetch(`http://localhost:8001/api/video-call/end?appointment_id=${appointmentId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/video-call/end?appointment_id=${appointmentId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${''}`, // TODO: get token
