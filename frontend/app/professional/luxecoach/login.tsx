@@ -127,8 +127,9 @@ export default function LuxeCoachLogin() {
             style={styles.continueButton}
             onPress={() => {
               const path = isPersonal 
-                ? '/professional/personal/(tabs)/' 
-                : '/professional/nutritionist/(tabs)/';
+                ? '/professional/personal/' 
+                : '/professional/nutritionist/';
+              console.log('🚀 Navegando para:', path);
               router.push(path);
             }}
           >
