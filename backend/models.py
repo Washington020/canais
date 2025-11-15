@@ -190,7 +190,7 @@ class ScheduledNotification(BaseModel):
 # Appointment System Models
 class AppointmentRequest(BaseModel):
     professional_type: str  # "nutritionist" or "personal"
-    professional_id: str
+    professional_id: Optional[str] = None  # Null for pending appointments (new clients)
     appointment_date: datetime
     appointment_time: str  # "08:00", "09:00", etc.
     notes: Optional[str] = None
