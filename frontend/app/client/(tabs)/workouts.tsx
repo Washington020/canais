@@ -137,6 +137,32 @@ export default function Workouts() {
           </View>
         </View>
 
+        {progress && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📈 Seu Progresso</Text>
+            <View style={styles.progressInfo}>
+              <Text style={styles.progressText}>
+                {progress.completed_sessions} de {progress.total_expected_sessions} treinos concluídos
+              </Text>
+              <Text style={styles.progressPercentage}>{progress.progress_percentage}%</Text>
+            </View>
+            <View style={styles.progressBarContainer}>
+              <View style={[styles.progressBarFill, { width: `${progress.progress_percentage}%` }]} />
+            </View>
+            <Text style={styles.progressRemaining}>
+              Faltam {progress.remaining_sessions} treinos para completar o programa
+            </Text>
+          </View>
+        )}
+
+        <TouchableOpacity 
+          style={styles.startWorkoutButton}
+          onPress={() => router.push(`/client/workout-session?workoutId=${workout.id}`)}
+        >
+          <Ionicons name="play-circle" size={28} color="#FFFFFF" />
+          <Text style={styles.startWorkoutText}>Iniciar Treino</Text>
+        </TouchableOpacity>
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>💪 Exercícios</Text>
           {workout.exercises.map((exercise, index) => (
