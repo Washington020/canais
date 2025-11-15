@@ -42,17 +42,25 @@ export default function AvailabilityScreen() {
   }, []);
 
   const loadAvailability = async () => {
+    setLoading(true);
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('professionalToken');
+      
+      if (!token) {
+        console.log('⚠️ Token não encontrado ao carregar disponibilidade');
+        return;
+      }
+      
       const response = await axios.get(`${API_URL}/professionals/my-availability`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.data.weekly_schedule) {
         setAvailability(response.data.weekly_schedule);
+        console.log('✅ Disponibilidade carregada:', response.data.weekly_schedule);
       }
     } catch (error) {
-      console.error('Erro ao carregar disponibilidade:', error);
+      console.error('❌ Erro ao carregar disponibilidade:', error);
     } finally {
       setLoading(false);
     }
