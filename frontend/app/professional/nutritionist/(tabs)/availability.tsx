@@ -68,22 +68,33 @@ export default function AvailabilityScreen() {
   const saveAvailability = async () => {
     try {
       setSaving(true);
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('professionalToken');
+      
+      if (!token) {
+        Alert.alert('Erro', 'Token não encontrado. Faça login novamente.');
+        return;
+      }
       
       await axios.post(
         `${API_URL}/professionals/set-weekly-availability`,
-        { weekly_schedule: availability },
+        { 
+          weekly_schedule: availability,
+          start_time: "09:00",
+          end_time: "18:00",
+          slot_duration: 15
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       Alert.alert(
-        'Sucesso!',
-        'Sua disponibilidade foi atualizada com sucesso.',
+        '✅ Sucesso!',
+        'Sua disponibilidade foi atualizada! Os clientes já podem agendar consultas nos dias selecionados.',
         [{ text: 'OK' }]
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar disponibilidade:', error);
-      Alert.alert('Erro', 'Não foi possível salvar sua disponibilidade. Tente novamente.');
+      const errorMsg = error.response?.data?.detail || 'Não foi possível salvar sua disponibilidade. Tente novamente.';
+      Alert.alert('❌ Erro', errorMsg);
     } finally {
       setSaving(false);
     }
