@@ -7,10 +7,12 @@ import {
   Alert,
   SafeAreaView,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { RTCPeerConnection, RTCView, mediaDevices, RTCIceCandidate, RTCSessionDescription } from 'react-native-webrtc';
 
 export default function VideoCallScreen() {
   const router = useRouter();
@@ -21,7 +23,11 @@ export default function VideoCallScreen() {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [isConnected, setIsConnected] = useState(false);
+  const [localStream, setLocalStream] = useState<any>(null);
+  const [remoteStream, setRemoteStream] = useState<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const peerConnection = useRef<RTCPeerConnection | null>(null);
 
   useEffect(() => {
     // Solicitar permissão de câmera ao montar o componente
