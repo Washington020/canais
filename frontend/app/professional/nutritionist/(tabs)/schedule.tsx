@@ -53,6 +53,7 @@ export default function PersonalTrainerSchedule() {
   const [videoChannelName, setVideoChannelName] = useState('');
   const [currentAppointmentId, setCurrentAppointmentId] = useState<string>('');
   const [user, setUser] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]); // Data selecionada no calendário
   const router = useRouter();
 
   useEffect(() => {
