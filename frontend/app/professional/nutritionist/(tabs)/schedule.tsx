@@ -198,7 +198,12 @@ export default function PersonalTrainerSchedule() {
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(selectedYear, selectedMonth, day);
       const dateString = date.toISOString().split('T')[0];
-      const appointmentsOnDate = (appointments || []).filter(apt => apt.appointment_date === dateString);
+      // Filtrar apenas consultas ativas (não concluídas nem canceladas)
+      const appointmentsOnDate = (appointments || []).filter(apt => 
+        apt.appointment_date === dateString && 
+        apt.status !== 'completed' && 
+        apt.status !== 'cancelled'
+      );
       
       dates.push({
         day,
