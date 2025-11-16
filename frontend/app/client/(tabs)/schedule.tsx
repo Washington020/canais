@@ -345,9 +345,14 @@ export default function ClientSchedule() {
   };
 
   const onDateSelect = (dateString: string) => {
+    console.log('📅 onDateSelect chamado:', dateString);
+    console.log('🏥 Tipo de profissional:', selectedProfessionalType);
+    
     setSelectedDate(dateString);
-    setSelectedSlot(null); // Clear selected slot when changing date
-    setAvailableSlots([]); // Clear previous slots
+    setSelectedSlot(null);
+    setAvailableSlots([]);
+    
+    console.log('🔄 Chamando loadAvailableSlots...');
     loadAvailableSlots(selectedProfessionalType, dateString);
   };
 
