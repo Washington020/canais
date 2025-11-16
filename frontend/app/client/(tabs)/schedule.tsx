@@ -485,28 +485,41 @@ export default function ClientSchedule() {
                       style={styles.videoButton}
                       onPress={async () => {
                         try {
-                          console.log('🎥 Iniciando videochamada para consulta:', appointment.id);
+                          console.log('🎥 Cliente iniciando videochamada...');
                           
-                          // Start video call via API
-                          const token = await AsyncStorage.getItem('userToken');
+                          // Get token (try both possible keys)
+                          let token = await AsyncStorage.getItem('token');
+                          if (!token) {
+                            token = await AsyncStorage.getItem('userToken');
+                          }
+                          
+                          if (!token) {
+                            Alert.alert('Erro', 'Sessão expirada. Faça login novamente.');
+                            return;
+                          }
+                          
                           const response = await axios.post(
                             `${API_URL}/video-call/start`,
                             { appointment_id: appointment.id },
-                            {
-                              headers: { Authorization: `Bearer ${token}` }
-                            }
+                            { headers: { Authorization: `Bearer ${token}` } }
                           );
                           
                           if (response.data.success) {
-                            setVideoChannelName(response.data.room_id);
-                            setCurrentAppointmentId(appointment.id);
-                            setShowVideoCall(true);
+                            // Navegar para tela de videochamada
+                            router.push({
+                              pathname: '/video-call',
+                              params: {
+                                roomId: response.data.room_id,
+                                appointmentId: appointment.id,
+                                clientName: appointment.professional_name || 'Profissional',
+                              },
+                            });
                           } else {
                             Alert.alert('Erro', 'Não foi possível iniciar a videochamada');
                           }
-                        } catch (error) {
+                        } catch (error: any) {
                           console.error('❌ Erro ao iniciar videochamada:', error);
-                          Alert.alert('Erro', 'Erro ao conectar com o servidor');
+                          Alert.alert('Erro', error.response?.data?.detail || 'Erro ao conectar com o servidor');
                         }
                       }}
                     >
