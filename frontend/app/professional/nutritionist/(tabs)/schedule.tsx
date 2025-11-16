@@ -269,6 +269,11 @@ export default function PersonalTrainerSchedule() {
     return (appointments || []).filter(apt => apt.appointment_date === today);
   };
 
+  // Função para pegar agendamentos da data selecionada
+  const getSelectedDateAppointments = () => {
+    return (appointments || []).filter(apt => apt.appointment_date === selectedDate);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
