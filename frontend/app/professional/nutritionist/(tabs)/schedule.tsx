@@ -436,27 +436,30 @@ export default function PersonalTrainerSchedule() {
                       style={styles.videoButton}
                       onPress={async () => {
                         try {
-                          console.log('🎥 Nutricionista iniciando videochamada para consulta:', appointment.id);
+                          console.log('🎥 Iniciando videochamada...');
                           
-                          // Start video call via API
                           const token = await AsyncStorage.getItem('professionalToken');
                           const response = await axios.post(
                             `${API_URL}/video-call/start`,
                             { appointment_id: appointment.id },
-                            {
-                              headers: { Authorization: `Bearer ${token}` }
-                            }
+                            { headers: { Authorization: `Bearer ${token}` } }
                           );
                           
                           if (response.data.success) {
-                            setVideoChannelName(response.data.room_id);
-                            setCurrentAppointmentId(appointment.id);
-                            setShowVideoCall(true);
+                            // Navegar para tela de videochamada
+                            router.push({
+                              pathname: '/video-call',
+                              params: {
+                                roomId: response.data.room_id,
+                                appointmentId: appointment.id,
+                                clientName: appointment.client_name,
+                              },
+                            });
                           } else {
                             Alert.alert('Erro', 'Não foi possível iniciar a videochamada');
                           }
                         } catch (error) {
-                          console.error('❌ Erro ao iniciar videochamada:', error);
+                          console.error('❌ Erro:', error);
                           Alert.alert('Erro', 'Erro ao conectar com o servidor');
                         }
                       }}
