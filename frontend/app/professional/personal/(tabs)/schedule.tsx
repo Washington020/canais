@@ -40,7 +40,7 @@ interface AppointmentStats {
   monthly_hours: number;
 }
 
-export default function PersonalTrainerScheduleUpdated() {
+export default function PersonalTrainerSchedule() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [stats, setStats] = useState<AppointmentStats | null>(null);
   const [loading, setLoading] = useState(true);
