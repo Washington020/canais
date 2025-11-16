@@ -1,33 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Alert,
   SafeAreaView,
-  Dimensions,
-  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { RTCPeerConnection, RTCView, mediaDevices, RTCIceCandidate, RTCSessionDescription } from 'react-native-webrtc';
+import AgoraVideoCall from '@/components/AgoraVideoCall.native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function VideoCallScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { roomId, appointmentId, clientName } = params;
 
-  const [permission, requestPermission] = useCameraPermissions();
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
-  const [isConnected, setIsConnected] = useState(false);
-  const [localStream, setLocalStream] = useState<any>(null);
-  const [remoteStream, setRemoteStream] = useState<any>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const peerConnection = useRef<RTCPeerConnection | null>(null);
+  const [showVideoCall, setShowVideoCall] = useState(true);
 
   useEffect(() => {
     // Solicitar permissão de câmera ao montar o componente
