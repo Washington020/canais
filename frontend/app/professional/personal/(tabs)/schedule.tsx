@@ -198,7 +198,12 @@ export default function PersonalTrainerSchedule() {
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(selectedYear, selectedMonth, day);
       const dateString = date.toISOString().split('T')[0];
-      const appointmentsOnDate = (appointments || []).filter(apt => apt.appointment_date === dateString);
+      // Filtrar apenas consultas ativas (não concluídas nem canceladas)
+      const appointmentsOnDate = (appointments || []).filter(apt => 
+        apt.appointment_date === dateString && 
+        apt.status !== 'completed' && 
+        apt.status !== 'cancelled'
+      );
       
       dates.push({
         day,
@@ -269,9 +274,13 @@ export default function PersonalTrainerSchedule() {
     return (appointments || []).filter(apt => apt.appointment_date === today);
   };
 
-  // Função para pegar agendamentos da data selecionada
+  // Função para pegar agendamentos da data selecionada (excluindo concluídas)
   const getSelectedDateAppointments = () => {
-    return (appointments || []).filter(apt => apt.appointment_date === selectedDate);
+    return (appointments || []).filter(apt => 
+      apt.appointment_date === selectedDate && 
+      apt.status !== 'completed' && 
+      apt.status !== 'cancelled'
+    );
   };
 
   if (loading) {
