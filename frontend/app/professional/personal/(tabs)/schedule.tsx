@@ -17,7 +17,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
-import AgoraVideoCall from '@/components/AgoraVideoCall';
+import WebRTCVideoCall from '@/components/WebRTCVideoCall';
 
 const API_URL = (process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || '') + '/api';
 
@@ -40,7 +40,7 @@ interface AppointmentStats {
   monthly_hours: number;
 }
 
-export default function PersonalTrainerSchedule() {
+export default function PersonalTrainerScheduleUpdated() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [stats, setStats] = useState<AppointmentStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,9 @@ export default function PersonalTrainerSchedule() {
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [videoChannelName, setVideoChannelName] = useState('');
+  const [currentAppointmentId, setCurrentAppointmentId] = useState<string>('');
   const [user, setUser] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]); // Data selecionada no calendário
   const router = useRouter();
 
   useEffect(() => {
@@ -119,7 +121,7 @@ export default function PersonalTrainerSchedule() {
       
       await axios.put(`${API_URL}/appointments/${appointmentId}/complete`, {}, { headers });
       
-      Alert.alert('Sucesso', 'Treino marcado como concluído');
+      Alert.alert('Sucesso', 'Consulta marcada como concluída!');
       loadAppointments();
       loadStats();
     } catch (error: any) {
@@ -267,6 +269,11 @@ export default function PersonalTrainerSchedule() {
     return (appointments || []).filter(apt => apt.appointment_date === today);
   };
 
+  // Função para pegar agendamentos da data selecionada
+  const getSelectedDateAppointments = () => {
+    return (appointments || []).filter(apt => apt.appointment_date === selectedDate);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -284,7 +291,7 @@ export default function PersonalTrainerSchedule() {
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Agenda Personal Trainer</Text>
+        <Text style={styles.title}>Agenda Nutricionista</Text>
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => setAvailabilityModal(true)}
@@ -304,7 +311,7 @@ export default function PersonalTrainerSchedule() {
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>{stats.total_appointments_month || 0}</Text>
-              <Text style={styles.statLabel}>Treinos/Mês</Text>
+              <Text style={styles.statLabel}>Consultas/Mês</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>{stats.total_clients_served || 0}</Text>
@@ -351,25 +358,10 @@ export default function PersonalTrainerSchedule() {
                     dateInfo.appointments.length > 0 && styles.appointmentCell
                   ]}
                   onPress={() => {
-                    console.log('🔍 [PERSONAL] Clique na data:', dateInfo.date);
-                    console.log('🔍 [PERSONAL] Tem consultas:', dateInfo.appointments.length > 0);
-                    console.log('🔍 [PERSONAL] É passada:', dateInfo.isPast);
-                    
-                    // Teste simples primeiro
-                    Alert.alert(
-                      '📅 Data Clicada! (PERSONAL)',
-                      `Data: ${new Date(dateInfo.date).toLocaleDateString('pt-BR')}\nConsultas: ${dateInfo.appointments.length}\nPassada: ${dateInfo.isPast ? 'Sim' : 'Não'}`,
-                      [
-                        { text: 'Fechar', style: 'cancel' },
-                        {
-                          text: 'Disponibilizar Horários',
-                          onPress: () => {
-                            console.log('🔍 [PERSONAL] Iniciando disponibilização para:', dateInfo.date);
-                            setAvailability(dateInfo.date);
-                          }
-                        }
-                      ]
-                    );
+                    // Atualizar a data selecionada para mostrar os agendamentos desse dia
+                    setSelectedDate(dateInfo.date);
+                    console.log('📅 Data selecionada:', dateInfo.date);
+                    console.log('📋 Consultas nesta data:', dateInfo.appointments.length);
                   }}
                   activeOpacity={0.7}
                 >
@@ -391,14 +383,20 @@ export default function PersonalTrainerSchedule() {
 
         {/* Today's Appointments */}
         <View style={styles.todaySection}>
-          <Text style={styles.sectionTitle}>Treinos de Hoje</Text>
-          {getTodaysAppointments().length === 0 ? (
+          <Text style={styles.sectionTitle}>
+            Consultas de {selectedDate === new Date().toISOString().split('T')[0] 
+              ? 'Hoje' 
+              : new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
+          </Text>
+          {getSelectedDateAppointments().length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="fitness-outline" size={48} color="#64748B" />
-              <Text style={styles.emptyText}>Nenhum treino agendado para hoje</Text>
+              <Text style={styles.emptyText}>
+                Nenhuma consulta agendada para {selectedDate === new Date().toISOString().split('T')[0] ? 'hoje' : 'esta data'}
+              </Text>
             </View>
           ) : (
-            getTodaysAppointments().map((appointment) => (
+            getSelectedDateAppointments().map((appointment) => (
               <View key={appointment.id} style={styles.appointmentCard}>
                 <View style={styles.appointmentHeader}>
                   <View style={styles.timeContainer}>
@@ -427,12 +425,31 @@ export default function PersonalTrainerSchedule() {
                   <View style={styles.appointmentActions}>
                     <TouchableOpacity 
                       style={styles.videoButton}
-                      onPress={() => {
-                        // Usar o canal do agendamento diretamente
-                        const channelName = (appointment as any).video_channel_name || `luxepass_${appointment.id}`;
-                        console.log('🎥 Personal Trainer entrando no canal:', channelName);
-                        setVideoChannelName(channelName);
-                        setShowVideoCall(true);
+                      onPress={async () => {
+                        try {
+                          console.log('🎥 Nutricionista iniciando videochamada para consulta:', appointment.id);
+                          
+                          // Start video call via API
+                          const token = await AsyncStorage.getItem('professionalToken');
+                          const response = await axios.post(
+                            `${API_URL}/video-call/start`,
+                            { appointment_id: appointment.id },
+                            {
+                              headers: { Authorization: `Bearer ${token}` }
+                            }
+                          );
+                          
+                          if (response.data.success) {
+                            setVideoChannelName(response.data.room_id);
+                            setCurrentAppointmentId(appointment.id);
+                            setShowVideoCall(true);
+                          } else {
+                            Alert.alert('Erro', 'Não foi possível iniciar a videochamada');
+                          }
+                        } catch (error) {
+                          console.error('❌ Erro ao iniciar videochamada:', error);
+                          Alert.alert('Erro', 'Erro ao conectar com o servidor');
+                        }
                       }}
                     >
                       <Ionicons name="videocam" size={16} color="#FFFFFF" />
@@ -502,10 +519,10 @@ export default function PersonalTrainerSchedule() {
 
       {/* Video Call Modal */}
       {showVideoCall && videoChannelName && (
-        <AgoraVideoCall
+        <WebRTCVideoCall
           visible={showVideoCall}
           channelName={videoChannelName}
-          userName={user?.full_name || 'Personal Trainer'}
+          userName={user?.full_name || 'Nutricionista'}
           onClose={() => {
             setShowVideoCall(false);
             setVideoChannelName('');
