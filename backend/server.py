@@ -5115,64 +5115,82 @@ async def set_professional_availability(
     availability_data: dict,
     current_professional: dict = Depends(get_current_professional)
 ):
-    """Professional sets their available dates and times"""
+    """Professional sets their weekly availability schedule"""
     try:
-        professional_id = str(current_professional["_id"])
+        professional_id = ObjectId(current_professional["_id"])
         professional_type = current_professional["professional_type"]
+        
+        logger.info(f"🗓️ Configurando disponibilidade semanal para profissional {professional_id}")
         
         # Get data from request
         date = availability_data.get("date")
         start_time = availability_data.get("start_time", "08:00")
         end_time = availability_data.get("end_time", "19:00")
-        break_times = availability_data.get("break_times", ["12:00", "13:00"])
         slot_duration = availability_data.get("slot_duration", 60)
         
-        if not date:
-            raise HTTPException(400, "Data é obrigatória")
+        # Parse the date to get day of week
+        try:
+            target_date = datetime.strptime(date, "%Y-%m-%d")
+        except:
+            raise HTTPException(400, "Formato de data inválido. Use YYYY-MM-DD")
         
-        # Generate time slots for the day
-        slots_created = 0
-        start_hour = int(start_time.split(":")[0])
-        end_hour = int(end_time.split(":")[0])
+        day_names = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        day_of_week = day_names[target_date.weekday()]
         
-        for hour in range(start_hour, end_hour):  
-            time_str = f"{hour:02d}:00"
-            
-            # Skip lunch break if specified
-            if time_str in break_times:
-                continue
-                
-            # Check if slot already exists
-            existing_slot = await db.appointment_slots.find_one({
-                "professional_id": professional_id,
-                "date": date,
-                "time": time_str
-            })
-            
-            if not existing_slot:
-                slot_data = {
-                    "professional_id": professional_id,
-                    "professional_type": professional_type,
-                    "date": date,
-                    "time": time_str,
-                    "available": True,
-                    "duration_minutes": slot_duration,
-                    "created_at": datetime.now(timezone.utc)
+        logger.info(f"📅 Dia da semana: {day_of_week}, horário: {start_time}-{end_time}")
+        
+        # Update or create weekly availability
+        existing = await db.professional_availability.find_one({"professional_id": professional_id})
+        
+        weekly_schedule_update = {
+            day_of_week: {
+                "active": True,
+                "start_time": start_time,
+                "end_time": end_time
+            }
+        }
+        
+        if existing:
+            # Update existing
+            await db.professional_availability.update_one(
+                {"professional_id": professional_id},
+                {
+                    "$set": {
+                        f"weekly_schedule.{day_of_week}": weekly_schedule_update[day_of_week],
+                        "slot_duration": slot_duration,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
                 }
-                
-                await db.appointment_slots.insert_one(slot_data)
-                slots_created += 1
+            )
+            logger.info(f"✅ Disponibilidade atualizada para {day_of_week}")
+        else:
+            # Create new
+            availability_doc = {
+                "professional_id": professional_id,
+                "professional_type": professional_type,
+                "weekly_schedule": weekly_schedule_update,
+                "slot_duration": slot_duration,
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+            await db.professional_availability.insert_one(availability_doc)
+            logger.info(f"✅ Nova disponibilidade criada para {day_of_week}")
         
         return {
             "success": True,
-            "message": f"{slots_created} horários disponibilizados para {date}",
-            "slots_created": slots_created,
-            "date": date,
+            "message": f"Horários disponibilizados para toda {day_of_week} ({start_time}-{end_time})",
+            "day_of_week": day_of_week,
+            "start_time": start_time,
+            "end_time": end_time,
             "professional_type": professional_type
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Erro ao definir disponibilidade: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Erro ao definir disponibilidade")
 
 @api_router.get("/professionals/availability/{date}")
