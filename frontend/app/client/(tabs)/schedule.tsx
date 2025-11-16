@@ -291,11 +291,13 @@ export default function ClientSchedule() {
       }
     }
 
+    console.log('🎯 Abrindo modal de agendamento...');
     setSelectedProfessionalType(professionalType);
-    setSelectedDate(''); // Reset selected date
-    setSelectedSlot(null); // Reset selected slot
-    setAvailableSlots([]); // Clear available slots
+    setSelectedDate('');
+    setSelectedSlot(null);
+    setAvailableSlots([]);
     setShowBookingModal(true);
+    console.log('✅ showBookingModal setado para TRUE');
   };
 
   const generateCalendarDates = () => {
