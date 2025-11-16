@@ -17,168 +17,26 @@ export default function VideoCallScreen() {
 
   const [showVideoCall, setShowVideoCall] = useState(true);
 
-  useEffect(() => {
-    // Solicitar permissão de câmera ao montar o componente
-    if (!permission?.granted) {
-      requestPermission();
-    }
-
-    // Iniciar contador de duração
-    timerRef.current = setInterval(() => {
-      setCallDuration(prev => prev + 1);
-    }, 1000);
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, []);
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const handleCallEnd = async () => {
+    setShowVideoCall(false);
+    router.back();
   };
 
-  const handleEndCall = () => {
-    Alert.alert(
-      'Encerrar Chamada',
-      'Deseja realmente encerrar a videochamada?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Encerrar',
-          style: 'destructive',
-          onPress: () => {
-            if (timerRef.current) {
-              clearInterval(timerRef.current);
-            }
-            router.back();
-          },
-        },
-      ]
-    );
+  const getUserName = async () => {
+    // Try to get from AsyncStorage
+    const token = await AsyncStorage.getItem('token') || await AsyncStorage.getItem('professionalToken');
+    return clientName as string || 'Usuário';
   };
-
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-  };
-
-  const toggleVideo = () => {
-    setIsVideoOff(!isVideoOff);
-  };
-
-  if (!permission) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Carregando...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.permissionContainer}>
-          <Ionicons name="videocam-off" size={64} color="#EF4444" />
-          <Text style={styles.permissionTitle}>Permissão de Câmera Necessária</Text>
-          <Text style={styles.permissionText}>
-            Para realizar videochamadas, precisamos acessar sua câmera e microfone.
-          </Text>
-          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-            <Text style={styles.permissionButtonText}>Permitir Acesso</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Video Container */}
-      <View style={styles.videoContainer}>
-        {!isVideoOff && permission.granted ? (
-          <CameraView
-            style={styles.camera}
-            facing="front"
-          >
-            {/* Overlay com informações */}
-            <View style={styles.topOverlay}>
-              <View style={styles.callInfo}>
-                <View style={styles.recordingIndicator} />
-                <Text style={styles.callDuration}>{formatDuration(callDuration)}</Text>
-              </View>
-              <Text style={styles.clientName}>{clientName || 'Cliente'}</Text>
-            </View>
-          </CameraView>
-        ) : (
-          <View style={styles.videoOff}>
-            <Ionicons name="videocam-off" size={64} color="#FFFFFF" />
-            <Text style={styles.videoOffText}>Câmera Desligada</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Controls */}
-      <View style={styles.controlsContainer}>
-        <View style={styles.controls}>
-          {/* Mute Button */}
-          <TouchableOpacity
-            style={[styles.controlButton, isMuted && styles.controlButtonActive]}
-            onPress={toggleMute}
-          >
-            <Ionicons
-              name={isMuted ? 'mic-off' : 'mic'}
-              size={24}
-              color="#FFFFFF"
-            />
-            <Text style={styles.controlLabel}>
-              {isMuted ? 'Mudo' : 'Microfone'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* End Call Button */}
-          <TouchableOpacity
-            style={styles.endCallButton}
-            onPress={handleEndCall}
-          >
-            <Ionicons name="call" size={32} color="#FFFFFF" />
-          </TouchableOpacity>
-
-          {/* Video Toggle Button */}
-          <TouchableOpacity
-            style={[styles.controlButton, isVideoOff && styles.controlButtonActive]}
-            onPress={toggleVideo}
-          >
-            <Ionicons
-              name={isVideoOff ? 'videocam-off' : 'videocam'}
-              size={24}
-              color="#FFFFFF"
-            />
-            <Text style={styles.controlLabel}>
-              {isVideoOff ? 'Vídeo Off' : 'Vídeo'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Info Section */}
-        <View style={styles.infoSection}>
-          <View style={styles.infoItem}>
-            <Ionicons name="calendar" size={16} color="#64748B" />
-            <Text style={styles.infoText}>Sala: {roomId}</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Ionicons name="shield-checkmark" size={16} color="#22C55E" />
-            <Text style={styles.infoText}>Conexão Segura</Text>
-          </View>
-        </View>
-      </View>
+      <AgoraVideoCall
+        visible={showVideoCall}
+        channelName={roomId as string}
+        userName={clientName as string || 'Usuário'}
+        onClose={handleCallEnd}
+        onCallEnded={handleCallEnd}
+      />
     </SafeAreaView>
   );
 }
