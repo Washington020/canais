@@ -358,25 +358,10 @@ export default function PersonalTrainerSchedule() {
                     dateInfo.appointments.length > 0 && styles.appointmentCell
                   ]}
                   onPress={() => {
-                    console.log('🔍 [PERSONAL] Clique na data:', dateInfo.date);
-                    console.log('🔍 [PERSONAL] Tem consultas:', dateInfo.appointments.length > 0);
-                    console.log('🔍 [PERSONAL] É passada:', dateInfo.isPast);
-                    
-                    // Teste simples primeiro
-                    Alert.alert(
-                      '📅 Data Clicada! (PERSONAL)',
-                      `Data: ${new Date(dateInfo.date).toLocaleDateString('pt-BR')}\nConsultas: ${dateInfo.appointments.length}\nPassada: ${dateInfo.isPast ? 'Sim' : 'Não'}`,
-                      [
-                        { text: 'Fechar', style: 'cancel' },
-                        {
-                          text: 'Disponibilizar Horários',
-                          onPress: () => {
-                            console.log('🔍 [PERSONAL] Iniciando disponibilização para:', dateInfo.date);
-                            setAvailability(dateInfo.date);
-                          }
-                        }
-                      ]
-                    );
+                    // Atualizar a data selecionada para mostrar os agendamentos desse dia
+                    setSelectedDate(dateInfo.date);
+                    console.log('📅 Data selecionada:', dateInfo.date);
+                    console.log('📋 Consultas nesta data:', dateInfo.appointments.length);
                   }}
                   activeOpacity={0.7}
                 >
