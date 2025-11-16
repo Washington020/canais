@@ -7,7 +7,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import AgoraVideoCall from '@/components/AgoraVideoCall.native';
+import AgoraVideoCall from '@/components/AgoraVideoCall';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function VideoCallScreen() {
