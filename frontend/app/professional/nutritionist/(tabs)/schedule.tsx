@@ -383,14 +383,20 @@ export default function PersonalTrainerSchedule() {
 
         {/* Today's Appointments */}
         <View style={styles.todaySection}>
-          <Text style={styles.sectionTitle}>Consultas de Hoje</Text>
-          {getTodaysAppointments().length === 0 ? (
+          <Text style={styles.sectionTitle}>
+            Consultas de {selectedDate === new Date().toISOString().split('T')[0] 
+              ? 'Hoje' 
+              : new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
+          </Text>
+          {getSelectedDateAppointments().length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="fitness-outline" size={48} color="#64748B" />
-              <Text style={styles.emptyText}>Nenhuma consulta agendada para hoje</Text>
+              <Text style={styles.emptyText}>
+                Nenhuma consulta agendada para {selectedDate === new Date().toISOString().split('T')[0] ? 'hoje' : 'esta data'}
+              </Text>
             </View>
           ) : (
-            getTodaysAppointments().map((appointment) => (
+            getSelectedDateAppointments().map((appointment) => (
               <View key={appointment.id} style={styles.appointmentCard}>
                 <View style={styles.appointmentHeader}>
                   <View style={styles.timeContainer}>
