@@ -159,39 +159,56 @@ export default function ClientSchedule() {
     }
   };
 
-  const loadAvailableSlots = async (professionalType: string, date: string) => {
+  const loadAvailableSlots = async (professionalType: string, dateString: string) => {
     try {
-      console.log('🔍 loadAvailableSlots chamado:', { professionalType, date });
+      console.log('🔍 Buscando horários:', { professionalType, dateString });
+      
       const token = await AsyncStorage.getItem('token');
       if (!token) {
         console.log('❌ Token não encontrado');
         return;
       }
 
-      console.log('✅ Token encontrado, fazendo chamada para API...');
       const headers = { Authorization: `Bearer ${token}` };
-      const url = `${API_URL}/appointments/available-slots?professional_type=${professionalType}&date=${date}`;
-      console.log('🌐 URL:', url);
-      
-      const response = await axios.get(url, { headers });
-      
+      const response = await axios.get(
+        `${API_URL}/appointments/available-slots`,
+        {
+          params: {
+            professional_type: professionalType,
+            date: dateString
+          },
+          headers
+        }
+      );
+
       console.log('✅ Resposta recebida:', response.data);
-      console.log('📊 Total de slots:', response.data.available_slots?.length || 0);
-      
-      setAvailableSlots(response.data.available_slots || []);
-    } catch (error: any) {
-      console.error('❌ Error loading available slots:', error);
-      console.error('❌ Error details:', error.response?.data);
-      if (error.response?.status === 403) {
+      console.log('📊 Total de slots:', response.data.available_slots?.length);
+
+      if (response.data.available_slots && response.data.available_slots.length > 0) {
+        const formattedSlots = response.data.available_slots.map((slot: any) => ({
+          ...slot,
+          professional_type: professionalType,
+          date: dateString
+        }));
+        setAvailableSlots(formattedSlots);
+        console.log('✅ Slots configurados:', formattedSlots.length);
+      } else {
+        console.log('⚠️ Nenhum slot disponível');
+        setAvailableSlots([]);
         Alert.alert(
-          'Acesso Restrito',
-          'Agendamentos disponíveis apenas para planos VIP e Intermediário. Faça upgrade para acessar esta funcionalidade.',
-          [
-            { text: 'OK' },
-            { text: 'Fazer Upgrade', onPress: () => router.push('/client/plans') }
-          ]
+          'Sem Horários',
+          'Nenhum horário disponível para esta data. Tente outra data ou tipo de profissional.',
+          [{ text: 'OK' }]
         );
       }
+    } catch (error: any) {
+      console.error('❌ Erro ao buscar horários:', error.response?.data || error.message);
+      setAvailableSlots([]);
+      Alert.alert(
+        'Erro',
+        'Não foi possível buscar os horários disponíveis. Por favor, tente novamente.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
