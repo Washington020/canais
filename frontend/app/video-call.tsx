@@ -1,33 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
+  Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
+// Componente só para Web - versão mobile está em video-call.native.tsx
 export default function VideoCallScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const { clientName } = params;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Ionicons name="phone-portrait-outline" size={64} color="#3B82F6" />
-        <Text style={styles.title}>Videochamada Disponível Apenas no App</Text>
+        <Text style={styles.title}>Videochamada no App Móvel</Text>
         <Text style={styles.description}>
-          A funcionalidade de videochamada está disponível apenas nos aplicativos móveis (iOS e Android).
+          A videochamada com {clientName || 'o cliente'} está disponível apenas nos aplicativos móveis.
         </Text>
         <Text style={styles.description}>
-          Por favor, abra este aplicativo em um dispositivo móvel usando o Expo Go para utilizar a videochamada.
+          📱 Abra o app no Expo Go (iOS ou Android) para realizar videochamadas em tempo real.
         </Text>
         <TouchableOpacity 
           style={styles.button}
           onPress={() => router.back()}
         >
-          <Text style={styles.buttonText}>Voltar</Text>
+          <Text style={styles.buttonText}>Voltar para Agenda</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
