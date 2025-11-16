@@ -440,14 +440,14 @@ export default function ClientSchedule() {
         <View style={styles.appointmentsSection}>
           <Text style={styles.sectionTitle}>Meus Agendamentos</Text>
           
-          {appointments.length === 0 ? (
+          {appointments.filter(apt => apt.status !== 'completed' && apt.status !== 'cancelled').length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="calendar-outline" size={48} color="#64748B" />
               <Text style={styles.emptyText}>Você ainda não tem agendamentos</Text>
               <Text style={styles.emptySubtext}>Escolha um serviço acima para agendar</Text>
             </View>
           ) : (
-            appointments.map((appointment) => (
+            appointments.filter(apt => apt.status !== 'completed' && apt.status !== 'cancelled').map((appointment) => (
               <View key={appointment.id} style={styles.appointmentCard}>
                 <View style={styles.appointmentHeader}>
                   <View style={styles.serviceIcon}>
