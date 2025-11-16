@@ -281,56 +281,27 @@ export default function ClientSchedule() {
     setShowBookingModal(true);
   };
 
-  const generateCalendarDates = async () => {
+  const generateCalendarDates = () => {
     const dates = [];
     const today = new Date();
     const currentMonth = new Date(selectedYear, selectedMonth, 1);
     const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
     
-    console.log('📅 Gerando calendário para:', selectedProfessionalType);
-    
-    // Verificar disponibilidade para cada dia do mês
-    const availabilityChecks = [];
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(selectedYear, selectedMonth, day);
       const dateString = date.toISOString().split('T')[0];
       
-      availabilityChecks.push(
-        checkDateAvailability(dateString, selectedProfessionalType)
-          .then(hasSlots => ({
-            day,
-            date: dateString,
-            isPast: date < today,
-            isToday: dateString === today.toISOString().split('T')[0],
-            isWeekend: date.getDay() === 0 || date.getDay() === 6,
-            hasAvailability: hasSlots
-          }))
-      );
+      // Todas as datas futuras são clicáveis - horários são carregados ao clicar
+      dates.push({
+        day,
+        date: dateString,
+        isPast: date < today,
+        isToday: dateString === today.toISOString().split('T')[0],
+        isWeekend: date.getDay() === 0 || date.getDay() === 6
+      });
     }
     
-    const datesWithAvailability = await Promise.all(availabilityChecks);
-    console.log('✅ Datas com disponibilidade:', datesWithAvailability.filter(d => d.hasAvailability).length);
-    
-    return datesWithAvailability;
-  };
-
-  const checkDateAvailability = async (date: string, professionalType: string): Promise<boolean> => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) return false;
-
-      const response = await axios.get(
-        `${API_URL}/appointments/available-slots`,
-        {
-          params: { professional_type: professionalType, date },
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
-      return response.data.available_slots && response.data.available_slots.length > 0;
-    } catch (error) {
-      return false;
-    }
+    return dates;
   };
 
   const monthNames = [
