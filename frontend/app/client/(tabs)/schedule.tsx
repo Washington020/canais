@@ -239,8 +239,13 @@ export default function ClientSchedule() {
   };
 
   const openBookingModal = (professionalType: string) => {
+    console.log('🔵 openBookingModal chamado!', professionalType);
+    console.log('👤 Usuário:', user);
+    console.log('📊 Plan type:', user?.plan_type);
+    
     // Check if user has a valid plan for appointments
     if (!user || user.plan_type === 'basico' || user.plan_type === 'basic') {
+      console.log('⚠️ Plano inválido, mostrando alert...');
       Alert.alert(
         'Acesso Restrito',
         'Agendamentos disponíveis apenas para planos Intermediário, Premium e VIP. Faça upgrade para acessar esta funcionalidade.',
@@ -251,6 +256,8 @@ export default function ClientSchedule() {
       );
       return;
     }
+    
+    console.log('✅ Plano válido, continuando...');
 
     // Check monthly limits
     if (appointmentLimits && appointmentLimits.remaining) {
