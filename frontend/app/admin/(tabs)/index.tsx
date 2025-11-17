@@ -137,10 +137,10 @@ export default function AdminDashboard() {
       >
         {/* Header */}
         <LinearGradient
-          colors={['#8B5CF6', '#6D28D9']}
+          colors={['#6366F1', '#4F46E5']}
           style={styles.header}
         >
-          <Text style={styles.headerTitle}>Dashboard</Text>
+          <Text style={styles.headerTitle}>Painel</Text>
           <Text style={styles.headerSubtitle}>Painel Administrativo</Text>
         </LinearGradient>
 
