@@ -1672,7 +1672,7 @@ index d3b947e..e69de29 100644
 -----------------------+import time
 -----------------------+
 -----------------------+# Backend URL from environment
------------------------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://fit-scheduler-11.preview.emergentagent.com')
+-----------------------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://luxecoach.preview.emergentagent.com')
 -----------------------+API_BASE = f"{BACKEND_URL}/api"
 -----------------------+
 -----------------------+class DeploymentHealthChecker:
@@ -2731,7 +2731,7 @@ index d3b947e..e69de29 100644
 ----------------------------------------+import traceback
 ----------------------------------------+
 ----------------------------------------+# Get backend URL from environment
-----------------------------------------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://fit-scheduler-11.preview.emergentagent.com')
+----------------------------------------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://luxecoach.preview.emergentagent.com')
 ----------------------------------------+API_BASE = f"{BACKEND_URL}/api"
 ----------------------------------------+
 ----------------------------------------+class EnhancedGymRegistrationTester:
@@ -4719,7 +4719,7 @@ index d3b947e..e69de29 100644
 ------------------------------------------------------+from datetime import datetime, timezone
 ------------------------------------------------------+
 ------------------------------------------------------+# Configuration
-------------------------------------------------------+BACKEND_URL = "https://fit-scheduler-11.preview.emergentagent.com/api"
+------------------------------------------------------+BACKEND_URL = "https://luxecoach.preview.emergentagent.com/api"
 ------------------------------------------------------+
 ------------------------------------------------------+def create_test_gym():
 ------------------------------------------------------+    """Create test gym with academia_teste/teste123 credentials"""
@@ -4813,7 +4813,7 @@ index d3b947e..e69de29 100644
 ------------------------------------------------------+import json
 ------------------------------------------------------+
 ------------------------------------------------------+# Configuration
-------------------------------------------------------+BACKEND_URL = "https://fit-scheduler-11.preview.emergentagent.com/api"
+------------------------------------------------------+BACKEND_URL = "https://luxecoach.preview.emergentagent.com/api"
 ------------------------------------------------------+
 ------------------------------------------------------+def fix_gym_password():
 ------------------------------------------------------+    """Fix gym password using admin endpoint"""
@@ -5757,7 +5757,7 @@ index d3b947e..e69de29 100644
 ----------------------------------------+from datetime import datetime
 ----------------------------------------+
 ----------------------------------------+# Get backend URL from environment
-----------------------------------------+BACKEND_URL = "https://fit-scheduler-11.preview.emergentagent.com/api"
+----------------------------------------+BACKEND_URL = "https://luxecoach.preview.emergentagent.com/api"
 ----------------------------------------+
 ----------------------------------------+def test_unique_gym_registration():
 ----------------------------------------+    """Test successful gym registration with unique CNPJ"""
@@ -6169,7 +6169,7 @@ index d3b947e..e69de29 100644
 ----+from datetime import datetime
 ----+
 ----+# Backend URL
-----+BACKEND_URL = "https://fit-scheduler-11.preview.emergentagent.com/api"
+----+BACKEND_URL = "https://luxecoach.preview.emergentagent.com/api"
 ----+
 ----+def test_exact_scenarios():
 ----+    """Test the exact scenarios from the review request"""

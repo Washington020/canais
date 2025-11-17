@@ -3,7 +3,7 @@ import qrcode
 import sys
 
 # URL do Expo baseado no preview URL
-preview_url = "https://fit-scheduler-11.preview.emergentagent.com"
+preview_url = "https://luxecoach.preview.emergentagent.com"
 expo_url = f"exp://{preview_url.replace('https://', '').replace('http://', '')}"
 
 print(f"\n{'='*60}")

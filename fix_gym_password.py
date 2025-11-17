@@ -7,7 +7,7 @@ import requests
 import json
 
 # Configuration
-BACKEND_URL = "https://fit-scheduler-11.preview.emergentagent.com/api"
+BACKEND_URL = "https://luxecoach.preview.emergentagent.com/api"
 
 def fix_gym_password():
     """Fix gym password using admin endpoint"""

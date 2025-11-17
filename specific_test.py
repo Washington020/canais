@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 
 # Backend URL
-BACKEND_URL = "https://fit-scheduler-11.preview.emergentagent.com/api"
+BACKEND_URL = "https://luxecoach.preview.emergentagent.com/api"
 
 def test_exact_scenarios():
     """Test the exact scenarios from the review request"""
