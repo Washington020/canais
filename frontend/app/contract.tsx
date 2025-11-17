@@ -203,8 +203,25 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#BDC3C7',
+    borderRadius: 4,
     marginRight: 12,
     marginTop: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  checkboxChecked: {
+    backgroundColor: '#27AE60',
+    borderColor: '#27AE60',
+  },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   checkboxLabel: {
     flex: 1,
