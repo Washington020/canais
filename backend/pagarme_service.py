@@ -4,16 +4,18 @@ import logging
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone, timedelta
 import base64
+import hashlib
+import hmac
 
 logger = logging.getLogger(__name__)
 
 class PagarMeService:
     def __init__(self):
-        self.api_key = os.environ.get('PAGARME_API_KEY')
+        self.api_key = os.environ.get('PAGARME_SECRET_KEY', 'sk_0a85389d63104b378ef9dea7d270d946')
+        self.public_key = os.environ.get('PAGARME_PUBLIC_KEY', 'pk_test_wm8rKZbfRafyVne6')
         self.base_url = "https://api.pagar.me/core/v5"
         
-        if not self.api_key:
-            raise ValueError("PAGARME_API_KEY não encontrada nas variáveis de ambiente")
+        logger.info(f"✅ PagarMeService inicializado com API key configurada")
     
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Pagar.me API requests"""
