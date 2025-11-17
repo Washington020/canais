@@ -260,7 +260,7 @@ export default function AdminDashboard() {
 
         {pendingClients.length === 0 && (
           <View style={styles.emptyState}>
-            <Ionicons name="checkmark-circle" size={64} color="#22C55E" />
+            <Ionicons name="checkmark-circle" size={48} color="#10B981" />
             <Text style={styles.emptyStateText}>Nenhum cliente aguardando aprovação</Text>
           </View>
         )}
