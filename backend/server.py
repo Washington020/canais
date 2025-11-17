@@ -6913,6 +6913,167 @@ async def get_video_call_status(
         logger.error(f"Erro ao buscar status da videochamada: {e}")
         raise HTTPException(status_code=500, detail="Erro ao buscar status")
 
+# ===========================
+# PAYMENT AND CONTRACT SYSTEM
+# ===========================
+
+from contract_template import CONTRACT_TEMPLATE
+
+class ContractUserData(BaseModel):
+    full_name: str
+    cpf: str
+    birth_date: str
+    email: str
+    phone: str
+    address: str
+    plan_type: str
+    payment_method: str
+
+@api_router.post("/contract/generate")
+async def generate_contract(user_data: ContractUserData, request: Request):
+    """
+    Gera contrato personalizado com todos os dados do usuário
+    """
+    try:
+        # Buscar informações do plano
+        plan_info = PAYMENT_PLANS.get(user_data.plan_type)
+        if not plan_info:
+            raise HTTPException(status_code=400, detail="Plano inválido")
+        
+        # Calcular valores
+        monthly_price = plan_info["monthly_price"]
+        activation_fee = plan_info["activation_fee"]
+        first_payment = plan_info["first_month_total"]
+        
+        # Calcular multas por inadimplência
+        late_fee_2_percent = round(monthly_price * 0.02, 2)
+        late_fee_1_percent = round(monthly_price * 0.01, 2)
+        total_with_late_fees = round(monthly_price + late_fee_2_percent + late_fee_1_percent, 2)
+        
+        # Calcular exemplos de multa por cancelamento
+        fine_month_3 = round(9 * monthly_price, 2)
+        fine_month_6 = round(6 * monthly_price, 2)
+        fine_month_9 = round(3 * monthly_price, 2)
+        
+        # Definir cláusulas específicas por plano
+        if user_data.plan_type == "vip":
+            fidelity_clause = "Plano VIP: SEM FIDELIDADE - Cancelamento a qualquer momento"
+            cancellation_policy = "📌 PLANO VIP:\n\nCancelamento SEM MULTA a qualquer momento.\nApenas aviso prévio de 30 dias."
+            no_fine_clause = "SEM MULTA ✅ (Plano VIP)"
+            fidelity_months = 0
+        else:
+            fidelity_clause = f"Planos Básico e Intermediário: 12 (doze) meses obrigatórios"
+            cancellation_policy = f"📌 PLANO {plan_info['name'].upper()}:\n\nO cancelamento antes do término do período de fidelidade de 12 meses está SUJEITO A MULTA RESCISÓRIA.\n\nFÓRMULA: Multa = (Meses Restantes) × R$ {monthly_price}"
+            no_fine_clause = "SEM MULTA ✅"
+            fidelity_months = 12
+        
+        # Datas
+        contract_start_date = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+        contract_end_date = (datetime.now(timezone.utc) + timedelta(days=365)).strftime("%d/%m/%Y")
+        billing_day = datetime.now(timezone.utc).day
+        
+        # Formatar benefícios
+        plan_benefits = "\n".join([f"  • {benefit}" for benefit in plan_info["features"]])
+        
+        # Método de pagamento
+        payment_method_label = "PIX" if user_data.payment_method == "pix" else "CARTÃO DE CRÉDITO"
+        
+        # IP e device
+        client_ip = request.client.host
+        user_agent = request.headers.get("user-agent", "Unknown")
+        
+        # Preencher o contrato
+        contract_filled = CONTRACT_TEMPLATE.format(
+            user_full_name=user_data.full_name,
+            user_cpf=user_data.cpf,
+            user_birth_date=user_data.birth_date,
+            user_email=user_data.email,
+            user_phone=user_data.phone,
+            user_address=user_data.address,
+            plan_name=plan_info["name"],
+            activation_fee=f"{activation_fee:.2f}",
+            monthly_price=f"{monthly_price:.2f}",
+            first_payment_total=f"{first_payment:.2f}",
+            plan_benefits=plan_benefits,
+            payment_method=payment_method_label,
+            contract_start_date=contract_start_date,
+            contract_end_date=contract_end_date,
+            billing_day=billing_day,
+            fidelity_clause=fidelity_clause,
+            fidelity_months=fidelity_months,
+            cancellation_policy=cancellation_policy,
+            no_fine_clause=no_fine_clause,
+            late_fee_2_percent=f"{late_fee_2_percent:.2f}",
+            late_fee_1_percent=f"{late_fee_1_percent:.2f}",
+            total_with_late_fees=f"{total_with_late_fees:.2f}",
+            fine_month_3=f"{fine_month_3:.2f}",
+            fine_month_6=f"{fine_month_6:.2f}",
+            fine_month_9=f"{fine_month_9:.2f}",
+            acceptance_timestamp="{to_be_filled}",
+            acceptance_ip=client_ip,
+            device_info=user_agent
+        )
+        
+        contract_id = str(uuid.uuid4())
+        
+        return {
+            "success": True,
+            "contract_text": contract_filled,
+            "contract_version": "1.0",
+            "contract_id": contract_id,
+            "user_data": {
+                "full_name": user_data.full_name,
+                "cpf": user_data.cpf,
+                "email": user_data.email
+            },
+            "plan_info": {
+                "name": plan_info["name"],
+                "monthly_price": monthly_price,
+                "fidelity_months": fidelity_months
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao gerar contrato: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/contract/accept")
+async def accept_contract(contract_data: dict, request: Request):
+    """
+    Salva o aceite do contrato
+    """
+    try:
+        acceptance_timestamp = datetime.now(timezone.utc).isoformat()
+        client_ip = request.client.host
+        
+        contract_record = {
+            "contract_id": contract_data["contract_id"],
+            "user_email": contract_data["user_email"],
+            "user_cpf": contract_data["user_cpf"],
+            "plan_type": contract_data["plan_type"],
+            "contract_text": contract_data["contract_text"],
+            "contract_version": "1.0",
+            "accepted": True,
+            "accepted_at": acceptance_timestamp,
+            "acceptance_ip": client_ip,
+            "user_agent": request.headers.get("user-agent", "Unknown"),
+            "is_over_18": contract_data.get("is_over_18", False),
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        await db.contracts.insert_one(contract_record)
+        
+        return {
+            "success": True,
+            "message": "Contrato aceito com sucesso",
+            "contract_id": contract_data["contract_id"],
+            "accepted_at": acceptance_timestamp
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao salvar aceite do contrato: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include the router in the main app
 # Include routers
 app.include_router(api_router)
