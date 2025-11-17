@@ -202,37 +202,74 @@ export default function RegisterScreen() {
       }
       
       console.log('🚀 3. Processando pagamento:', {
-        ...paymentRequestData,
-        card_data: paymentRequestData.card_data ? '***' : undefined
+        method: paymentData.payment_method,
+        plan: selectedPlan.type
       });
       
-      const paymentResponse = await axios.post(
-        `${API_URL}/api/payments/pagarme/checkout/session`,
-        paymentRequestData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      let paymentResponse;
       
-      console.log('✅ 3. Pagamento processado:', paymentResponse.data);
-      
-      const payment = paymentResponse.data;
-      
-      // Se for PIX, mostrar QR Code
-      if (paymentData.payment_method === 'pix' && payment.qr_code) {
-        showPixQRCode(payment);
-      } 
-      // Se for cartão, mostrar sucesso
-      else if (paymentData.payment_method === 'cartao_credito') {
-        Alert.alert(
-          '✅ Pagamento Processado!',
-          `🎉 Parabéns! Sua assinatura do ${selectedPlan.name} foi confirmada.\n\n💳 Pagamento: Cartão de Crédito\n💰 Valor: ${formatPrice(selectedPlan.first_month_total)}\n\n⏰ ATENÇÃO: Seu acesso será liberado em até 24 horas.\n\n📧 Você receberá um email quando seu login estiver ativo.\n\n📱 Dados de acesso:\nEmail: ${formData.email}\nSenha: (a que você cadastrou)`,
-          [
-            { 
-              text: 'Entendi', 
-              onPress: () => router.replace('/client/login')
-            }
-          ],
-          { cancelable: false }
+      // Se for PIX, usar o novo endpoint de PIX
+      if (paymentData.payment_method === 'pix') {
+        console.log('📱 Criando pagamento PIX...');
+        paymentResponse = await axios.post(
+          `${API_URL}/api/payments/pix/create`,
+          {
+            user_id: userResponse.data.id,
+            plan_type: selectedPlan.type,
+            amount: selectedPlan.first_month_total,
+            description: `${selectedPlan.name} - Taxa de Adesão + 1ª Mensalidade`
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
         );
+        
+        console.log('✅ Pagamento PIX criado:', paymentResponse.data);
+        
+        if (paymentResponse.data.success && paymentResponse.data.qr_code) {
+          showPixQRCode(paymentResponse.data);
+        } else {
+          throw new Error('Erro ao gerar QR Code PIX');
+        }
+      } 
+      // Se for cartão, usar o novo endpoint de cartão
+      else if (paymentData.payment_method === 'cartao_credito') {
+        console.log('💳 Criando pagamento com cartão...');
+        
+        // Tokenizar o cartão (simplificado - em produção usar SDK do Pagar.me)
+        const cardToken = 'tok_test_' + Date.now();
+        
+        paymentResponse = await axios.post(
+          `${API_URL}/api/payments/card/create`,
+          {
+            user_id: userResponse.data.id,
+            plan_type: selectedPlan.type,
+            card_token: cardToken,
+            amount: selectedPlan.first_month_total,
+            description: `${selectedPlan.name} - Taxa de Adesão + 1ª Mensalidade`
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        console.log('✅ Pagamento com cartão criado:', paymentResponse.data);
+        
+        if (paymentResponse.data.success && paymentResponse.data.status === 'paid') {
+          Alert.alert(
+            '✅ Pagamento Aprovado!',
+            `🎉 Parabéns! Sua assinatura do ${selectedPlan.name} foi confirmada!\n\n💳 Pagamento: Cartão de Crédito\n💰 Valor: R$ ${selectedPlan.first_month_total.toFixed(2).replace('.', ',')}\n\n✅ Seu acesso foi liberado!\n\n📱 Dados de acesso:\nEmail: ${formData.email}\nSenha: (a que você cadastrou)`,
+            [
+              { 
+                text: 'Fazer Login', 
+                onPress: () => router.replace('/client/login')
+              }
+            ],
+            { cancelable: false }
+          );
+        } else {
+          Alert.alert(
+            'Pagamento em Análise',
+            'Seu pagamento está sendo processado. Você receberá um email assim que for aprovado.',
+            [{ text: 'OK', onPress: () => router.replace('/client/login') }]
+          );
+        }
       }
 
     } catch (error: any) {
