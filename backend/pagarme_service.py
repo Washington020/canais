@@ -276,6 +276,148 @@ class PagarMeService:
                 "line_1": user_data.get("address", "Rua Example, 123")
             }
         }
+    
+    async def create_subscription(self, customer_id: str, card_token: str, plan_code: str, amount: float) -> Dict[str, Any]:
+        """
+        Cria uma assinatura recorrente mensal
+        """
+        try:
+            amount_cents = int(amount * 100)
+            
+            payload = {
+                "customer_id": customer_id,
+                "plan_id": plan_code,
+                "card_token": card_token,
+                "payment_method": "credit_card",
+                "billing_type": "exact_day",
+                "installments": 1,
+                "statement_descriptor": "LUXEPASS",
+                "items": [
+                    {
+                        "pricing_scheme": {
+                            "price": amount_cents,
+                            "scheme_type": "unit"
+                        },
+                        "description": f"Assinatura LuxePass - {plan_code}",
+                        "name": f"Plano {plan_code}",
+                        "quantity": 1
+                    }
+                ]
+            }
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/subscriptions",
+                    json=payload,
+                    headers=self._get_headers()
+                )
+                
+                if response.status_code in [200, 201]:
+                    subscription_data = response.json()
+                    logger.info(f"✅ Assinatura criada: {subscription_data.get('id')}")
+                    
+                    return {
+                        "success": True,
+                        "subscription_id": subscription_data.get('id'),
+                        "status": subscription_data.get('status'),
+                        "data": subscription_data
+                    }
+                else:
+                    logger.error(f"❌ Erro ao criar assinatura: {response.text}")
+                    return {
+                        "success": False,
+                        "error": response.text
+                    }
+                    
+        except Exception as e:
+            logger.error(f"❌ Erro ao criar assinatura: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    async def charge_subscription(self, subscription_id: str) -> Dict[str, Any]:
+        """
+        Força a cobrança de uma assinatura
+        """
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/subscriptions/{subscription_id}/cycles",
+                    headers=self._get_headers()
+                )
+                
+                if response.status_code in [200, 201]:
+                    cycle_data = response.json()
+                    logger.info(f"✅ Assinatura cobrada: {subscription_id}")
+                    
+                    return {
+                        "success": True,
+                        "cycle_id": cycle_data.get('id'),
+                        "status": cycle_data.get('status'),
+                        "data": cycle_data
+                    }
+                else:
+                    logger.error(f"❌ Erro ao cobrar assinatura: {response.text}")
+                    return {
+                        "success": False,
+                        "error": response.text
+                    }
+                    
+        except Exception as e:
+            logger.error(f"❌ Erro ao cobrar assinatura: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    async def cancel_subscription(self, subscription_id: str) -> Dict[str, Any]:
+        """
+        Cancela uma assinatura
+        """
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.delete(
+                    f"{self.base_url}/subscriptions/{subscription_id}",
+                    headers=self._get_headers()
+                )
+                
+                if response.status_code in [200, 204]:
+                    logger.info(f"✅ Assinatura cancelada: {subscription_id}")
+                    return {
+                        "success": True,
+                        "message": "Assinatura cancelada com sucesso"
+                    }
+                else:
+                    logger.error(f"❌ Erro ao cancelar assinatura: {response.text}")
+                    return {
+                        "success": False,
+                        "error": response.text
+                    }
+                    
+        except Exception as e:
+            logger.error(f"❌ Erro ao cancelar assinatura: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def verify_webhook_signature(self, payload: str, signature: str) -> bool:
+        """
+        Verifica a assinatura do webhook do Pagar.me
+        """
+        try:
+            calculated_signature = hmac.new(
+                self.api_key.encode('utf-8'),
+                payload.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
+            
+            return hmac.compare_digest(calculated_signature, signature)
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao verificar assinatura do webhook: {e}")
+            return False
 
 # Global instance - created lazily
 _pagarme_service_instance = None
