@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Completar a implementação da funcionalidade 'Marcar Consulta como Concluída' para o Personal Trainer e testar todas as interfaces profissionais."
+user_problem_statement: "Implementar sistema completo de pagamento com Pagar.me, incluindo PIX, Cartão de Crédito recorrente, sistema de contrato personalizado com dados da empresa LUXEPASS/GUESBET CNPJ 60.357.323/0001-69, cláusulas de fidelidade, multa por cancelamento, possibilidade de negativação, e painel admin para gerenciar clientes e pagamentos."
 
 backend:
   - task: "Appointment Complete Endpoint"
