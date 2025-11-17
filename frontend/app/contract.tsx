@@ -9,11 +9,27 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Checkbox from 'expo-checkbox';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_BACKEND_URL || 'http://localhost:8001';
+
+// Componente Checkbox customizado
+const Checkbox = ({ value, onValueChange, color, style }: any) => {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.checkbox,
+        value && styles.checkboxChecked,
+        value && color && { backgroundColor: color, borderColor: color },
+        style,
+      ]}
+      onPress={() => onValueChange(!value)}
+    >
+      {value && <Text style={styles.checkmark}>✓</Text>}
+    </TouchableOpacity>
+  );
+};
 
 export default function ContractScreen() {
   const router = useRouter();
