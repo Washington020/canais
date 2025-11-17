@@ -7074,6 +7074,546 @@ async def accept_contract(contract_data: dict, request: Request):
         logger.error(f"Erro ao salvar aceite do contrato: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+# ===========================
+# PAYMENT ENDPOINTS - PAGAR.ME
+# ===========================
+
+class PaymentPixRequest(BaseModel):
+    user_id: str
+    plan_type: str
+    amount: float
+    description: str
+
+class PaymentCardRequest(BaseModel):
+    user_id: str
+    plan_type: str
+    card_token: str
+    amount: float
+    description: str
+
+class SubscriptionCreateRequest(BaseModel):
+    user_id: str
+    plan_type: str
+    payment_method: str  # "pix" or "card"
+    card_token: Optional[str] = None
+
+@api_router.post("/payments/pix/create")
+async def create_pix_payment(payment_data: PaymentPixRequest):
+    """
+    Cria um pagamento PIX para o primeiro pagamento (Taxa + 1ª Mensalidade)
+    """
+    try:
+        # Buscar usuário
+        user = await db.users.find_one({"_id": ObjectId(payment_data.user_id)})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Buscar ou criar cliente no Pagar.me
+        pagarme_customer_id = user.get("pagarme_customer_id")
+        
+        if not pagarme_customer_id:
+            # Criar cliente no Pagar.me
+            customer_data = {
+                "full_name": user.get("full_name", "Cliente"),
+                "email": user.get("email", ""),
+                "cpf": user.get("cpf", "00000000000").replace(".", "").replace("-", ""),
+                "phone": user.get("phone", "11999999999"),
+                "address": user.get("address", "Endereço não informado")
+            }
+            
+            # Usar o serviço assíncrono via httpx
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                auth_string = f"{pagarme_service.api_key}:"
+                auth_bytes = auth_string.encode('ascii')
+                base64_auth = base64.b64encode(auth_bytes).decode('ascii')
+                
+                headers = {
+                    "Authorization": f"Basic {base64_auth}",
+                    "Content-Type": "application/json"
+                }
+                
+                cpf_clean = customer_data["cpf"]
+                phone_clean = customer_data["phone"].replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                
+                payload = {
+                    "name": customer_data["full_name"],
+                    "email": customer_data["email"],
+                    "type": "individual",
+                    "document": cpf_clean,
+                    "document_type": "CPF",
+                    "phones": {
+                        "mobile_phone": {
+                            "country_code": "55",
+                            "area_code": phone_clean[0:2] if len(phone_clean) >= 2 else "11",
+                            "number": phone_clean[2:] if len(phone_clean) > 2 else "999999999"
+                        }
+                    }
+                }
+                
+                response = await client.post(
+                    f"{pagarme_service.base_url}/customers",
+                    json=payload,
+                    headers=headers
+                )
+                
+                if response.status_code in [200, 201]:
+                    customer_response = response.json()
+                    pagarme_customer_id = customer_response.get("id")
+                    
+                    # Salvar customer_id no usuário
+                    await db.users.update_one(
+                        {"_id": ObjectId(payment_data.user_id)},
+                        {"$set": {"pagarme_customer_id": pagarme_customer_id}}
+                    )
+                    logger.info(f"✅ Cliente criado no Pagar.me: {pagarme_customer_id}")
+                else:
+                    logger.error(f"❌ Erro ao criar cliente: {response.text}")
+                    raise HTTPException(status_code=500, detail="Erro ao criar cliente no Pagar.me")
+        
+        # Criar pagamento PIX
+        amount_cents = int(payment_data.amount * 100)
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            auth_string = f"{pagarme_service.api_key}:"
+            auth_bytes = auth_string.encode('ascii')
+            base64_auth = base64.b64encode(auth_bytes).decode('ascii')
+            
+            headers = {
+                "Authorization": f"Basic {base64_auth}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "customer_id": pagarme_customer_id,
+                "amount": amount_cents,
+                "payment_method": "pix",
+                "pix": {
+                    "expires_in": 86400  # 24 horas
+                },
+                "items": [
+                    {
+                        "amount": amount_cents,
+                        "description": payment_data.description,
+                        "quantity": 1
+                    }
+                ],
+                "metadata": {
+                    "user_id": payment_data.user_id,
+                    "plan_type": payment_data.plan_type,
+                    "payment_type": "first_payment"
+                }
+            }
+            
+            response = await client.post(
+                f"{pagarme_service.base_url}/orders",
+                json=payload,
+                headers=headers
+            )
+            
+            if response.status_code in [200, 201]:
+                order_data = response.json()
+                charges = order_data.get("charges", [])
+                
+                if charges:
+                    charge = charges[0]
+                    last_transaction = charge.get("last_transaction", {})
+                    
+                    # Salvar ordem no banco
+                    payment_record = {
+                        "user_id": payment_data.user_id,
+                        "order_id": order_data.get("id"),
+                        "charge_id": charge.get("id"),
+                        "plan_type": payment_data.plan_type,
+                        "payment_method": "pix",
+                        "amount": payment_data.amount,
+                        "status": "pending",
+                        "qr_code": last_transaction.get("qr_code"),
+                        "qr_code_url": last_transaction.get("qr_code_url"),
+                        "expires_at": last_transaction.get("expires_at"),
+                        "created_at": datetime.now(timezone.utc),
+                        "payment_type": "first_payment"
+                    }
+                    
+                    await db.payments.insert_one(payment_record)
+                    
+                    logger.info(f"✅ Pagamento PIX criado: {order_data.get('id')}")
+                    
+                    return {
+                        "success": True,
+                        "order_id": order_data.get("id"),
+                        "qr_code": last_transaction.get("qr_code"),
+                        "qr_code_url": last_transaction.get("qr_code_url"),
+                        "amount": payment_data.amount,
+                        "expires_at": last_transaction.get("expires_at")
+                    }
+                else:
+                    raise HTTPException(status_code=500, detail="Nenhuma cobrança gerada")
+            else:
+                logger.error(f"❌ Erro ao criar pagamento PIX: {response.text}")
+                raise HTTPException(status_code=500, detail="Erro ao criar pagamento PIX")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao criar pagamento PIX: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/payments/card/create")
+async def create_card_payment(payment_data: PaymentCardRequest):
+    """
+    Cria um pagamento com cartão e já cria a assinatura recorrente
+    """
+    try:
+        # Buscar usuário
+        user = await db.users.find_one({"_id": ObjectId(payment_data.user_id)})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+        # Buscar ou criar cliente no Pagar.me
+        pagarme_customer_id = user.get("pagarme_customer_id")
+        
+        if not pagarme_customer_id:
+            # Criar cliente (mesmo código do PIX)
+            customer_data = {
+                "full_name": user.get("full_name", "Cliente"),
+                "email": user.get("email", ""),
+                "cpf": user.get("cpf", "00000000000").replace(".", "").replace("-", ""),
+                "phone": user.get("phone", "11999999999"),
+                "address": user.get("address", "Endereço não informado")
+            }
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                auth_string = f"{pagarme_service.api_key}:"
+                auth_bytes = auth_string.encode('ascii')
+                base64_auth = base64.b64encode(auth_bytes).decode('ascii')
+                
+                headers = {
+                    "Authorization": f"Basic {base64_auth}",
+                    "Content-Type": "application/json"
+                }
+                
+                cpf_clean = customer_data["cpf"]
+                phone_clean = customer_data["phone"].replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                
+                payload = {
+                    "name": customer_data["full_name"],
+                    "email": customer_data["email"],
+                    "type": "individual",
+                    "document": cpf_clean,
+                    "document_type": "CPF",
+                    "phones": {
+                        "mobile_phone": {
+                            "country_code": "55",
+                            "area_code": phone_clean[0:2] if len(phone_clean) >= 2 else "11",
+                            "number": phone_clean[2:] if len(phone_clean) > 2 else "999999999"
+                        }
+                    }
+                }
+                
+                response = await client.post(
+                    f"{pagarme_service.base_url}/customers",
+                    json=payload,
+                    headers=headers
+                )
+                
+                if response.status_code in [200, 201]:
+                    customer_response = response.json()
+                    pagarme_customer_id = customer_response.get("id")
+                    
+                    await db.users.update_one(
+                        {"_id": ObjectId(payment_data.user_id)},
+                        {"$set": {"pagarme_customer_id": pagarme_customer_id}}
+                    )
+        
+        # Criar pagamento com cartão
+        amount_cents = int(payment_data.amount * 100)
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            auth_string = f"{pagarme_service.api_key}:"
+            auth_bytes = auth_string.encode('ascii')
+            base64_auth = base64.b64encode(auth_bytes).decode('ascii')
+            
+            headers = {
+                "Authorization": f"Basic {base64_auth}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "customer_id": pagarme_customer_id,
+                "amount": amount_cents,
+                "payment_method": "credit_card",
+                "credit_card": {
+                    "installments": 1,
+                    "statement_descriptor": "LUXEPASS",
+                    "card_token": payment_data.card_token
+                },
+                "items": [
+                    {
+                        "amount": amount_cents,
+                        "description": payment_data.description,
+                        "quantity": 1
+                    }
+                ],
+                "metadata": {
+                    "user_id": payment_data.user_id,
+                    "plan_type": payment_data.plan_type,
+                    "payment_type": "first_payment"
+                }
+            }
+            
+            response = await client.post(
+                f"{pagarme_service.base_url}/orders",
+                json=payload,
+                headers=headers
+            )
+            
+            if response.status_code in [200, 201]:
+                order_data = response.json()
+                order_status = order_data.get("status")
+                
+                # Salvar pagamento no banco
+                payment_record = {
+                    "user_id": payment_data.user_id,
+                    "order_id": order_data.get("id"),
+                    "plan_type": payment_data.plan_type,
+                    "payment_method": "card",
+                    "card_token": payment_data.card_token,
+                    "amount": payment_data.amount,
+                    "status": order_status,
+                    "created_at": datetime.now(timezone.utc),
+                    "payment_type": "first_payment"
+                }
+                
+                await db.payments.insert_one(payment_record)
+                
+                # Se pagamento aprovado, criar assinatura
+                if order_status == "paid":
+                    plan_info = PAYMENT_PLANS.get(payment_data.plan_type)
+                    monthly_price = plan_info["monthly_price"]
+                    fidelity_months = 0 if payment_data.plan_type == "vip" else 12
+                    
+                    subscription_record = {
+                        "user_id": payment_data.user_id,
+                        "plan_type": payment_data.plan_type,
+                        "payment_method": "card",
+                        "card_token": payment_data.card_token,
+                        "monthly_price": monthly_price,
+                        "status": "active",
+                        "current_period_start": datetime.now(timezone.utc),
+                        "current_period_end": datetime.now(timezone.utc) + timedelta(days=30),
+                        "next_billing_date": datetime.now(timezone.utc) + timedelta(days=30),
+                        "billing_day": datetime.now(timezone.utc).day,
+                        "fidelity_months": fidelity_months,
+                        "retry_count": 0,
+                        "created_at": datetime.now(timezone.utc)
+                    }
+                    
+                    await db.subscriptions.insert_one(subscription_record)
+                    
+                    # Atualizar usuário
+                    await db.users.update_one(
+                        {"_id": ObjectId(payment_data.user_id)},
+                        {
+                            "$set": {
+                                "plan_type": payment_data.plan_type,
+                                "status": "active",
+                                "subscription_start": datetime.now(timezone.utc),
+                                "subscription_end": datetime.now(timezone.utc) + timedelta(days=365)
+                            }
+                        }
+                    )
+                
+                logger.info(f"✅ Pagamento com cartão criado: {order_data.get('id')}")
+                
+                return {
+                    "success": True,
+                    "order_id": order_data.get("id"),
+                    "status": order_status,
+                    "amount": payment_data.amount,
+                    "subscription_created": order_status == "paid"
+                }
+            else:
+                logger.error(f"❌ Erro ao criar pagamento com cartão: {response.text}")
+                raise HTTPException(status_code=500, detail="Erro ao processar pagamento")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao criar pagamento com cartão: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/payments/status/{order_id}")
+async def check_payment_status(order_id: str):
+    """
+    Verifica o status de um pagamento
+    """
+    try:
+        # Buscar no banco local primeiro
+        payment = await db.payments.find_one({"order_id": order_id})
+        
+        if not payment:
+            raise HTTPException(status_code=404, detail="Pagamento não encontrado")
+        
+        # Verificar no Pagar.me
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            auth_string = f"{pagarme_service.api_key}:"
+            auth_bytes = auth_string.encode('ascii')
+            base64_auth = base64.b64encode(auth_bytes).decode('ascii')
+            
+            headers = {
+                "Authorization": f"Basic {base64_auth}",
+                "Content-Type": "application/json"
+            }
+            
+            response = await client.get(
+                f"{pagarme_service.base_url}/orders/{order_id}",
+                headers=headers
+            )
+            
+            if response.status_code == 200:
+                order_data = response.json()
+                status = order_data.get("status")
+                
+                # Atualizar status no banco
+                await db.payments.update_one(
+                    {"order_id": order_id},
+                    {"$set": {"status": status, "updated_at": datetime.now(timezone.utc)}}
+                )
+                
+                # Se pagamento aprovado e é PIX, criar assinatura
+                if status == "paid" and payment.get("payment_method") == "pix":
+                    user_id = payment.get("user_id")
+                    plan_type = payment.get("plan_type")
+                    
+                    # Verificar se já tem assinatura
+                    existing_sub = await db.subscriptions.find_one({"user_id": user_id})
+                    
+                    if not existing_sub:
+                        plan_info = PAYMENT_PLANS.get(plan_type)
+                        monthly_price = plan_info["monthly_price"]
+                        fidelity_months = 0 if plan_type == "vip" else 12
+                        
+                        subscription_record = {
+                            "user_id": user_id,
+                            "plan_type": plan_type,
+                            "payment_method": "pix",
+                            "monthly_price": monthly_price,
+                            "status": "active",
+                            "current_period_start": datetime.now(timezone.utc),
+                            "current_period_end": datetime.now(timezone.utc) + timedelta(days=30),
+                            "next_billing_date": datetime.now(timezone.utc) + timedelta(days=30),
+                            "billing_day": datetime.now(timezone.utc).day,
+                            "fidelity_months": fidelity_months,
+                            "retry_count": 0,
+                            "created_at": datetime.now(timezone.utc)
+                        }
+                        
+                        await db.subscriptions.insert_one(subscription_record)
+                        
+                        # Atualizar usuário
+                        await db.users.update_one(
+                            {"_id": ObjectId(user_id)},
+                            {
+                                "$set": {
+                                    "plan_type": plan_type,
+                                    "status": "active",
+                                    "subscription_start": datetime.now(timezone.utc),
+                                    "subscription_end": datetime.now(timezone.utc) + timedelta(days=365)
+                                }
+                            }
+                        )
+                
+                return {
+                    "success": True,
+                    "order_id": order_id,
+                    "status": status,
+                    "payment_method": payment.get("payment_method"),
+                    "amount": payment.get("amount")
+                }
+            else:
+                raise HTTPException(status_code=500, detail="Erro ao verificar status")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao verificar status do pagamento: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/clients-payments")
+async def get_clients_payments(current_admin = Depends(get_current_admin)):
+    """
+    Lista todos os clientes com informações de pagamento para o admin
+    """
+    try:
+        # Buscar todos os usuários com assinaturas
+        users_with_subscriptions = await db.users.aggregate([
+            {
+                "$lookup": {
+                    "from": "subscriptions",
+                    "localField": "_id",
+                    "foreignField": "user_id",
+                    "as": "subscription"
+                }
+            },
+            {
+                "$unwind": {
+                    "path": "$subscription",
+                    "preserveNullAndEmptyArrays": True
+                }
+            }
+        ]).to_list(None)
+        
+        clients = []
+        for user in users_with_subscriptions:
+            subscription = user.get("subscription", {})
+            
+            # Calcular meses completados e restantes
+            if subscription:
+                start_date = subscription.get("current_period_start")
+                fidelity_months = subscription.get("fidelity_months", 0)
+                
+                if start_date:
+                    months_completed = (datetime.now(timezone.utc) - start_date).days // 30
+                    months_remaining = max(0, fidelity_months - months_completed)
+                else:
+                    months_completed = 0
+                    months_remaining = fidelity_months
+            else:
+                months_completed = 0
+                months_remaining = 0
+            
+            client_data = {
+                "id": str(user["_id"]),
+                "full_name": user.get("full_name", ""),
+                "email": user.get("email", ""),
+                "phone": user.get("phone", ""),
+                "cpf": user.get("cpf", ""),
+                "plan_type": user.get("plan_type", "basico"),
+                "payment_method": subscription.get("payment_method", "pix") if subscription else "pix",
+                "status": subscription.get("status", "pending") if subscription else "pending",
+                "contract_start": subscription.get("current_period_start").isoformat() if subscription and subscription.get("current_period_start") else None,
+                "contract_end": user.get("subscription_end").isoformat() if user.get("subscription_end") else None,
+                "next_billing_date": subscription.get("next_billing_date").isoformat() if subscription and subscription.get("next_billing_date") else None,
+                "monthly_price": subscription.get("monthly_price", 0) if subscription else 0,
+                "fidelity_months": subscription.get("fidelity_months", 0) if subscription else 0,
+                "months_completed": months_completed,
+                "months_remaining": months_remaining
+            }
+            
+            clients.append(client_data)
+        
+        return {
+            "success": True,
+            "total": len(clients),
+            "clients": clients
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao buscar clientes: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include the router in the main app
 # Include routers
 app.include_router(api_router)
