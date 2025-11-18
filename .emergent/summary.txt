@@ -1,84 +1,85 @@
 <analysis>
-The trajectory documents an extensive, multi-phase development and debugging effort on the LuxePass application, conducted primarily in Portuguese. The initial work focused on fixing a critical bug in the appointment booking flow where available time slots were not appearing for clients. This involved a deep dive into the backend (), uncovering and fixing several issues: professionals being stored in the  collection instead of a dedicated  collection, a persistent MongoDB  caching problem that returned stale availability data, and an  due to inconsistent data structures ( vs. ) in the availability schedule.
+The trajectory documents a massive feature implementation and subsequent production deployment. The primary language of the user is Portuguese, and all future interactions must be in **Portuguese**.
 
-Following this, the user introduced a major new requirement: a system for handling appointments for new clients who haven't been assigned a professional yet. This led to a significant feature implementation, including:
-1.  Modifying the backend to allow pending appointments without a .
-2.  Creating new backend endpoints (, ) for professionals to view and accept new clients.
-3.  Developing a Novos Clientes tab in the professional interfaces.
-4.  Implementing features for professionals to create diet/workout plans for their assigned clients.
-5.  Creating corresponding Minha Nutrição and Meus Treinos tabs for clients to view these plans.
-6.  Adding an interactive workout session feature with timers and progress tracking.
+The work began with a detailed requirement-gathering phase for a complete payment and subscription system using the Pagar.me gateway. This involved defining complex business logic for different subscription plans, a 12-month fidelity period, automated recurring billing (for both credit card and PIX), cancellation policies with calculated fines, and a formal, dynamic contract of service that users must accept.
 
-The most recent activity involves debugging two new issues reported by the user: the Confirmar Agendamento button is not working for clients, and professional schedules (nutritionist vs. personal) are showing the same appointments instead of being filtered by specialty. The next agent must continue responding in **Portuguese**.
+The implementation phase was split into backend and frontend work. On the backend (), new Pydantic models, a  module, and numerous FastAPI endpoints were created to handle plans, contracts, user registration, subscriptions, and payments. On the frontend, a completely new multi-screen flow was built ( ->  ->  -> ) to guide the user through plan selection, registration, contract acceptance, and payment.
+
+Debugging was a significant part of the process, tackling a white screen error caused by a missing  dependency, fixing layout issues on the admin dashboard, and resolving a critical bug where an old payment flow was being triggered instead of the new one.
+
+The final, and ongoing, phase is the production deployment to a Hostinger Ubuntu server. This involved setting up the server environment (NGINX, Python, Node, MongoDB), pushing the code to a new GitHub repository, and step-by-step guidance on server configuration, which is currently stalled at configuring DNS records.
 </analysis>
 
 <product_requirements>
-The project is LuxePass, a multi-interface fitness and wellness platform.
+The primary requirement is to integrate a full-featured, automated payment and subscription system into the LuxePass application using the Pagar.me gateway.
 
-**Core User Flows:**
-1.  **Client-Side:** Clients can register, select a service (e.g., Consulta Nutricional, Personal Training), view available time slots on a calendar, and book an appointment. These appointments initially have a pending status. Once a professional accepts, the client's agenda updates with the professional's name. Clients can then view diet plans created by their nutritionist and workout plans from their personal trainer. The workout plan is interactive, featuring a session tracker with timers for exercises and rest periods, and a progress bar.
-
-2.  **Professional-Side (LuxeCoach):** Nutritionists and Personal Trainers log in to their respective interfaces. They can set their weekly availability. A Novos Clientes tab displays a queue of pending appointments relevant to their specialty (e.g., nutritionists see Consulta Nutricional requests). They can Assumir Cliente (Accept Client), which links the appointment to them. Once a client is assumed, they can create a corresponding diet or workout plan for that client. Their main Agenda should only show appointments they have personally accepted.
+**Core Features:**
+1.  **Subscription Plans:** Offer three distinct plans (Básico, Intermediário, VIP) with different pricing and an initial admission fee (except for VIP).
+2.  **Payment Methods:** Support initial and recurring payments via both PIX and Credit Card.
+3.  **Automated Billing:** Credit card payments must be charged automatically each month. For PIX, a new QR code must be generated and the user notified monthly.
+4.  **Contractual Agreement:** Before paying, users must review and accept a detailed, legally robust contract. This contract is dynamically populated with user data (Name, CPF), plan details, values, and company information (CNPJ: 60.357.323/0001-69). It must include clauses for a 12-month fidelity period, fines for early cancellation, and a warning about potential credit score impact (negativação) for non-payment.
+5.  **Cancellation Policy:** The VIP plan can be canceled anytime without a fee. Other plans, if canceled within the 12-month fidelity period, will incur a fine equal to the sum of the remaining monthly payments.
+6.  **Admin Panel:** An admin interface must show all clients, their chosen plan, payment method, payment status (Active, Pending, Blocked), and contract dates. It must allow for manual Cobrar Agora actions.
+7.  **Access Control:** After three failed payment attempts, the user's access to key features (like gym token generation and appointments) must be automatically blocked.
 </product_requirements>
 
 <key_technical_concepts>
-- **Frameworks**: FastAPI (Python) for backend, Expo (React Native) for frontend.
-- **Database**: MongoDB, with significant debugging related to the  async driver's caching behavior.
-- **Authentication**: JWT-based for both clients and professionals.
-- **Routing**: Expo Router (file-based).
-- **Core Logic**: Dynamic generation of available appointment slots based on professionals' weekly schedules. A pending appointments queue system for new client acquisition. Role-based access and data filtering (e.g., nutritionists only see nutrition appointments).
+- **Backend:** FastAPI,  SDK for payment processing, MongoDB with  driver, JWT for authentication, .
+- **Frontend:** Expo (React Native), Expo Router for file-based navigation,  for API requests, custom components replacing .
+- **Deployment:** Ubuntu Server on Hostinger, NGINX as a reverse proxy, Git/GitHub for version control,  for managing the backend service,  for SSL/HTTPS, and yarn install v1.22.22
+[1/4] Resolving packages...
+success Already up-to-date.
+Done in 1.15s. for frontend dependency management.
+- **Architecture:** Monorepo with  and  directories, designed for a multi-subdomain production environment.
 </key_technical_concepts>
 
 <code_architecture>
-The application is a monorepo with  and  directories. The frontend uses Expo's file-based routing.
+The project is a monorepo with distinct  (FastAPI) and  (Expo) applications. The goal is a multi-subdomain deployment.
 
 
 
--   ****:
-    -   **Importance**: The single source of all API logic, handling authentication, availability, appointments, and the new diet/workout plan features.
-    -   **Summary of Changes**: Heavily modified. The  endpoint was rewritten to dynamically generate slots from weekly availability, fixing a major bug. New endpoints were added to support the pending appointment flow:  was updated to allow  to be null, and  and  were created. Endpoints for creating, fetching, and tracking diet/workout plans were also added (, , , etc.). The logic was also corrected to query the  collection for professionals.
+- ****
+    - **Importance:** The core of the backend. It contains all API logic.
+    - **Summary of Changes:** Extensively modified to add a suite of new endpoints for the payment and contract flow, including , , , and . Logic for handling  webhooks and managing subscription states was planned but not fully implemented in this file yet. Test user creation at startup was disabled to fix a deployment error.
 
--   ****:
-    -   **Importance**: The client's main screen for booking appointments. It contains the logic for displaying the calendar, fetching available slots, and confirming a booking.
-    -   **Summary of Changes**: The  function was modified to send  to support the new pending flow. It is the center of the current bug where the Confirmar Agendamento button is unresponsive.
+- ****
+    - **Importance:** A dedicated service module to abstract all communication with the Pagar.me API.
+    - **Summary of Changes:** Created to house functions like , , and . This isolates payment logic, making  cleaner.
 
--   ****:
-    -   **Importance**: Newly created/overwritten screens for both Nutritionists and Personal Trainers to view and accept pending appointments.
-    -   **Summary of Changes**: These files were implemented to call the new  endpoint. They display a list of unassigned appointments and include an Assumir Cliente button that calls the  endpoint.
+- ****
+    - **Importance:** Stores the master string template for the dynamic legal contract.
+    - **Summary of Changes:** Created to hold the full text of the contract, with placeholders like  and  to be filled by .
 
--   ****:
-    -   **Importance**: Screens for professionals to create diet or workout plans for their clients.
-    -   **Summary of Changes**: These files were created from scratch. They fetch the professional's assigned clients and provide a form to create and save a new plan via new backend endpoints.
+- **, , , **
+    - **Importance:** These new files form the complete, correct user onboarding and payment flow.
+    - **Summary of Changes:** These screens were created from scratch to guide the user from selecting a plan, entering personal data, accepting a dynamic legal contract, to making the final payment via PIX or credit card.
 
--   **** & ****:
-    -   **Importance**: Screens for the client to view their assigned workout and diet plans.
-    -   **Summary of Changes**: Created to fetch and display plans from the backend.  was enhanced with a progress bar and a button to navigate to the new  screen.
+- ****
+    - **Importance:** The main dashboard for the admin user.
+    - **Summary of Changes:** Styles were heavily modified to fix layout issues reported by the user, including reducing the header size, adjusting spacing, and improving the text wrapping and color scheme for better readability.
 
--   ****:
-    -   **Importance**: A new screen for the interactive workout experience.
-    -   **Summary of Changes**: Created from scratch to display the current exercise, a countdown timer, a rest timer, and buttons to progress through the workout, calling backend endpoints to track the session.
+- ****
+    - **Importance:** An older, pre-existing registration file that was incorrectly handling payments and causing bugs.
+    - **Summary of Changes:** This file was patched to call the new, correct payment endpoints () as a hotfix when the user reported non-functional buttons, because the app was still navigating to this old screen.
 
--   ****:
-    -   **Importance**: Manages frontend dependencies.
-    -   **Summary of Changes**: The  package was added to fix a white screen crash.
+- ** & **
+    - **Importance:** Files created to document and automate the production deployment process.
+    - **Summary of Changes:** Created to store configurations, environment variables for different subdomains, and shell commands for building the frontend for each specific deployment target (, , , etc.).
 </code_architecture>
 
 <pending_tasks>
-- **Fix Confirmar Agendamento Button**: The button in the client's scheduling modal is not working, preventing clients from booking appointments.
-- **Fix Professional Schedules**: The agendas for Nutritionists and Personal Trainers are showing all appointments, not just the ones relevant to their specialty and accepted by them.
-- **Client-side Feedback on Booking**: After booking, the client UI should update to show Aguardando profissional para assumir a consulta (Waiting for a professional to accept the consultation).
+- **DNS Configuration:** Add the correct  records for all subdomains (, , , etc.) in the Hostinger DNS panel, pointing to the server IP .
+- **SSL Installation:** Once DNS propagates, successfully run  to install SSL certificates for all subdomains.
+- **Android APK Build:** Generate an APK for the client application () for testing, as requested by the user.
+- **Automated Update Script:** Create a script to simplify future updates on the production server.
 </pending_tasks>
 
 <current_work>
-The AI engineer was actively debugging two critical issues reported by the user with accompanying screenshots.
+The work is paused mid-deployment on the production Ubuntu server. After numerous debugging steps to get the backend service running (including fixing Python dependencies and disabling test user creation), the process stalled at generating SSL certificates with . The failure was diagnosed as a DNS propagation issue: the subdomains were pointing to the wrong IP address () instead of the correct server IP ().
 
-1.  **Broken Confirmar Agendamento Button**: In the client's scheduling flow (), after selecting a time slot, the Confirmar Agendamento button is unresponsive. The last action was to inspect the code for this button, confirming that its  prop correctly calls the  function. The next logical step was to investigate why  might be invalid or if the  function itself has a silent failure.
-
-2.  **Identical Professional Schedules**: The user reported that the appointment calendars for the Nutritionist and Personal Trainer are identical, meaning they are not being filtered by professional type. The AI engineer identified that the frontend was calling a non-existent endpoint () and that the backend filtering logic was missing. The last action was to recognize the need to re-implement a correct, filtered endpoint on the backend.
-
-The work was halted right at the point of diagnosing these two issues, with the next step being to fix the backend endpoint for professional schedules.
+The user then reported that the DNS records had disappeared from their Hostinger panel and asked for the configuration again. The AI engineer explained that all DNS records must be created under the main  domain. The user confirmed they were on the correct screen in the Hostinger panel by sending a screenshot. The immediate task is to provide the user with the exact values to input into that DNS creation form for all the required subdomains. The user's last message was a screenshot of the Hostinger DNS management page with the prompt: e aqui que vai criar (is it here that I create it). The AI confirmed it was the right place and was about to provide instructions.
 </current_work>
 
 <optional_next_step>
-Re-create the  backend endpoint in  to correctly fetch and filter appointments based on the logged-in professional's ID and specialty, then update the frontend  files to use it.
+Analyze the user's last screenshot ( in message 519) of the Hostinger DNS panel and provide precise, step-by-step instructions for creating the  record for  and all other required subdomains.
 </optional_next_step>
